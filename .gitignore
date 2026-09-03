@@ -1,0 +1,12 @@
+.DS_Store
+.build/
+.swiftpm/
+dist/
+
+__pycache__/
+*.py[cod]
+
+.idea/
+.vscode/
+*.xcuserstate
+xcuserdata/

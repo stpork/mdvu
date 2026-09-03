@@ -1,0 +1,9 @@
+# Architecture
+
+`mdv` is a single-process AppKit application. `DocumentWindowController` owns native chrome and one visible `WKWebView`; the web view only renders generated content and bundled application scripts.
+
+The rendering path is `MarkdownPipeline → MarkdownExtension[] → cmark-gfm → targeted HTML post-processing → HTMLDocument → WKWebView`. cmark runs in safe mode. GFM syntax extensions are registered explicitly, while Obsidian compatibility and diagrams remain separate adapters. File reading, parsing, and HTML generation run on a cancellable background operation queue; only WebKit loading touches the main thread. Heading anchors, table wrappers, and visible code highlighting are deferred until after first paint to avoid full-HTML rewrites on the critical path. Navigation is decided natively: web links leave the app, Markdown links stay inside it, and unsupported schemes are not loaded.
+
+Fenced diagrams go through `DiagramRegistry` and `DiagramRenderer`. Mermaid is one renderer; adding PlantUML means registering another implementation, without changing the Markdown parser. Initial HTML contains diagram placeholders. Mermaid is stored as an LZFSE-compressed resource, decompressed only on first uncached use, and runs after the first browser layout. It emits SVG to the native SHA-256 cache in `~/Library/Caches/com.mdv.viewer/diagrams`, keyed by the effective light/dark theme. A bad diagram becomes an inline error with its source.
+
+There is no server, database, Node runtime, or network dependency at run time. A dispatch-source file watcher debounces native filesystem events and reloads while preserving relative scroll position. Visual regression uses the app's built-in deterministic window snapshot mode; large-file benchmarks use the same production Markdown pipeline without starting AppKit.

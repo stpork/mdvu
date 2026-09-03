@@ -1,0 +1,14 @@
+cask "mdv" do
+  version "0.1.0"
+  sha256 "913e06ba66fad1d9118727befb52ae0b3e247ae9ed49e0e203c1626998e5f72b"
+
+  url "RELEASE_URL/mdv-#{version}-macos-universal.zip"
+  name "mdv"
+  desc "Fast native Markdown viewer"
+  homepage "PROJECT_HOMEPAGE"
+
+  depends_on macos: ">= :ventura"
+
+  app "mdv.app"
+  binary "#{appdir}/mdv.app/Contents/MacOS/mdv", target: "mdv"
+end
