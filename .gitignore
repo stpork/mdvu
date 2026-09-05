@@ -11,3 +11,4 @@ __pycache__/
 *.xcuserstate
 xcuserdata/
 initial.md
+*.bc
