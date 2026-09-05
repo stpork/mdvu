@@ -29,8 +29,15 @@ struct MarkdownParser {
         }
 
         let byteCount = source.utf8.count
-        source.withCString { bytes in
-            cmark_parser_feed(parser, bytes, byteCount)
+        let fed = source.utf8.withContiguousStorageIfAvailable { ptr -> Bool in
+            guard let base = ptr.baseAddress else { return false }
+            cmark_parser_feed(parser, UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), ptr.count)
+            return true
+        } ?? false
+        if !fed {
+            source.withCString { bytes in
+                cmark_parser_feed(parser, bytes, byteCount)
+            }
         }
         guard let document = cmark_parser_finish(parser) else {
             return RenderedDocument(body: "<pre>\(HTML.escape(source))</pre>", title: nil)
@@ -102,14 +109,21 @@ struct MarkdownParser {
               let classEnd = input[opening.upperBound...].firstIndex(of: "\""),
               let contentStart = input[classEnd...].firstIndex(of: ">"),
               let closing = input.range(of: suffix, range: input.index(after: contentStart)..<input.endIndex) {
-            let language = HTML.unescape(String(input[opening.upperBound..<classEnd])).lowercased()
-            guard let renderer = diagrams.renderer(for: language) else {
+            let rawLang = input[opening.upperBound..<classEnd]
+            guard let renderer = diagrams.renderer(for: rawLang) else {
                 searchStart = closing.upperBound
                 continue
             }
             result += input[cursor..<opening.lowerBound]
-            let encodedSource = String(input[input.index(after: contentStart)..<closing.lowerBound])
-            result += renderer.placeholder(source: HTML.unescape(encodedSource).trimmingCharacters(in: .newlines), theme: diagramTheme, cache: cache)
+            var encodedSource = input[input.index(after: contentStart)..<closing.lowerBound]
+            while let first = encodedSource.first, first == "\n" || first == "\r" {
+                encodedSource = encodedSource.dropFirst()
+            }
+            while let last = encodedSource.last, last == "\n" || last == "\r" {
+                encodedSource = encodedSource.dropLast()
+            }
+            let unescaped = HTML.unescape(encodedSource)
+            result += renderer.placeholder(source: unescaped, theme: diagramTheme, cache: cache)
             cursor = closing.upperBound
             searchStart = cursor
         }
@@ -167,16 +181,29 @@ enum HTML {
             : value.contains(where: { $0 == "&" || $0 == "<" || $0 == ">" || $0 == "\"" })
         guard needsEscape else { return value }
         var result = ""
-        result.reserveCapacity(value.utf8.count + 16)
-        for char in value {
-            switch char {
-            case "&": result.append("&amp;")
-            case "<": result.append("&lt;")
-            case ">": result.append("&gt;")
-            case "\"": result.append("&quot;")
-            case "'": result.append(attribute ? "&#39;" : "'")
-            default: result.append(char)
+        result.reserveCapacity(value.utf8.count + 64)
+        var cursor = value.startIndex
+        var search = cursor
+        while search < value.endIndex {
+            let ch = value[search]
+            if ch == "&" || ch == "<" || ch == ">" || ch == "\"" || (attribute && ch == "'") {
+                result.append(contentsOf: value[cursor..<search])
+                switch ch {
+                case "&": result.append("&amp;")
+                case "<": result.append("&lt;")
+                case ">": result.append("&gt;")
+                case "\"": result.append("&quot;")
+                case "'": result.append("&#39;")
+                default: break
+                }
+                search = value.index(after: search)
+                cursor = search
+            } else {
+                search = value.index(after: search)
             }
+        }
+        if cursor < value.endIndex {
+            result.append(contentsOf: value[cursor...])
         }
         return result
     }
@@ -185,38 +212,50 @@ enum HTML {
         escape(value, attribute: true)
     }
 
-    static func unescape(_ value: String) -> String {
-        guard value.contains("&") else { return value }
+    static func unescape(_ value: some StringProtocol) -> String {
+        guard value.utf8.contains(UInt8(ascii: "&")) else { return String(value) }
         var result = ""
         result.reserveCapacity(value.utf8.count)
         var cursor = value.startIndex
-        while cursor < value.endIndex {
-            if value[cursor] == "&" {
-                let rest = value[cursor...]
-                if rest.hasPrefix("&quot;") {
+        var search = cursor
+        while search < value.endIndex {
+            if value[search] == "&" {
+                result.append(contentsOf: value[cursor..<search])
+                let rest = value[search...]
+                if rest.starts(with: "&quot;") {
                     result.append("\"")
-                    cursor = value.index(cursor, offsetBy: 6)
+                    search = value.index(search, offsetBy: 6)
+                    cursor = search
                     continue
-                } else if rest.hasPrefix("&#39;") {
+                } else if rest.starts(with: "&#39;") {
                     result.append("'")
-                    cursor = value.index(cursor, offsetBy: 5)
+                    search = value.index(search, offsetBy: 5)
+                    cursor = search
                     continue
-                } else if rest.hasPrefix("&gt;") {
+                } else if rest.starts(with: "&gt;") {
                     result.append(">")
-                    cursor = value.index(cursor, offsetBy: 4)
+                    search = value.index(search, offsetBy: 4)
+                    cursor = search
                     continue
-                } else if rest.hasPrefix("&lt;") {
+                } else if rest.starts(with: "&lt;") {
                     result.append("<")
-                    cursor = value.index(cursor, offsetBy: 4)
+                    search = value.index(search, offsetBy: 4)
+                    cursor = search
                     continue
-                } else if rest.hasPrefix("&amp;") {
+                } else if rest.starts(with: "&amp;") {
                     result.append("&")
-                    cursor = value.index(cursor, offsetBy: 5)
+                    search = value.index(search, offsetBy: 5)
+                    cursor = search
                     continue
+                } else {
+                    search = value.index(after: search)
                 }
+            } else {
+                search = value.index(after: search)
             }
-            result.append(value[cursor])
-            cursor = value.index(after: cursor)
+        }
+        if cursor < value.endIndex {
+            result.append(contentsOf: value[cursor...])
         }
         return result
     }

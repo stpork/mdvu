@@ -18,7 +18,7 @@ TEST_FLAGS += -Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGIN_DIR)
 endif
 endif
 
-SWIFT_RELEASE_FLAGS := -Xswiftc -Osize -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names
+SWIFT_RELEASE_FLAGS := -Xswiftc -Osize -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
 
 .PHONY: all release test app package universal archive publish install benchmark update-snapshot visual-test clean
 all:

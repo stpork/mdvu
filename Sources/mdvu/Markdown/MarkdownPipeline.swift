@@ -53,8 +53,8 @@ private struct ObsidianExtension: MarkdownExtension {
         let hasWikiSyntax = dialect == .obsidian && source.contains("[[")
         guard hasCallout || hasWikiSyntax else { return source }
         var result = ""
-        result.reserveCapacity(source.utf8.count + 256)
         var cursor = source.startIndex
+        var chunkStart = cursor
         var fence: Character?
 
         while cursor < source.endIndex {
@@ -66,25 +66,40 @@ private struct ObsidianExtension: MarkdownExtension {
             if let marker {
                 if fence == nil { fence = marker }
                 else if fence == marker { fence = nil }
-                result.append(contentsOf: line)
-            } else if fence != nil {
-                result.append(contentsOf: line)
-            } else {
+            } else if fence == nil {
                 let needsCallout = line.contains("[!")
                 let needsWiki = hasWikiSyntax && line.contains("[[")
                 if needsCallout || needsWiki {
-                    result.append(transform(String(line), wikiLinks: hasWikiSyntax))
-                } else {
-                    result.append(contentsOf: line)
+                    let transformed = transform(String(line), wikiLinks: hasWikiSyntax)
+                    if transformed != line {
+                        if result.isEmpty {
+                            result.reserveCapacity(source.utf8.count + 256)
+                        }
+                        result.append(contentsOf: source[chunkStart..<cursor])
+                        result.append(transformed)
+                        if nextNewline < source.endIndex {
+                            result.append("\n")
+                            cursor = source.index(after: nextNewline)
+                            chunkStart = cursor
+                            continue
+                        } else {
+                            chunkStart = source.endIndex
+                            break
+                        }
+                    }
                 }
             }
 
             if nextNewline < source.endIndex {
-                result.append("\n")
                 cursor = source.index(after: nextNewline)
             } else {
                 break
             }
+        }
+
+        if result.isEmpty { return source }
+        if chunkStart < source.endIndex {
+            result.append(contentsOf: source[chunkStart...])
         }
         return result
     }
