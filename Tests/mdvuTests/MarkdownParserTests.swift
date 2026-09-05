@@ -285,4 +285,47 @@ struct MarkdownParserTests {
         controller.zoomOut(nil)
         #expect(abs(controller.effectiveZoom - 1.0) < 0.001)
     }
+
+    @MainActor
+    @Test func aboutPanelContentAndLinks() {
+        let attrString = AboutPanelController.makeAttributedString(version: "0.2.0")
+        let plain = attrString.string
+
+        #expect(plain.contains("mdvu\n"))
+        #expect(plain.contains("Markdown and Mermaid Viewer\n"))
+        #expect(plain.contains("Version: 0.2.0\n"))
+        #expect(plain.contains("Copyright © 2026 Finn de Bear"))
+        #expect(!plain.contains("(1)"))
+        #expect(!plain.contains("("))
+
+        // Check links
+        var foundRepoLink = false
+        var foundReleaseLink = false
+        var foundMailLink = false
+
+        attrString.enumerateAttribute(.link, in: NSRange(location: 0, length: attrString.length), options: []) { value, range, _ in
+            guard let url = value as? URL else { return }
+            let substring = (plain as NSString).substring(with: range)
+            if url.absoluteString == "https://github.com/stpork/mdvu" && substring == "mdvu\n" {
+                foundRepoLink = true
+            }
+            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.2.0" && substring.contains("0.2.0") {
+                foundReleaseLink = true
+            }
+            if url.absoluteString == "mailto:finndebear@gmail.com" && substring == "Finn de Bear" {
+                foundMailLink = true
+            }
+        }
+
+        #expect(foundRepoLink)
+        #expect(foundReleaseLink)
+        #expect(foundMailLink)
+
+        // Check center paragraph alignments
+        attrString.enumerateAttribute(.paragraphStyle, in: NSRange(location: 0, length: attrString.length), options: []) { value, _, _ in
+            if let style = value as? NSParagraphStyle {
+                #expect(style.alignment == .center)
+            }
+        }
+    }
 }

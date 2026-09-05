@@ -74,50 +74,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let alert = NSAlert(); alert.messageText = "mdvu"; alert.informativeText = message; alert.runModal()
     }
 
-    @objc func showAboutPanel(_ sender: Any?) {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
-        let credits = NSMutableAttributedString()
-        let regularStyle: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11),
-            .foregroundColor: NSColor.secondaryLabelColor
-        ]
-        let boldStyle: [NSAttributedString.Key: Any] = [
-            .font: NSFont.boldSystemFont(ofSize: 11),
-            .foregroundColor: NSColor.labelColor
-        ]
-        var emailStyle: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11),
-            .foregroundColor: NSColor.linkColor,
-            .underlineStyle: NSUnderlineStyle.single.rawValue
-        ]
-        if let emailURL = URL(string: "mailto:finndebear@gmail.com") {
-            emailStyle[.link] = emailURL
-        }
-        var repoStyle: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11),
-            .foregroundColor: NSColor.linkColor,
-            .underlineStyle: NSUnderlineStyle.single.rawValue
-        ]
-        if let repoURL = URL(string: "https://github.com/stpork/mdvu") {
-            repoStyle[.link] = repoURL
-        }
-
-        credits.append(NSAttributedString(string: "Author: ", attributes: boldStyle))
-        credits.append(NSAttributedString(string: "Finn de Bear", attributes: regularStyle))
-        credits.append(NSAttributedString(string: " <", attributes: regularStyle))
-        credits.append(NSAttributedString(string: "finndebear@gmail.com", attributes: emailStyle))
-        credits.append(NSAttributedString(string: ">\n\n", attributes: regularStyle))
-
-        credits.append(NSAttributedString(string: "Repository:\n", attributes: boldStyle))
-        credits.append(NSAttributedString(string: "https://github.com/stpork/mdvu", attributes: repoStyle))
-        credits.append(NSAttributedString(string: "\n\nMIT License • Copyright © 2026 Finn de Bear", attributes: regularStyle))
-
-        let options: [NSApplication.AboutPanelOptionKey: Any] = [
-            .applicationName: "mdvu",
-            .applicationVersion: version,
-            .credits: credits
-        ]
-        NSApp.orderFrontStandardAboutPanel(options: options)
+    @MainActor @objc func showAboutPanel(_ sender: Any?) {
+        AboutPanelController.shared.show()
     }
 }
 
