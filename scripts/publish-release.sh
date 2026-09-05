@@ -169,8 +169,8 @@ echo "==> Step 4/4: Executing Live Publication..."
 
 # 1. Commit pending changes on develop
 echo "--> Finalizing commit on develop branch..."
-if ! git diff-index --quiet HEAD --; then
-    git add -A
+git add -A
+if [ -n "$(git status --porcelain)" ]; then
     git commit -m "chore(release): prepare $TAG"
 fi
 
@@ -228,7 +228,7 @@ if command -v brew >/dev/null 2>&1; then
 fi
 
 git add Casks/mdvu.rb
-if ! git diff-index --quiet HEAD --; then
+if [ -n "$(git status --porcelain)" ]; then
     git commit -m "Update mdvu to $TAG"
     git branch -M main 2>/dev/null || true
     git push -u origin main
