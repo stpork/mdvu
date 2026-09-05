@@ -214,10 +214,15 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private weak var zoomMinusButton: NSButton?
     private weak var zoomField: ZoomLevelTextField?
     private weak var zoomPlusButton: NSButton?
-    private var targetMagnification: CGFloat = 1.0
+    private var targetPageZoom: CGFloat = 1.0
     private var isRestoringDocumentZoom: Bool = false
 
-    var currentMagnificationLevel: CGFloat { targetMagnification }
+    var effectiveZoom: CGFloat {
+        let currentMag = abs(webView.magnification - 1.0) > 0.005 ? webView.magnification : 1.0
+        return targetPageZoom * currentMag
+    }
+
+    var currentMagnificationLevel: CGFloat { effectiveZoom }
     private weak var searchToolbarItem: NSSearchToolbarItem?
     private weak var searchField: NSSearchField?
     private let searchCountLabel = NSTextField(labelWithString: "")
@@ -279,11 +284,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         systemAppearanceIsDark = effectiveAppearanceIsDark
         if options.snapshotPath == nil { window.setFrameAutosaveName("mdvu.mainWindow") }
         configureToolbar()
-        magnificationObservation = webView.observe(\.magnification, options: [.new]) { [weak self] wv, _ in
+        magnificationObservation = webView.observe(\.magnification, options: [.new]) { [weak self] _, _ in
             guard let self else { return }
             if self.isRestoringDocumentZoom { return }
-            let clamped = ZoomPolicy.clamp(wv.magnification)
-            self.targetMagnification = clamped
             self.updateZoomControls()
         }
         webView.navigationDelegate = self
@@ -431,13 +434,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             field.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             field.alignment = .center
             field.toolTip = "Zoom level. Click to edit, double-click to reset (⌘0)"
-            field.stringValue = ZoomPolicy.formatPercentage(targetMagnification)
+            field.stringValue = ZoomPolicy.formatPercentage(effectiveZoom)
             field.target = self
             field.action = #selector(zoomFieldAction(_:))
             field.onCommit = { [weak self] raw in
                 guard let self else { return }
-                let newMag = ZoomPolicy.parseManualInput(raw, fallback: self.targetMagnification)
-                self.setUnifiedMagnification(newMag)
+                let newZoom = ZoomPolicy.parseManualInput(raw, fallback: self.effectiveZoom)
+                self.applyPageZoom(newZoom, resetMagnification: true)
             }
             field.onDoubleClick = { [weak self] in
                 self?.resetZoom(nil)
@@ -822,8 +825,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         profiler.mark("webview.firstContent")
-        if abs(webView.magnification - targetMagnification) > 0.001 {
-            webView.setMagnification(targetMagnification, centeredAt: CGPoint(x: webView.bounds.midX, y: webView.bounds.midY))
+        if abs(webView.pageZoom - targetPageZoom) > 0.001 {
+            webView.pageZoom = targetPageZoom
+        }
+        if abs(webView.magnification - 1.0) > 0.001 {
+            webView.setMagnification(1.0, centeredAt: CGPoint.zero)
         }
         isRestoringDocumentZoom = false
         updateZoomControls()
@@ -917,6 +923,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     @objc func reload(_ sender: Any?) { if let currentURL { openDocument(currentURL, preserveScroll: true) } }
     @objc func toggleFullWidth(_ sender: Any?) {
+        preserveReadingAnchor()
         isFullWidth.toggle()
         UserDefaults.standard.set(isFullWidth, forKey: "layout.fullWidth")
         updateFullWidthControl()
@@ -1008,43 +1015,97 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             menuItem.state = isSidebarVisible ? .on : .off
             menuItem.title = isSidebarVisible ? "Hide Table of Contents" : "Show Table of Contents"
         }
-        if menuItem.action == #selector(zoomIn(_:)) { return targetMagnification < (ZoomPolicy.maximum - 0.005) }
-        if menuItem.action == #selector(zoomOut(_:)) { return targetMagnification > (ZoomPolicy.minimum + 0.005) }
+        if menuItem.action == #selector(zoomIn(_:)) { return effectiveZoom < (ZoomPolicy.maximum - 0.005) }
+        if menuItem.action == #selector(zoomOut(_:)) { return effectiveZoom > (ZoomPolicy.minimum + 0.005) }
         if menuItem.action == #selector(resetZoom(_:)) {
-            return abs(targetMagnification - 1.0) > 0.005 || abs(webView.pageZoom - 1.0) > 0.005
+            return abs(effectiveZoom - 1.0) > 0.005
         }
         return true
     }
 
     @objc func zoomIn(_ sender: Any?) {
-        let next = ZoomPolicy.nextStep(from: targetMagnification)
-        setUnifiedMagnification(next)
+        let current = effectiveZoom
+        let next = ZoomPolicy.nextStep(from: current)
+        applyPageZoom(next)
     }
 
     @objc func zoomOut(_ sender: Any?) {
-        let prev = ZoomPolicy.previousStep(from: targetMagnification)
-        setUnifiedMagnification(prev)
+        let current = effectiveZoom
+        let prev = ZoomPolicy.previousStep(from: current)
+        applyPageZoom(prev)
     }
 
     @objc func resetZoom(_ sender: Any?) {
-        webView.pageZoom = 1.0
-        setUnifiedMagnification(1.0)
+        applyPageZoom(1.0, resetMagnification: true)
     }
 
     @objc private func zoomFieldAction(_ sender: Any?) {
         window?.makeFirstResponder(nil)
     }
 
-    private func setUnifiedMagnification(_ magnification: CGFloat, centeredAt: CGPoint? = nil) {
-        let clamped = ZoomPolicy.clamp(magnification)
-        targetMagnification = clamped
-        let center = centeredAt ?? CGPoint(x: webView.bounds.midX, y: webView.bounds.midY)
-        webView.setMagnification(clamped, centeredAt: center)
+    private func preserveReadingAnchor() {
+        let captureAnchorJS = """
+        (() => {
+            const x = window.innerWidth / 2;
+            const y = window.innerHeight / 2;
+            let el = document.elementFromPoint(x, y);
+            while (el && el !== document.body && el !== document.documentElement) {
+                if (['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'TR', 'BLOCKQUOTE', 'TABLE', 'IMG'].includes(el.tagName)) {
+                    break;
+                }
+                el = el.parentElement;
+            }
+            if (!el || el === document.body || el === document.documentElement) {
+                el = document.elementFromPoint(x, 100) || document.body;
+            }
+            const prev = document.querySelector('[data-mdvu-anchor]');
+            if (prev) prev.removeAttribute('data-mdvu-anchor');
+            if (el && el !== document.body && el !== document.documentElement) {
+                el.setAttribute('data-mdvu-anchor', 'true');
+                return { top: el.getBoundingClientRect().top, ratio: window.scrollY / (document.documentElement.scrollHeight || 1) };
+            }
+            return { top: 0, ratio: window.scrollY / (document.documentElement.scrollHeight || 1) };
+        })()
+        """
+        webView.evaluateJavaScript(captureAnchorJS) { [weak self] result, _ in
+            guard let self else { return }
+            let dict = (result as? [String: Any]) ?? [:]
+            let oldTop = (dict["top"] as? Double) ?? 0
+            let oldRatio = (dict["ratio"] as? Double) ?? 0
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(40)) { [weak self] in
+                guard let self else { return }
+                let restoreAnchorJS = """
+                (() => {
+                    const el = document.querySelector('[data-mdvu-anchor]');
+                    if (el) {
+                        const newRect = el.getBoundingClientRect();
+                        const delta = newRect.top - (\(oldTop));
+                        window.scrollBy(0, delta);
+                        el.removeAttribute('data-mdvu-anchor');
+                    } else {
+                        window.scrollTo(0, (\(oldRatio)) * document.documentElement.scrollHeight);
+                    }
+                })()
+                """
+                self.webView.evaluateJavaScript(restoreAnchorJS)
+            }
+        }
+    }
+
+    func applyPageZoom(_ zoom: CGFloat, resetMagnification: Bool = false) {
+        let clamped = ZoomPolicy.clamp(zoom)
+        targetPageZoom = clamped
+        preserveReadingAnchor()
+        if resetMagnification || abs(webView.magnification - 1.0) > 0.005 {
+            webView.setMagnification(1.0, centeredAt: CGPoint.zero)
+        }
+        webView.pageZoom = clamped
         updateZoomControls()
     }
 
-    private func updateZoomControls() {
-        let current = targetMagnification
+    func updateZoomControls() {
+        let current = effectiveZoom
         zoomMinusButton?.isEnabled = current > (ZoomPolicy.minimum + 0.005)
         zoomPlusButton?.isEnabled = current < (ZoomPolicy.maximum - 0.005)
 
@@ -1054,6 +1115,31 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             editor.string = formatted
             editor.selectAll(nil)
         }
+    }
+
+    func syncLiveMagnification(ended: Bool = false) {
+        updateZoomControls()
+        if ended {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.updateZoomControls()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                self?.updateZoomControls()
+            }
+        }
+    }
+
+    func handleSmartMagnifyAnimation() {
+        let start = CACurrentMediaTime()
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] t in
+            guard let self else { t.invalidate(); return }
+            self.updateZoomControls()
+            if CACurrentMediaTime() - start > 0.35 {
+                t.invalidate()
+                self.updateZoomControls()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     func isPointInWebView(_ pointInWindow: NSPoint) -> Bool {
@@ -1068,49 +1154,29 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let delta = event.isDirectionInvertedFromDevice ? -rawDelta : rawDelta
         let factor: CGFloat = event.hasPreciseScrollingDeltas ? 0.005 : 0.08
         let scale = max(0.2, 1.0 + delta * factor)
-        let currentMagnification = targetMagnification
-        let newMagnification = ZoomPolicy.clamp(currentMagnification * scale)
-        guard abs(newMagnification - currentMagnification) > 0.0005 else { return }
+        let curMag = webView.magnification
+        let newMagnification = ZoomPolicy.clamp(curMag * scale)
+        guard abs(newMagnification - curMag) > 0.0005 else { return }
 
         let mouseInWindow = event.locationInWindow
         let mouseInWebView = webView.convert(mouseInWindow, from: nil)
-        let centerPoint: CGPoint
-        if webView.bounds.contains(mouseInWebView) {
-            centerPoint = mouseInWebView
-        } else {
-            centerPoint = CGPoint(x: webView.bounds.midX, y: webView.bounds.midY)
-        }
-        setUnifiedMagnification(newMagnification, centeredAt: centerPoint)
+        let centerPoint = webView.bounds.contains(mouseInWebView) ? mouseInWebView : CGPoint(x: webView.bounds.midX, y: webView.bounds.midY)
+        applyMagnification(newMagnification, centeredAt: centerPoint)
     }
 
-    func handleMagnify(with event: NSEvent) {
-        let delta = event.magnification
-        guard delta != 0 else { return }
-        let currentMagnification = targetMagnification
-        let scale = max(0.1, 1.0 + delta)
-        let newMagnification = ZoomPolicy.clamp(currentMagnification * scale)
-        guard abs(newMagnification - currentMagnification) > 0.0005 else { return }
+    func applyMagnification(_ newMag: CGFloat, centeredAt mousePoint: CGPoint) {
+        let curMag = webView.magnification
+        let clamped = ZoomPolicy.clamp(newMag)
+        guard abs(clamped - curMag) > 0.0005 else { return }
 
-        let mouseInWindow = event.locationInWindow
-        let mouseInWebView = webView.convert(mouseInWindow, from: nil)
-        let centerPoint: CGPoint
-        if webView.bounds.contains(mouseInWebView) {
-            centerPoint = mouseInWebView
-        } else {
-            centerPoint = CGPoint(x: webView.bounds.midX, y: webView.bounds.midY)
-        }
-        setUnifiedMagnification(newMagnification, centeredAt: centerPoint)
-    }
+        let mx = Double(mousePoint.x)
+        let my = Double(mousePoint.y)
+        let deltaX = mx * (1.0 / Double(curMag) - 1.0 / Double(clamped))
+        let deltaY = my * (1.0 / Double(curMag) - 1.0 / Double(clamped))
 
-    func handleSmartMagnify(with event: NSEvent) {
-        if abs(targetMagnification - 1.0) > 0.05 {
-            resetZoom(nil)
-        } else {
-            let mouseInWindow = event.locationInWindow
-            let mouseInWebView = webView.convert(mouseInWindow, from: nil)
-            let centerPoint = webView.bounds.contains(mouseInWebView) ? mouseInWebView : CGPoint(x: webView.bounds.midX, y: webView.bounds.midY)
-            setUnifiedMagnification(1.5, centeredAt: centerPoint)
-        }
+        webView.setMagnification(clamped, centeredAt: CGPoint.zero)
+        webView.evaluateJavaScript("window.scrollBy(\(deltaX), \(deltaY))")
+        updateZoomControls()
     }
 
     @objc func openFileDialog(_ sender: Any? = nil) {
@@ -1341,11 +1407,13 @@ final class DocumentWindow: NSWindow {
             }
         }
         if event.type == .magnify {
-            controller?.handleMagnify(with: event)
+            super.sendEvent(event)
+            controller?.syncLiveMagnification(ended: event.phase == .ended || event.phase == .cancelled)
             return
         }
         if event.type == .smartMagnify {
-            controller?.handleSmartMagnify(with: event)
+            super.sendEvent(event)
+            controller?.handleSmartMagnifyAnimation()
             return
         }
         super.sendEvent(event)

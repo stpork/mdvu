@@ -262,4 +262,27 @@ struct MarkdownParserTests {
 
         #expect(abs(controller.currentMagnificationLevel - 1.20) < 0.001)
     }
+
+    @MainActor
+    @Test func zoomPinchAndDiscreteSteps() {
+        let fixture = URL(fileURLWithPath: "Tests/Fixtures/kitchen-sink-small.md").standardizedFileURL
+        let profiler = StartupProfiler()
+        let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
+
+        #expect(abs(controller.effectiveZoom - 1.0) < 0.001)
+
+        // Mouse wheel magnification
+        controller.applyMagnification(1.4, centeredAt: CGPoint(x: 200, y: 150))
+        #expect(abs(controller.effectiveZoom - 1.4) < 0.01)
+
+        // Reset zoom resets both pageZoom and magnification
+        controller.resetZoom(nil)
+        #expect(abs(controller.effectiveZoom - 1.0) < 0.001)
+
+        // Discrete zoom steps
+        controller.zoomIn(nil)
+        #expect(abs(controller.effectiveZoom - 1.1) < 0.001)
+        controller.zoomOut(nil)
+        #expect(abs(controller.effectiveZoom - 1.0) < 0.001)
+    }
 }
