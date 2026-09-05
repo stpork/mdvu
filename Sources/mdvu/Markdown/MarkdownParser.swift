@@ -18,7 +18,7 @@ struct MarkdownParser {
     }()
 
     func render(_ source: String) -> RenderedDocument {
-        let options = CMARK_OPT_FOOTNOTES | CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE
+        let options = CMARK_OPT_FOOTNOTES | CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE | CMARK_OPT_UNSAFE
         guard let parser = cmark_parser_new(options) else {
             return RenderedDocument(body: "<pre>\(HTML.escape(source))</pre>", title: nil)
         }

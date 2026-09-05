@@ -12,14 +12,24 @@
         ▼
  ┌─────────────────────────────────────────────────────────────┐
  │ MarkdownPipeline (Background Queue)                         │
- │  1. Dialect Preprocessing:                                  │
- │     • github: YAML front-matter conversion                  │
- │     • obsidian: Callouts ([!NOTE]), [[wikilinks]], ![[embed]]│
- │     • generic: Strict CommonMark compliance                 │
- │  2. Parsing: cmark-gfm in safe mode with pinned extensions  │
- │     (tables, task lists, autolinks, strikethrough)          │
- │  3. AST Extraction: Extracts H1-H6 metadata for native TOC  │
- │  4. HTML Assembly: HTMLDocument embeds inline CSS, prism    │
+ │  1. CodeFenceProtector: Isolates all code fences (```, ~~~, │
+ │     and nested ````) from inline transformations            │
+ │  2. Dialect Preprocessing Pipeline:                         │
+ │     • FrontMatterExtension: YAML metadata table conversion  │
+ │     • GitLabTOCExtension: [[_TOC_]] & [TOC] placeholders    │
+ │     • AdmonitionExtension: MkDocs (!!!, ???) & Docusaurus/  │
+ │       VuePress (:::note) mapped cleanly to native callouts  │
+ │     • ObsidianExtension: Callouts ([!NOTE]), [[wikilinks]], │
+ │       and media embeds (![[image.png]])                     │
+ │     • CriticMarkupExtension: {++add++}, {--del--},          │
+ │       {~~old~>new~~}, {==mark==}, and {>>comment<<}         │
+ │     • SubSuperscriptExtension: ~sub~, ^sup^, ^^underline^^  │
+ │       (strictly preserving GFM ~~strikethrough~~)           │
+ │  3. Parsing: cmark-gfm AST parsing with extensions:         │
+ │     tables, task lists, autolinks, footnotes, strikethrough │
+ │     and tagfilter XSS prevention                            │
+ │  4. AST Extraction: Extracts H1-H6 metadata for native TOC  │
+ │  5. HTML Assembly: HTMLDocument embeds inline CSS, prism    │
  │     tokens, and async diagram placeholders                  │
  └─────────────────────────────────────────────────────────────┘
         │
@@ -27,6 +37,7 @@
  ┌─────────────────────────────────────────────────────────────┐
  │ AppKit & WebKit Integration (Main Thread)                   │
  │  • WKWebView renders HTML via loadHTMLString                │
+ │  • 120 FPS CoreAnimation GPU-layer zoom scaling             │
  │  • Preserves user-defined targetMagnification across loads  │
  │  • Restores scroll position ratio asynchronously            │
  └─────────────────────────────────────────────────────────────┘
@@ -37,6 +48,9 @@
  │  • Evaluates pending diagrams on page:                      │
  │    - Mermaid 11.17.2 + ZenUML 0.2.3 (mermaid.lzma)          │
  │    - PlantUML 1.2026.7 + Viz.js 3.24.0 (plantuml.lzma)      │
+ │  • Frame-Budgeted Rendering: Yields every 16 ms to prevent  │
+ │    main-thread stalls on 300+ diagram documents             │
+ │  • Auto-Quoting Resilience for requirementDiagram           │
  │  • On-Demand Decompression: 0 ms overhead if no diagrams    │
  │  • Renders SVG diagrams to SHA-256 disk cache               │
  │  • In-page find highlights matches & reports live counts    │
@@ -52,15 +66,15 @@
 * **Persistent Window Zoom**:
   * Tracks user scale preference via `targetMagnification` (bounded between `0.10` [10%] and `5.00` [500%]).
   * Guards against WebKit's automatic internal viewport resets to `1.0` during `loadHTMLString`.
-  * Restores `setMagnification` in `webView(_:didFinish:)` so Back, Forward, link clicks, and file edits never discard user zoom.
+  * Restores magnification in `webView(_:didFinish:)` so Back, Forward, link clicks, and file edits never discard user zoom.
 * **Titlebar File Open & Proxy Icon**:
   * Intercepts title text clicks to trigger `NSOpenPanel` as a sheet modal.
   * Preserves window dragging (4 pt drag threshold), macOS directory hierarchy popup (`⌘-click`), and file dragging via the document proxy icon.
   * Excludes `contentView` during title field lookup to prevent false matches against sidebar items.
 
 ### B. Event Interception & Gesture Routing (`DocumentWindow`)
-* **Pinch-to-Zoom (`.magnify`)**: Intercepted in `sendEvent`, smoothly adjusting `targetMagnification` around the gesture center point and updating toolbar indicators on every frame.
-* **Smart Magnify (`.smartMagnify`)**: Double-tap with two fingers toggles between 100% and 150% zoom.
+* **Pinch-to-Zoom (`.magnify`)**: Delivered directly via `super.sendEvent` to WebKit for zero-latency 60–120 FPS GPU CoreAnimation layer magnification, with toolbar percentage synced live on every gesture event.
+* **Smart Magnify (`.smartMagnify`)**: Double-tap with two fingers toggles smoothly between 100% and 150% zoom.
 * **Momentum Leak Protection**: Absorbs remaining momentum scroll events when `⌘` is released during zoom gestures, preventing unwanted document jumps.
 * **Two-Finger Navigation vs. Zoom Conflict**:
   * When `!canGoBack && !canGoForward`, horizontal swipes are discarded without accumulating deltas or touching zoom.
@@ -68,7 +82,9 @@
 
 ### C. Standardized Zoom Controls (`ZoomPolicy` & `ZoomLevelTextField`)
 * **Compound Toolbar Item**: `[-][ 100% ][+]` built as an `NSStackView` with `minus` button, editable text field, and `plus` button.
-* **Stepping & Snapping**: Steps by 10% and snaps fractional pinch values to clean 10% multiples (e.g. `114%` $\to$ `120%` or `110%`).
+* **Magnetic Snapping ($\pm 2.5\%$)**: Micro-gestures within $\pm 2.5\%$ of clean 10% multiples (100%, 150%, 200%, 300%) snap cleanly to round numbers, eliminating jitter and phantom presentation artifacts like `201%` or `101%`.
+* **Bounce-Back Settling Engine**: Rapid pinch-out gestures that bounce back against WebKit's viewport boundaries settle at exact `1.0` (`100%`) via trailing spring timers (50 ms, 150 ms, 300 ms).
+* **Stepping & Snapping**: Buttons and `⌘+` / `⌘-` step by 10% and snap to clean 10% multiples.
 * **Active Field Editor Sync**: Even if the cursor is focused inside `ZoomLevelTextField`, changing zoom level immediately updates the active `NSTextView` string and selection.
 * **Double-Click Reset**: Double-clicking the field immediately resets zoom to `100%` (`⌘0`).
 
@@ -82,14 +98,18 @@
 
 * **Engine Specifications & Versions**:
   * **Mermaid 11.17.2**:
-    * **Standard Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Component`.
+    * **Standard Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`.
     * **Extended Grammars**: `ishikawa-beta` (fishbone), `swimlane-beta` (swimlanes), `packet-beta`, `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, `xychart-beta`.
   * **ZenUML Plugin 0.2.3** (`@mermaid-js/mermaid-zenuml`): Sequence diagrams embedded inside ````mermaid`` code blocks registered via `mermaid.registerExternalDiagrams`.
   * **PlantUML Core 1.2026.7** (`@plantuml/core`) + **Viz.js 3.24.0** (Graphviz 14.1.1):
     * 100% client-side WebAssembly / TeaVM execution. **Zero Java runtime (JVM/JRE) requirement.**
     * Supports code fences ````plantuml`` and ````puml``.
-    * Renders sequence, class, state, activity, component, and use-case models.
+    * Renders sequence, class, state, activity, component, object, deployment, and use-case models, plus JSON/YAML trees, Salt wireframes, and network diagrams.
     * Automatic dark mode adaptation (`skinparam backgroundColor transparent`).
+* **Frame-Budgeted Batch Rendering**:
+  * JavaScript diagram dispatcher tracks frame execution time (`performance.now()`) and yields via `requestAnimationFrame` whenever a 16 ms budget is exceeded. This allows micro-diagrams to batch render at 30+ diagrams per frame while preventing main-thread lockups on heavy documents.
+* **Grammar Preprocessing Resilience**:
+  * Custom grammar cleaner automatically fixes common parser traps (e.g. auto-quoting unquoted identifiers with hyphens in Mermaid `requirementDiagram`).
 * **LZMA Ultra Compression**:
   * Bundled assets are compressed using **LZMA Ultra** (`preset 9 | PRESET_EXTREME`, `nice=273`, `mf=bt4`, `dict=64MB`):
     * `mermaid.lzma`: **1.33 MB** (compresses 7.02 MB of raw minified JS).
@@ -109,9 +129,10 @@
 1. **Prewarmed WebKit**: `WebKitPrewarmer` initializes a lightweight background `WKWebView` during `applicationWillFinishLaunching`, shaving ~150 ms off initial document paint time.
 2. **Cancellable Background Pipelines**: Parsing runs on a dedicated user-initiated `OperationQueue`. Quickly switching files in directory mode cancels in-flight operations immediately.
 3. **Zero Reflection & Metadata**: Compiled with `-Osize -Xfrontend -disable-reflection-metadata -Xfrontend -disable-reflection-names`, stripping Swift metadata overhead.
-4. **Stripped Binary**: Single-architecture Mach-O executable is **572 KB** (`strip -u -r`). The complete `.app` bundle is only **3.2 MB** (Universal bundle **4.2 MB**, compressed release archive **2.2 MB**).
-5. **Lazy Client-Side Processing**: In-page syntax highlighting uses `IntersectionObserver` (800px margin) to stream code tokenization lazily without blocking initial display. Preprocessor directives (`#include`, `#define`) and C-style block comments are recognized cleanly without allocating intermediate token arrays. Heading anchors and TOC serialization are deduplicated to eliminate redundant WebKit IPC messages.
-6. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
+4. **Stripped Binary**: Single-architecture Mach-O executable is **572 KB** (`strip -u -r`). The complete `.app` bundle is only **3.2 MB** (Universal bundle **4.2 MB**, compressed release archive **~2.2 MB**).
+5. **High-Throughput Markdown Pipeline**: Reference C parsing via `cmark-gfm` processes content at **4.5+ MB/s** (~35 ms for 4,600+ line documents; ~350 ms for 13,900+ line stress files).
+6. **Lazy Client-Side Processing**: In-page syntax highlighting uses `IntersectionObserver` (800px margin) to stream code tokenization lazily without blocking initial display. Preprocessor directives (`#include`, `#define`) and C-style block comments are recognized cleanly without allocating intermediate token arrays. Heading anchors and TOC serialization are deduplicated to eliminate redundant WebKit IPC messages.
+7. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
 
 ---
 

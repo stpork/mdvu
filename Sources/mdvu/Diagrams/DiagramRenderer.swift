@@ -27,7 +27,7 @@ struct MermaidRenderer: DiagramRenderer {
     func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw MermaidError.webRuntimeRequired }
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String {
         let key = cache.key(renderer: identifier, version: version, source: source, theme: theme, options: "strict-transparent-v1")
-        if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\">\(svg)</figure>" }
+        if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\" data-renderer=\"mermaid\">\(svg)</figure>" }
         return "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"\(key)\"><pre>\(HTML.escape(source))</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>"
     }
     enum MermaidError: Error { case webRuntimeRequired }
@@ -42,7 +42,7 @@ struct PlantUMLRenderer: DiagramRenderer {
     func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw PlantUMLError.webRuntimeRequired }
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String {
         let key = cache.key(renderer: identifier, version: version, source: source, theme: theme, options: "plantuml-transparent-v1")
-        if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\">\(svg)</figure>" }
+        if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\" data-renderer=\"plantuml\">\(svg)</figure>" }
         return "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"\(key)\"><pre>\(HTML.escape(source))</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>"
     }
     enum PlantUMLError: Error { case webRuntimeRequired }

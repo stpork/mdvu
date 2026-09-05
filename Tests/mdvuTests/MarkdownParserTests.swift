@@ -543,5 +543,95 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("data-renderer=\"mermaid\""))
         #expect(doc.body.contains("data-renderer=\"plantuml\""))
     }
+
+    @Test func testCriticMarkupRendering() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        Here is {++added text++} and {--deleted text--}.
+        Substitution: {~~old~>new~~}.
+        Highlight: {==important==}.
+        Comment: {>>note to author<<}.
+
+        ```text
+        {++code block content++}
+        ```
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("<ins class=\"critic-add\">added text</ins>"))
+        #expect(doc.body.contains("<del class=\"critic-del\">deleted text</del>"))
+        #expect(doc.body.contains("<del class=\"critic-del\">old</del><ins class=\"critic-add\">new</ins>"))
+        #expect(doc.body.contains("<mark class=\"critic-mark\">important</mark>"))
+        #expect(doc.body.contains("<span class=\"critic-comment\""))
+        #expect(doc.body.contains("{++code block content++}"))
+    }
+
+    @Test func testSubSuperscriptAndStrikethrough() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        Water is H~2~O and energy is E = mc^2^.
+        Underline is ^^emphasized^^.
+        GFM strikethrough: ~~deleted content~~.
+
+        ```text
+        ~not-sub~ ^not-sup^
+        ```
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("H<sub>2</sub>O"))
+        #expect(doc.body.contains("mc<sup>2</sup>"))
+        #expect(doc.body.contains("<u>emphasized</u>"))
+        #expect(doc.body.contains("<del>deleted content</del>"))
+        #expect(!doc.body.contains("<sub>deleted content</sub>"))
+        #expect(doc.body.contains("~not-sub~ ^not-sup^"))
+    }
+
+    @Test func testAdmonitionAndContainers() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        !!! note "Custom Title"
+            This is a note body.
+
+        ???+ tip
+            Collapsible tip.
+
+        :::warning
+        This is a warning block.
+        :::
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("callout-note"))
+        #expect(doc.body.contains("Custom Title"))
+        #expect(doc.body.contains("callout-tip"))
+        #expect(doc.body.contains("callout-warning"))
+    }
+
+    @Test func testGitLabTOCPlaceholder() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        # Documentation
+
+        [[_TOC_]]
+
+        ## Next Section
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("toc-placeholder"))
+        #expect(doc.body.contains("Table of Contents"))
+    }
+
+    @Test func testZoomPolicySnapping() {
+        // Snapping within ±2.5% of 10% multiples
+        #expect(ZoomPolicy.formatPercentage(1.0) == "100%")
+        #expect(ZoomPolicy.formatPercentage(1.01) == "100%")
+        #expect(ZoomPolicy.formatPercentage(1.02) == "100%")
+        #expect(ZoomPolicy.formatPercentage(0.98) == "100%")
+        #expect(ZoomPolicy.formatPercentage(2.01) == "200%")
+        #expect(ZoomPolicy.formatPercentage(1.52) == "150%")
+        #expect(ZoomPolicy.formatPercentage(3.02) == "300%")
+
+        // Outside snapping tolerance remains exact
+        #expect(ZoomPolicy.formatPercentage(1.34) == "134%")
+        #expect(ZoomPolicy.formatPercentage(1.26) == "126%")
+    }
 }
 
