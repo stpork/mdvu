@@ -18,7 +18,7 @@ struct DiagramRegistry {
 }
 
 struct MermaidRenderer: DiagramRenderer {
-    let identifier = "mermaid"; let version = "11.12.2"
+    let identifier = "mermaid"; let version = "11.17.2"
     func canRender(language: String) -> Bool { language == "mermaid" }
     func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw MermaidError.webRuntimeRequired }
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String {

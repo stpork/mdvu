@@ -128,7 +128,10 @@ struct MarkdownParserTests {
 
     @Test func compressedMermaidResourceLoads() {
         #expect(ResourceLoader.mermaidJavaScript.contains("mermaid"))
-        #expect(ResourceLoader.mermaidJavaScript.utf8.count > 2_000_000)
+        #expect(ResourceLoader.mermaidJavaScript.contains("mermaid-zenuml"))
+        #expect(ResourceLoader.mermaidJavaScript.contains("swimlane"))
+        #expect(ResourceLoader.mermaidJavaScript.contains("ishikawa"))
+        #expect(ResourceLoader.mermaidJavaScript.utf8.count > 5_000_000)
     }
 
     @Test func inPageFindResourcesArePresent() {
@@ -200,22 +203,22 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func documentWindowTitleClickAndLoad() {
-        let fixture = Self.fixtureURL("kitchen-sink-small.md")
+        let fixture = Self.fixtureURL("test-light.md")
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
         guard let win = controller.window as? DocumentWindow else {
             #expect(Bool(false))
             return
         }
-        #expect(win.title == "kitchen-sink-small.md")
+        #expect(win.title == "test-light.md")
 
         var changedURL: URL?
         controller.onDocumentChange = { url in changedURL = url }
 
-        let target = Self.fixtureURL("kitchen-sink.md")
+        let target = Self.fixtureURL("test-medium.md")
         controller.loadTargetURL(target)
 
-        #expect(win.title == "kitchen-sink.md")
+        #expect(win.title == "test-medium.md")
         #expect(changedURL?.path == target.path)
     }
 
@@ -257,7 +260,7 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func zoomPersistsAcrossDocumentLoad() {
-        let fixture = Self.fixtureURL("kitchen-sink-small.md")
+        let fixture = Self.fixtureURL("test-light.md")
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
 
@@ -265,7 +268,7 @@ struct MarkdownParserTests {
         controller.zoomIn(nil) // 120%
         #expect(abs(controller.currentMagnificationLevel - 1.20) < 0.001)
 
-        let target = Self.fixtureURL("kitchen-sink.md")
+        let target = Self.fixtureURL("test-medium.md")
         controller.loadTargetURL(target)
 
         #expect(abs(controller.currentMagnificationLevel - 1.20) < 0.001)
@@ -273,7 +276,7 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func zoomPinchAndDiscreteSteps() {
-        let fixture = Self.fixtureURL("kitchen-sink-small.md")
+        let fixture = Self.fixtureURL("test-light.md")
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
 
@@ -464,7 +467,7 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func documentWindowControllerToggles() {
-        let fixture = Self.fixtureURL("kitchen-sink-small.md")
+        let fixture = Self.fixtureURL("test-light.md")
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
 
