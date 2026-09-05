@@ -54,6 +54,9 @@ install: app
 	mkdir -p "$(HOME)/Applications"
 	ditto "$(APP)" "$(HOME)/Applications/mdvu.app"
 	test ! -w /Applications || ditto "$(APP)" "/Applications/mdvu.app"
+	mkdir -p "$(HOME)/.local/bin"
+	ln -sf "$$(test -w /Applications && echo /Applications || echo $(HOME)/Applications)/mdvu.app/Contents/MacOS/mdvu" "$(HOME)/.local/bin/mdvu"
+	test ! -w /usr/local/bin || ln -sf /Applications/mdvu.app/Contents/MacOS/mdvu /usr/local/bin/mdvu
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"
