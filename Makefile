@@ -1,40 +1,62 @@
 SHELL := /bin/sh
-APP := dist/mdv.app
-BINARY ?= .build/release/mdv
-RESOURCE_BUNDLE ?= .build/release/mdv_mdv.bundle
+PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+APP := $(PROJECT_ROOT)/dist/mdvu.app
+BINARY ?= $(PROJECT_ROOT)/.build/release/mdvu
+RESOURCE_BUNDLE ?= $(PROJECT_ROOT)/.build/release/mdvu_mdvu.bundle
 SIGN_IDENTITY ?= -
 CODESIGN_OPTIONS ?=
+DEVELOPER_DIR := $(shell xcode-select -p)
+TESTING_FRAMEWORK_DIR := $(DEVELOPER_DIR)/Library/Developer/Frameworks
+TESTING_PLUGIN_DIR := $(DEVELOPER_DIR)/usr/lib/swift/host/plugins/testing
+ifneq ($(wildcard $(TESTING_FRAMEWORK_DIR)/Testing.framework),)
+TEST_FLAGS := -Xswiftc -F -Xswiftc $(TESTING_FRAMEWORK_DIR) \
+	-Xlinker -F$(TESTING_FRAMEWORK_DIR) \
+	-Xlinker -rpath -Xlinker $(TESTING_FRAMEWORK_DIR) \
+	-Xlinker -rpath -Xlinker $(DEVELOPER_DIR)/Library/Developer/usr/lib
+ifneq ($(wildcard $(TESTING_PLUGIN_DIR)),)
+TEST_FLAGS += -Xswiftc -plugin-path -Xswiftc $(TESTING_PLUGIN_DIR)
+endif
+endif
 
-.PHONY: all release test app package universal archive install benchmark update-snapshot visual-test clean
+SWIFT_RELEASE_FLAGS := -Xswiftc -Osize -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
+
+.PHONY: all release test app package universal archive publish install benchmark update-snapshot visual-test clean
 all:
-	swift build
+	cd "$(PROJECT_ROOT)" && swift build
 release:
-	swift build -c release
+	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
 test:
-	swift test
+	cd "$(PROJECT_ROOT)" && swift test $(TEST_FLAGS)
 benchmark: release
-	./scripts/benchmark.sh
+	"$(PROJECT_ROOT)/scripts/benchmark.sh"
 update-snapshot: all
-	./scripts/update-snapshot.sh
+	"$(PROJECT_ROOT)/scripts/update-snapshot.sh"
 visual-test: all
-	./scripts/visual-regression.sh
+	"$(PROJECT_ROOT)/scripts/visual-regression.sh"
 app: release package
 package:
 	rm -rf "$(APP)"
-	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources"
-	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdv"
-	test ! -d "$(RESOURCE_BUNDLE)" || cp -R "$(RESOURCE_BUNDLE)" "$(APP)/Contents/Resources/"
-	test ! -f packaging/mdv.icns || cp packaging/mdv.icns "$(APP)/Contents/Resources/"
-	cp packaging/Info.plist "$(APP)/Contents/Info.plist"
+	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle"
+	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdvu"
+	strip -u -r "$(APP)/Contents/MacOS/mdvu"
+	cp "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
+	test ! -f "$(PROJECT_ROOT)/packaging/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/mdvu.icns" "$(APP)/Contents/Resources/"
+	cp "$(PROJECT_ROOT)/packaging/Info.plist" "$(APP)/Contents/Info.plist"
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"
 universal:
-	./scripts/build-universal.sh
+	"$(PROJECT_ROOT)/scripts/build-universal.sh"
 archive: universal
-	./scripts/package-release.sh
+	"$(PROJECT_ROOT)/scripts/package-release.sh"
+publish:
+	"$(PROJECT_ROOT)/scripts/publish-release.sh" $(if $(filter 1,$(YES)),-y,)
 install: app
 	mkdir -p "$(HOME)/Applications"
-	ditto "$(APP)" "$(HOME)/Applications/mdv.app"
+	ditto "$(APP)" "$(HOME)/Applications/mdvu.app"
+	test ! -w /Applications || ditto "$(APP)" "/Applications/mdvu.app"
+	mkdir -p "$(HOME)/.local/bin"
+	ln -sf "$$(test -w /Applications && echo /Applications || echo $(HOME)/Applications)/mdvu.app/Contents/MacOS/mdvu" "$(HOME)/.local/bin/mdvu"
+	test ! -w /usr/local/bin || ln -sf /Applications/mdvu.app/Contents/MacOS/mdvu /usr/local/bin/mdvu
 clean:
-	swift package clean
-	rm -rf dist
+	cd "$(PROJECT_ROOT)" && swift package clean
+	rm -rf "$(PROJECT_ROOT)/dist"

@@ -2,23 +2,23 @@
 import PackageDescription
 
 let package = Package(
-    name: "mdv",
+    name: "mdvu",
     platforms: [.macOS(.v13)],
-    products: [.executable(name: "mdv", targets: ["mdv"])],
+    products: [.executable(name: "mdvu", targets: ["mdvu"])],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-cmark.git", exact: "0.8.0")
     ],
     targets: [
         .executableTarget(
-            name: "mdv",
+            name: "mdvu",
             dependencies: [
                 .product(name: "cmark-gfm", package: "swift-cmark"),
                 .product(name: "cmark-gfm-extensions", package: "swift-cmark")
             ],
-            path: "Sources/mdv",
+            path: "Sources/mdvu",
             resources: [.process("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        .testTarget(name: "mdvTests", dependencies: ["mdv"], path: "Tests/mdvTests")
+        .testTarget(name: "mdvuTests", dependencies: ["mdvu"], path: "Tests/mdvuTests")
     ]
 )

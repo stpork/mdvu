@@ -1,0 +1,61 @@
+import Foundation
+
+final class FileWatcher {
+    private var source: DispatchSourceFileSystemObject?
+    private var pending: DispatchWorkItem?
+    private let callback: () -> Void
+    private let queue = DispatchQueue(label: "com.mdvu.file-watcher", qos: .utility)
+    private let url: URL
+
+    init?(url: URL, callback: @escaping () -> Void) {
+        self.url = url
+        self.callback = callback
+        guard startWatching() else { return nil }
+    }
+
+    deinit { source?.cancel() }
+
+    @discardableResult
+    private func startWatching() -> Bool {
+        let fd = open(url.path, O_EVTONLY)
+        guard fd >= 0 else { return false }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .rename, .delete, .extend],
+            queue: queue
+        )
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
+            let data = source.data
+            if data.contains(.delete) || data.contains(.rename) {
+                source.cancel()
+                self.rearm()
+            }
+            self.changed()
+        }
+        source.setCancelHandler { close(fd) }
+        self.source = source
+        source.resume()
+        return true
+    }
+
+    private func rearm() {
+        queue.asyncAfter(deadline: .now() + .milliseconds(100)) { [weak self] in
+            guard let self else { return }
+            if !self.startWatching() {
+                self.queue.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
+                    _ = self?.startWatching()
+                }
+            }
+        }
+    }
+
+    private func changed() {
+        pending?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            DispatchQueue.main.async { self?.callback() }
+        }
+        pending = item
+        queue.asyncAfter(deadline: .now() + .milliseconds(180), execute: item)
+    }
+}
