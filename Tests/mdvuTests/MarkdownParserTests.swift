@@ -512,4 +512,26 @@ struct MarkdownParserTests {
         controller.toggleContents(nil)
         #expect(controller.isSidebarVisible == initialSplitState)
     }
+
+    @Test func testCompleteValidationEcosystem() throws {
+        let fixture = Self.fixtureURL("test-complete.md")
+        let data = try Data(contentsOf: fixture)
+        let source = String(decoding: data, as: UTF8.self)
+
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+        let doc = pipeline.render(source)
+
+        // Title extracted from first heading
+        #expect(doc.title != nil)
+
+        // Validation markers
+        #expect(doc.body.contains("MDVU-COMPLETE-BEGIN"))
+        #expect(doc.body.contains("MDVU-COMPLETE-MIDDLE"))
+        #expect(doc.body.contains("MDVU-COMPLETE-END"))
+
+        // Diagram placeholders
+        #expect(doc.body.contains("data-renderer=\"mermaid\""))
+        #expect(doc.body.contains("data-renderer=\"plantuml\""))
+    }
 }
+
