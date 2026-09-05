@@ -1,4 +1,4 @@
-# mdv fixture — Unicode: Ääkköset 中文 العربية 🚀
+# mdvu fixture — Unicode: Ääkköset 中文 العربية 🚀
 
 > [!NOTE] Native and fast
 > Callouts, **formatting**, `inline code`, and [links](https://example.com).
@@ -18,9 +18,9 @@ print(greeting)
 
 ```mermaid
 sequenceDiagram
-  User->>mdv: Open file
-  mdv-->>User: Text first
-  mdv-->>User: Diagram later
+  User->>mdvu: Open file
+  mdvu-->>User: Text first
+  mdvu-->>User: Diagram later
 ```
 
 # Sirius4Cloud — Solution Architecture

@@ -47,22 +47,39 @@ private struct ObsidianExtension: MarkdownExtension {
         let hasCallout = source.contains("[!")
         let hasWikiSyntax = dialect == .obsidian && source.contains("[[")
         guard hasCallout || hasWikiSyntax else { return source }
-        let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
         var result = ""
-        result.reserveCapacity(source.utf8.count)
+        result.reserveCapacity(source.utf8.count + 256)
+        var cursor = source.startIndex
         var fence: Character?
-        for (index, substring) in lines.enumerated() {
-            var line = String(substring)
+
+        while cursor < source.endIndex {
+            let nextNewline = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
+            let line = source[cursor..<nextNewline]
+
             let candidate = line.drop(while: { $0 == " " || $0 == "\t" })
             let marker: Character? = candidate.hasPrefix("```") ? "`" : (candidate.hasPrefix("~~~") ? "~" : nil)
             if let marker {
                 if fence == nil { fence = marker }
                 else if fence == marker { fence = nil }
-            } else if fence == nil {
-                line = transform(line, wikiLinks: hasWikiSyntax)
+                result.append(contentsOf: line)
+            } else if fence != nil {
+                result.append(contentsOf: line)
+            } else {
+                let needsCallout = line.contains("[!")
+                let needsWiki = hasWikiSyntax && line.contains("[[")
+                if needsCallout || needsWiki {
+                    result.append(transform(String(line), wikiLinks: hasWikiSyntax))
+                } else {
+                    result.append(contentsOf: line)
+                }
             }
-            result += line
-            if index != lines.index(before: lines.endIndex) { result += "\n" }
+
+            if nextNewline < source.endIndex {
+                result.append("\n")
+                cursor = source.index(after: nextNewline)
+            } else {
+                break
+            }
         }
         return result
     }
@@ -70,36 +87,20 @@ private struct ObsidianExtension: MarkdownExtension {
     private func transform(_ input: String, wikiLinks: Bool) -> String {
         var result = input
         if result.contains("[!") {
-            result = replace(result, regex: Self.calloutPattern) { match in
-                "\(match[1])**MDV-CALLOUT-\(match[2].uppercased())** \(match[3])\n\(match[1])"
+            result = RegexHelper.replace(result, regex: Self.calloutPattern) { match in
+                "\(match[1])**MDVU-CALLOUT-\(match[2].uppercased())** \(match[3])\n\(match[1])"
             }
         }
         if wikiLinks, result.contains("![[") {
-            result = replace(result, regex: Self.embedPattern) { "![\($0[1])](\($0[1]))" }
+            result = RegexHelper.replace(result, regex: Self.embedPattern) { "![\($0[1])](\($0[1]))" }
         }
         if wikiLinks, result.contains("[[") {
-            result = replace(result, regex: Self.wikiLinkPattern) { match in
+            result = RegexHelper.replace(result, regex: Self.wikiLinkPattern) { match in
                 let label = match[3].isEmpty ? match[1] : match[3]
                 let target = match[1].lowercased().hasSuffix(".md") ? match[1] : match[1] + ".md"
                 return "[\(label)](\(target)\(match[2]))"
             }
         }
-        return result
-    }
-
-    private func replace(_ input: String, regex: NSRegularExpression, transform: ([String]) -> String) -> String {
-        let original = input as NSString
-        let matches = regex.matches(in: input, range: NSRange(location: 0, length: original.length))
-        guard !matches.isEmpty else { return input }
-        var result = ""; result.reserveCapacity(original.length)
-        var cursor = 0
-        for match in matches {
-            result += original.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
-            let groups = (0..<match.numberOfRanges).map { match.range(at: $0).location == NSNotFound ? "" : original.substring(with: match.range(at: $0)) }
-            result += transform(groups)
-            cursor = match.range.location + match.range.length
-        }
-        result += original.substring(from: cursor)
         return result
     }
 }

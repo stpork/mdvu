@@ -12,7 +12,7 @@ final class StartupProfiler {
         let total = start.duration(to: now)
         let delta = previous.duration(to: now)
         previous = now
-        let line = String(format: "mdv.profile %-26s %7.1f ms  total %7.1f ms", (name as NSString).utf8String!, milliseconds(delta), milliseconds(total))
+        let line = String(format: "mdvu.profile %-26s %7.1f ms  total %7.1f ms", (name as NSString).utf8String!, milliseconds(delta), milliseconds(total))
         FileHandle.standardError.write(Data((line + "\n").utf8))
     }
 

@@ -7,13 +7,13 @@ enum BenchmarkRunner {
         do {
             let data = try Data(contentsOf: url, options: .mappedIfSafe)
             let source = String(decoding: data, as: UTF8.self)
-            let mermaid = ProcessInfo.processInfo.environment["MDV_BENCHMARK_MERMAID"] == "1"
+            let mermaid = ProcessInfo.processInfo.environment["MDVU_BENCHMARK_MERMAID"] == "1"
             let pipeline = MarkdownPipeline(dialect: .github, mermaid: mermaid)
-            if ProcessInfo.processInfo.environment["MDV_BENCHMARK_WARMUP"] != "0" {
+            if ProcessInfo.processInfo.environment["MDVU_BENCHMARK_WARMUP"] != "0" {
                 autoreleasepool { _ = pipeline.render(source) }
             }
             var samples: [Double] = []
-            let runCount = max(1, Int(ProcessInfo.processInfo.environment["MDV_BENCHMARK_RUNS"] ?? "") ?? 5)
+            let runCount = max(1, Int(ProcessInfo.processInfo.environment["MDVU_BENCHMARK_RUNS"] ?? "") ?? 5)
             for _ in 0..<runCount {
                 let start = ContinuousClock.now
                 autoreleasepool { _ = pipeline.render(source) }
@@ -24,7 +24,7 @@ enum BenchmarkRunner {
             let median = samples[samples.count / 2]
             print(String(format: "%7.2f MB  median %8.2f ms  %8.1f MB/s", Double(data.count) / 1_048_576, median, Double(data.count) / 1_048_576 / (median / 1_000)))
         } catch {
-            FileHandle.standardError.write(Data("mdv benchmark: \(error.localizedDescription)\n".utf8))
+            FileHandle.standardError.write(Data("mdvu benchmark: \(error.localizedDescription)\n".utf8))
         }
         return true
     }

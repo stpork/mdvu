@@ -3,8 +3,15 @@ import Foundation
 enum MarkdownDialect: String { case generic, github, obsidian }
 enum ThemeChoice: String { case system, light, dark }
 
+enum MarkdownDocument {
+    static let supportedExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
+    static func isMarkdown(url: URL) -> Bool {
+        supportedExtensions.contains(url.pathExtension.lowercased())
+    }
+}
+
 struct CLIOptions {
-    static let usage = "usage: mdv [--theme system|light|dark] [--dialect generic|github|obsidian] [--no-mermaid] [--full-width] [--snapshot PNG] FILE|DIR …"
+    static let usage = "usage: mdvu [--theme system|light|dark] [--dialect generic|github|obsidian] [--no-mermaid] [--full-width] [--snapshot PNG] FILE|DIR …"
     var paths: [String] = []
     var dialect: MarkdownDialect = .generic
     var theme: ThemeChoice = .system
