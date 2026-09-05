@@ -8,7 +8,7 @@
 <p align="center">
   <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
   <a href="#installation"><img src="https://img.shields.io/badge/version-0.2.0-emerald" alt="Version 0.2.0"></a>
-  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-1.8_MB_Universal-brightgreen" alt="Bundle Size 1.8 MB Universal"></a>
+  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.2_MB-brightgreen" alt="Bundle Size 3.2 MB"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
 </p>
 
@@ -22,10 +22,10 @@
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
 * **Blazing Fast**: Window visible in ~150 ms, first WebKit content painted in ~300 ms.
-* **Ultra-Compact**: **1.8 MB** Universal app bundle (`arm64` + `x86_64`), under **1.2 MB** for single-architecture slices, and **1.1 MB** compressed release archive.
-* **Cmark-GFM Engine**: Uses Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
-* **Obsidian-Friendly**: First-class support for Obsidian callouts (`[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`) and internal `[[wikilinks]]`.
-* **Offline Diagrams**: Bundled Mermaid 11.x (LZMA-compressed) renders diagrams asynchronously to SVG with theme-aware SHA-256 disk caching.
+* **Ultra-Compact**: **3.2 MB** app bundle, under **2.2 MB** compressed release archive (zero Electron, zero Node, zero JVM).
+* **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
+* **Dialect Profiles**: Native support for **GitHub** (`github`), **Obsidian** (`obsidian` with callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), and **CommonMark** (`generic`).
+* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, and SHA-256 disk caching.
 * **Standardized Zoom Engine**: Unified continuous and discrete zoom (`[-][ 100% ][+]`), with manual percentage input, 10%–500% boundary control, trackpad pinch sync, and 10% discrete stepping.
 * **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
 
@@ -133,9 +133,26 @@ mdvu --snapshot output.png README.md
 * **Two-Finger History Swipe**: Horizontal trackpad swipes navigate Back and Forward when history is available.
 * **Zoom Pan-Priority**: When zoomed in (`> 105%`), two-finger gestures seamlessly pan overflowing tables, code blocks, and diagrams without triggering history jumps.
 
-### 📊 Offline Mermaid Diagrams
-* Mermaid 11.x is bundled locally as an LZMA-compressed resource (609 KB) and decompressed on-demand on the first encounter of an uncached diagram.
-* Rendered SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` by SHA-256 hash and color scheme, enabling instant subsequent views.
+### 📊 Offline Diagram Rendering (Mermaid, ZenUML & PlantUML)
+
+`mdvu` bundles fully offline rendering engines compressed with **LZMA Ultra** for maximum storage efficiency:
+
+* **Mermaid 11.17.2**:
+  * **Core Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Component`.
+  * **Latest Extended Types**: `ishikawa-beta` (fishbone diagrams), `swimlane-beta` (workflow swimlanes), `packet-beta` (binary protocol formats), `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, and `xychart-beta`.
+  * **ZenUML 0.2.3 Plugin**: Full support for concise ZenUML sequence diagrams within ````mermaid`` code blocks.
+* **PlantUML 1.2026.7 (`@plantuml/core`) + Graphviz (`Viz.js 3.24.0` / Graphviz 14.1.1)**:
+  * **100% Offline & Pure WebAssembly/JS**: Executes client-side inside WebKit via TeaVM. **No Java runtime (JRE/JVM) or external binaries required.**
+  * **Fenced Blocks**: Supports both ````plantuml`` and ````puml`` code fences.
+  * **Complete Diagram Types**: Sequence diagrams, Class models with inheritance and associations, State machines, Activity diagrams, Component architectures, and Use-case models.
+  * **Dark Mode & Transparency**: Automatically adapts to document theme with transparent SVG backgrounds.
+* **On-Demand Lazy Decompression**:
+  * Documents without diagrams incur **zero CPU/memory overhead**; the LZMA archives are never accessed.
+  * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.33 MB).
+  * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.20 MB).
+* **SHA-256 SVG Disk Cache**:
+  * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by `SHA256(renderer + version + source + theme)`.
+  * Renders once; subsequent loads of identical diagrams are instant and bypass the rendering engine entirely.
 
 ---
 
@@ -165,19 +182,19 @@ mdvu --snapshot output.png README.md
 File on Disk / Watcher
         │
         ▼
-MarkdownPipeline (Preprocessing: Callouts, Wikilinks)
+MarkdownPipeline (Dialect Preprocessing: Callouts, Wikilinks)
         │
         ▼
 cmark-gfm (C AST Parser, GFM Extensions, Safe Mode)
         │
         ▼
-HTMLDocument Assembly (Theme, Highlighting, CSS)
+HTMLDocument Assembly (Theme, Highlighting, CSS, Placeholders)
         │
         ▼
-WKWebView (AppKit Chrome + Hardware Accelerated Rendering)
+WKWebView (AppKit Chrome + Hardware Accelerated Viewport)
         │
         ▼
-Async DiagramRenderer (Mermaid SVG + SHA-256 Cache)
+Async DiagramRenderer (Mermaid 11.17.2 + ZenUML / PlantUML 1.2026.7 + SHA-256 Cache)
 ```
 For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -190,4 +207,7 @@ For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Third-Party Software
 * [swift-cmark](https://github.com/swiftlang/swift-cmark) — BSD-2-Clause / MIT (c) John MacFarlane, GitHub, Apple.
-* [Mermaid.js](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
+* [Mermaid.js 11.17.2](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
+* [ZenUML Plugin 0.2.3](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
+* [PlantUML Core 1.2026.7](https://github.com/plantuml/plantuml-core) — GPL / LGPL / Apache-2.0 / MIT (c) PlantUML Team.
+* [Viz.js 3.24.0 (Graphviz 14.1.1)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.

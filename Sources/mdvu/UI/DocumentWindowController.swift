@@ -839,28 +839,49 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.captureSnapshotIfRequested() }
         }
         guard options.mermaid else { captureSnapshotIfRequested(); return }
-        webView.evaluateJavaScript("document.querySelector('.diagram-pending') !== null") { [weak self] value, _ in
+        webView.evaluateJavaScript("[(document.querySelector('.diagram-pending[data-renderer=\"mermaid\"]') !== null), (document.querySelector('.diagram-pending[data-renderer=\"plantuml\"]') !== null)]") { [weak self] value, _ in
             guard let self else { return }
-            guard value as? Bool == true else { self.captureSnapshotIfRequested(); return }
-            // Mermaid is parsed only when the page actually has an uncached diagram.
-            let mermaid = ResourceLoader.mermaidJavaScript
-            guard !mermaid.isEmpty else {
-                self.webView.evaluateJavaScript("document.querySelectorAll('.diagram-status').forEach(e => e.textContent = 'Diagram renderer unavailable')")
-                self.captureSnapshotIfRequested()
-                return
-            }
-            self.webView.evaluateJavaScript(mermaid) { [weak self] _, error in
-                guard let self else { return }
-                if let error {
-                    #if DEBUG
-                    FileHandle.standardError.write(Data("mdvu: Mermaid load failed: \(error.localizedDescription)\n".utf8))
-                    #endif
-                    self.webView.evaluateJavaScript("document.querySelectorAll('.diagram-status').forEach(e => e.textContent = 'Diagram renderer unavailable')")
-                    self.captureSnapshotIfRequested()
-                    return
+            guard let flags = value as? [Bool], flags.count == 2 else { self.captureSnapshotIfRequested(); return }
+            let needsMermaid = flags[0]
+            let needsPlantUML = flags[1]
+            guard needsMermaid || needsPlantUML else { self.captureSnapshotIfRequested(); return }
+
+            let group = DispatchGroup()
+
+            if needsMermaid {
+                let mermaid = ResourceLoader.mermaidJavaScript
+                if !mermaid.isEmpty {
+                    group.enter()
+                    self.webView.evaluateJavaScript(mermaid) { _, error in
+                        #if DEBUG
+                        if let error {
+                            FileHandle.standardError.write(Data("mdvu: Mermaid load failed: \(error.localizedDescription)\n".utf8))
+                        }
+                        #endif
+                        group.leave()
+                    }
                 }
+            }
+
+            if needsPlantUML {
+                let plantuml = ResourceLoader.plantumlJavaScript
+                if !plantuml.isEmpty {
+                    group.enter()
+                    self.webView.evaluateJavaScript(plantuml) { _, error in
+                        #if DEBUG
+                        if let error {
+                            FileHandle.standardError.write(Data("mdvu: PlantUML load failed: \(error.localizedDescription)\n".utf8))
+                        }
+                        #endif
+                        group.leave()
+                    }
+                }
+            }
+
+            group.notify(queue: .main) { [weak self] in
+                guard let self else { return }
                 self.webView.evaluateJavaScript("window.__mdvuRenderDiagrams && window.__mdvuRenderDiagrams()") { [weak self] _, _ in
-                    self?.profiler.mark("mermaid.complete")
+                    self?.profiler.mark("diagrams.complete")
                     self?.captureSnapshotIfRequested()
                 }
             }

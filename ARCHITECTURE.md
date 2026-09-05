@@ -12,8 +12,10 @@
         ▼
  ┌─────────────────────────────────────────────────────────────┐
  │ MarkdownPipeline (Background Queue)                         │
- │  1. Preprocessing: Fast regex-free scan for Obsidian        │
- │     callouts ([!NOTE], [!TIP]) and wikilinks ([[target]])   │
+ │  1. Dialect Preprocessing:                                  │
+ │     • github: YAML front-matter conversion                  │
+ │     • obsidian: Callouts ([!NOTE]), [[wikilinks]], ![[embed]]│
+ │     • generic: Strict CommonMark compliance                 │
  │  2. Parsing: cmark-gfm in safe mode with pinned extensions  │
  │     (tables, task lists, autolinks, strikethrough)          │
  │  3. AST Extraction: Extracts H1-H6 metadata for native TOC  │
@@ -31,8 +33,11 @@
         │
         ▼
  ┌─────────────────────────────────────────────────────────────┐
- │ Asynchronous Post-Render Phase                              │
- │  • Mermaid.js (LZMA-compressed) initializes on demand       │
+ │ Asynchronous Post-Render Phase (Decoupled & Lazy)           │
+ │  • Evaluates pending diagrams on page:                      │
+ │    - Mermaid 11.17.2 + ZenUML 0.2.3 (mermaid.lzma)          │
+ │    - PlantUML 1.2026.7 + Viz.js 3.24.0 (plantuml.lzma)      │
+ │  • On-Demand Decompression: 0 ms overhead if no diagrams    │
  │  • Renders SVG diagrams to SHA-256 disk cache               │
  │  • In-page find highlights matches & reports live counts    │
  └─────────────────────────────────────────────────────────────┘
@@ -73,9 +78,29 @@
 * Reloads markdown asynchronously while preserving the user's relative vertical scroll ratio.
 
 ### E. Diagram Subsystem & Asset Compression
-* **LZMA Compression**: The bundled `mermaid.min.js` (2.7 MB uncompressed) is compressed to 609 KB using LZMA (`mermaid.lzma`).
-* **On-Demand Decompression**: Decompressed in memory only when a document containing an uncached diagram is viewed.
-* **SHA-256 SVG Cache**: Diagram SVGs are stored under `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by SHA-256 hash of `(source + theme)`.
+`mdvu` integrates a decoupled multi-engine diagram architecture supporting both Mermaid and PlantUML with complete offline isolation and zero external dependencies:
+
+* **Engine Specifications & Versions**:
+  * **Mermaid 11.17.2**:
+    * **Standard Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Component`.
+    * **Extended Grammars**: `ishikawa-beta` (fishbone), `swimlane-beta` (swimlanes), `packet-beta`, `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, `xychart-beta`.
+  * **ZenUML Plugin 0.2.3** (`@mermaid-js/mermaid-zenuml`): Sequence diagrams embedded inside ````mermaid`` code blocks registered via `mermaid.registerExternalDiagrams`.
+  * **PlantUML Core 1.2026.7** (`@plantuml/core`) + **Viz.js 3.24.0** (Graphviz 14.1.1):
+    * 100% client-side WebAssembly / TeaVM execution. **Zero Java runtime (JVM/JRE) requirement.**
+    * Supports code fences ````plantuml`` and ````puml``.
+    * Renders sequence, class, state, activity, component, and use-case models.
+    * Automatic dark mode adaptation (`skinparam backgroundColor transparent`).
+* **LZMA Ultra Compression**:
+  * Bundled assets are compressed using **LZMA Ultra** (`preset 9 | PRESET_EXTREME`, `nice=273`, `mf=bt4`, `dict=64MB`):
+    * `mermaid.lzma`: **1.33 MB** (compresses 7.02 MB of raw minified JS).
+    * `plantuml.lzma`: **1.20 MB** (compresses 5.02 MB of raw minified JS + WebAssembly Graphviz).
+* **Decoupled Lazy Loading**:
+  * Plain Markdown documents without diagrams incur **0% memory or startup overhead** (neither archive is read from disk).
+  * Documents with only Mermaid diagrams decompress only `mermaid.lzma`.
+  * Documents with only PlantUML diagrams decompress only `plantuml.lzma`.
+* **SHA-256 SVG Disk Cache**:
+  * All diagram SVGs are persisted to `~/Library/Caches/com.mdvu.viewer/diagrams/` keyed by `SHA256(renderer + version + source + theme)`.
+  * Renders once asynchronously; subsequent views or window reloads display the cached SVG instantaneously without JavaScript engine evaluation.
 
 ---
 
@@ -84,7 +109,7 @@
 1. **Prewarmed WebKit**: `WebKitPrewarmer` initializes a lightweight background `WKWebView` during `applicationWillFinishLaunching`, shaving ~150 ms off initial document paint time.
 2. **Cancellable Background Pipelines**: Parsing runs on a dedicated user-initiated `OperationQueue`. Quickly switching files in directory mode cancels in-flight operations immediately.
 3. **Zero Reflection & Metadata**: Compiled with `-Osize -Xfrontend -disable-reflection-metadata -Xfrontend -disable-reflection-names`, stripping Swift metadata overhead.
-4. **Stripped Binary**: Universal binary is stripped using `strip -u -r`, keeping the final `.app` under **1.8 MB** (single-architecture slice under **1.2 MB**, compressed zip **1.1 MB**).
+4. **Stripped Binary**: Single-architecture Mach-O executable is **572 KB** (`strip -u -r`). The complete `.app` bundle is only **3.2 MB** (Universal bundle **4.2 MB**, compressed release archive **2.2 MB**).
 5. **Lazy Client-Side Processing**: In-page syntax highlighting uses `IntersectionObserver` (800px margin) to stream code tokenization lazily without blocking initial display. Preprocessor directives (`#include`, `#define`) and C-style block comments are recognized cleanly without allocating intermediate token arrays. Heading anchors and TOC serialization are deduplicated to eliminate redundant WebKit IPC messages.
 6. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
 

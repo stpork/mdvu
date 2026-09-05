@@ -13,7 +13,7 @@ struct MarkdownPipeline {
     init(dialect: MarkdownDialect, mermaid: Bool, cache: DiagramCache = DiagramCache()) {
         self.dialect = dialect
         self.extensions = [FrontMatterExtension(), ObsidianExtension()]
-        self.diagrams = DiagramRegistry(renderers: mermaid ? [MermaidRenderer()] : [])
+        self.diagrams = DiagramRegistry(renderers: mermaid ? [MermaidRenderer(), PlantUMLRenderer()] : [])
         self.cache = cache
     }
 

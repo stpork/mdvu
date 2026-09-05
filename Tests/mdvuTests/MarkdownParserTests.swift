@@ -134,6 +134,21 @@ struct MarkdownParserTests {
         #expect(ResourceLoader.mermaidJavaScript.utf8.count > 5_000_000)
     }
 
+    @Test func plantumlUsesPlaceholder() {
+        let pumlResult = MarkdownPipeline(dialect: .generic, mermaid: true).render("```puml\nAlice -> Bob\n```")
+        #expect(pumlResult.body.contains("data-renderer=\"plantuml\""))
+
+        let plantumlResult = MarkdownPipeline(dialect: .generic, mermaid: true).render("```plantuml\nclass Car\n```")
+        #expect(plantumlResult.body.contains("data-renderer=\"plantuml\""))
+    }
+
+    @Test func compressedPlantUMLResourceLoads() {
+        #expect(ResourceLoader.plantumlJavaScript.contains("PlantUML"))
+        #expect(ResourceLoader.plantumlJavaScript.contains("renderToString"))
+        #expect(ResourceLoader.plantumlJavaScript.contains("Viz"))
+        #expect(ResourceLoader.plantumlJavaScript.utf8.count > 4_000_000)
+    }
+
     @Test func inPageFindResourcesArePresent() {
         #expect(ResourceLoader.appJavaScript.contains("__mdvuFind"))
         #expect(ResourceLoader.markdownCSS.contains("mark.find-match"))

@@ -29,6 +29,19 @@ struct MermaidRenderer: DiagramRenderer {
     enum MermaidError: Error { case webRuntimeRequired }
 }
 
+struct PlantUMLRenderer: DiagramRenderer {
+    let identifier = "plantuml"; let version = "1.2026.7"
+    func canRender(language: String) -> Bool { language == "plantuml" || language == "puml" }
+    func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw PlantUMLError.webRuntimeRequired }
+    func placeholder(source: String, theme: String, cache: DiagramCache) -> String {
+        let key = cache.key(renderer: identifier, version: version, source: source, theme: theme, options: "plantuml-transparent-v1")
+        if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\">\(svg)</figure>" }
+        return "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"\(key)\"><pre>\(HTML.escape(source))</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>"
+    }
+    enum PlantUMLError: Error { case webRuntimeRequired }
+}
+
+
 final class DiagramCache: @unchecked Sendable {
     private let directory: URL
     private let memoryCache = NSCache<NSString, NSString>()

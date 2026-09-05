@@ -45,6 +45,15 @@ enum ResourceLoader {
         return ""
     }()
 
+    static let plantumlJavaScript: String = {
+        if let url = bundle.url(forResource: "plantuml", withExtension: "lzma"),
+           let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
+           let data = try? (compressed as NSData).decompressed(using: .lzma) as Data {
+            return String(decoding: data, as: UTF8.self)
+        }
+        return ""
+    }()
+
     private static func text(_ name: String, _ ext: String) -> String {
         guard let url = bundle.url(forResource: name, withExtension: ext), let value = try? String(contentsOf: url, encoding: .utf8) else { return "" }
         return value
