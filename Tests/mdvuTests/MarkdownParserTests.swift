@@ -452,12 +452,22 @@ struct MarkdownParserTests {
         #expect(win.level == .floating)
         #expect(win.isMovableByWindowBackground)
 
-        // Link click handling
+        // Link click handling (mock urlOpener to avoid launching browser during tests)
+        var openedURLs: [URL] = []
+        let originalOpener = controller.urlOpener
+        controller.urlOpener = { url in
+            openedURLs.append(url)
+            return true
+        }
+        defer { controller.urlOpener = originalOpener }
+
         let repoURL = URL(string: "https://github.com/stpork/mdvu")!
         let dummyTextView = NSTextView()
         #expect(controller.textView(dummyTextView, clickedOnLink: repoURL, at: 0))
         #expect(controller.textView(dummyTextView, clickedOnLink: "https://github.com/stpork/mdvu", at: 0))
         #expect(!controller.textView(dummyTextView, clickedOnLink: 12345, at: 0))
+        #expect(openedURLs.count == 2)
+        #expect(openedURLs[0].absoluteString == "https://github.com/stpork/mdvu")
 
         // Escape closes window
         let escEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: win.windowNumber, context: nil, characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53)!

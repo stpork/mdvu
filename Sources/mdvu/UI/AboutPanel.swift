@@ -47,6 +47,15 @@ final class AboutTextView: NSTextView {
 @MainActor
 final class AboutPanelController: NSObject, NSTextViewDelegate {
     static let shared = AboutPanelController()
+    var urlOpener: (URL) -> Bool = { url in
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+           ProcessInfo.processInfo.environment["SWIFT_TESTING_ENTRY_POINT"] != nil ||
+           ProcessInfo.processInfo.processName.contains("Test") ||
+           ProcessInfo.processInfo.arguments.contains(where: { $0.contains("xctest") || $0.contains("Testing") }) {
+            return true
+        }
+        return NSWorkspace.shared.open(url)
+    }
     private(set) var window: AboutWindow?
 
     static func makeAttributedString(version: String) -> NSAttributedString {
@@ -241,11 +250,9 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
 
     func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
         if let url = link as? URL {
-            NSWorkspace.shared.open(url)
-            return true
+            return urlOpener(url)
         } else if let str = link as? String, let url = URL(string: str) {
-            NSWorkspace.shared.open(url)
-            return true
+            return urlOpener(url)
         }
         return false
     }
