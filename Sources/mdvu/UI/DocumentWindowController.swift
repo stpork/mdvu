@@ -200,8 +200,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private let pipeline: MarkdownPipeline
     private var hasShown = false
     private var snapshotWritten = false
-    private var isFullWidth: Bool
-    private var isSidebarVisible: Bool
+    private(set) var isFullWidth: Bool
+    private(set) var isSidebarVisible: Bool = false
     private var lastSidebarWidth: CGFloat = 340
     private var suggestedSidebarWidth: CGFloat = 340
     private var longestSidebarWidth: CGFloat = 340

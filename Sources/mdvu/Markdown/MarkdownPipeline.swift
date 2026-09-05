@@ -27,9 +27,14 @@ struct RenderedDocument { let body: String; let title: String? }
 
 private struct FrontMatterExtension: MarkdownExtension {
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.hasPrefix("---\n"), let end = source.range(of: "\n---\n", range: source.index(source.startIndex, offsetBy: 4)..<source.endIndex) else { return source }
-        let yaml = source[source.index(source.startIndex, offsetBy: 4)..<end.lowerBound]
-        let rows = yaml.split(separator: "\n").compactMap { line -> String? in
+        let isLF = source.hasPrefix("---\n")
+        let isCRLF = source.hasPrefix("---\r\n")
+        guard isLF || isCRLF else { return source }
+        let headerLen = isCRLF ? 5 : 4
+        let separator = isCRLF ? "\r\n---\r\n" : "\n---\n"
+        guard let end = source.range(of: separator, range: source.index(source.startIndex, offsetBy: headerLen)..<source.endIndex) else { return source }
+        let yaml = source[source.index(source.startIndex, offsetBy: headerLen)..<end.lowerBound]
+        let rows = yaml.split(whereSeparator: { $0 == "\n" || $0 == "\r" }).compactMap { line -> String? in
             guard let colon = line.firstIndex(of: ":") else { return nil }
             return "| \(line[..<colon]) | \(line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)) |"
         }.joined(separator: "\n")

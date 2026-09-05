@@ -2,7 +2,11 @@ import Foundation
 
 enum BenchmarkRunner {
     static func runIfRequested(_ arguments: [String]) -> Bool {
-        guard let flag = arguments.firstIndex(of: "--benchmark"), arguments.indices.contains(flag + 1) else { return false }
+        guard let flag = arguments.firstIndex(of: "--benchmark") else { return false }
+        guard arguments.indices.contains(flag + 1) else {
+            FileHandle.standardError.write(Data("mdvu: error: --benchmark requires a file path argument\nusage: mdvu --benchmark <file>\n".utf8))
+            return true
+        }
         let url = URL(fileURLWithPath: arguments[flag + 1])
         do {
             let data = try Data(contentsOf: url, options: .mappedIfSafe)
