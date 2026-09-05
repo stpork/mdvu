@@ -54,6 +54,14 @@ To update in the future:
 brew upgrade --cask mdvu
 ```
 
+> [!TIP]
+> **Installing without root / admin privileges:**
+> If your user account does not have write access to `/Applications`, install into your user directory with `--appdir=~/Applications`:
+> ```sh
+> brew install --cask --appdir=~/Applications stpork/tap/mdvu
+> ```
+> To make this default for all Homebrew casks, add `export HOMEBREW_CASK_OPTS="--appdir=~/Applications"` to your `~/.zshrc`.
+
 ---
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
