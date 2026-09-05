@@ -301,7 +301,19 @@ struct MarkdownParserTests {
         controller.applyMagnification(1.4, centeredAt: CGPoint(x: 200, y: 150))
         #expect(abs(controller.effectiveZoom - 1.4) < 0.01)
 
-        // Reset zoom resets both pageZoom and magnification
+        // Sub-100% zoom (below WebKit's former 1.0 ceiling)
+        controller.setUnifiedMagnification(0.5, centeredAt: CGPoint(x: 200, y: 150))
+        #expect(abs(controller.effectiveZoom - 0.5) < 0.01)
+        controller.setUnifiedMagnification(0.1, centeredAt: CGPoint(x: 200, y: 150))
+        #expect(abs(controller.effectiveZoom - 0.1) < 0.01)
+
+        // Above 300% zoom (above WebKit's former 3.0 ceiling)
+        controller.setUnifiedMagnification(4.5, centeredAt: CGPoint(x: 200, y: 150))
+        #expect(abs(controller.effectiveZoom - 4.5) < 0.01)
+        controller.setUnifiedMagnification(5.0, centeredAt: CGPoint(x: 200, y: 150))
+        #expect(abs(controller.effectiveZoom - 5.0) < 0.01)
+
+        // Reset zoom resets to 1.0
         controller.resetZoom(nil)
         #expect(abs(controller.effectiveZoom - 1.0) < 0.001)
 
