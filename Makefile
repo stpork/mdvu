@@ -51,12 +51,21 @@ archive: universal
 publish:
 	"$(PROJECT_ROOT)/scripts/publish-release.sh" $(if $(filter 1,$(YES)),-y,)
 install: app
-	mkdir -p "$(HOME)/Applications"
-	ditto "$(APP)" "$(HOME)/Applications/mdvu.app"
-	test ! -w /Applications || ditto "$(APP)" "/Applications/mdvu.app"
-	mkdir -p "$(HOME)/.local/bin"
-	ln -sf "$$(test -w /Applications && echo /Applications || echo $(HOME)/Applications)/mdvu.app/Contents/MacOS/mdvu" "$(HOME)/.local/bin/mdvu"
-	test ! -w /usr/local/bin || ln -sf /Applications/mdvu.app/Contents/MacOS/mdvu /usr/local/bin/mdvu
+	@if [ -w /Applications ]; then \
+		echo "Installing mdvu.app to /Applications..."; \
+		ditto "$(APP)" "/Applications/mdvu.app"; \
+		target_app="/Applications/mdvu.app"; \
+	else \
+		echo "Installing mdvu.app to $(HOME)/Applications..."; \
+		mkdir -p "$(HOME)/Applications"; \
+		ditto "$(APP)" "$(HOME)/Applications/mdvu.app"; \
+		target_app="$(HOME)/Applications/mdvu.app"; \
+	fi; \
+	mkdir -p "$(HOME)/.local/bin"; \
+	ln -sf "$$target_app/Contents/MacOS/mdvu" "$(HOME)/.local/bin/mdvu"; \
+	if [ -w /usr/local/bin ]; then \
+		ln -sf "$$target_app/Contents/MacOS/mdvu" /usr/local/bin/mdvu; \
+	fi
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"

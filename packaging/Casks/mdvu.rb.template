@@ -7,7 +7,7 @@ cask "mdvu" do
   desc "Ultra-fast, lightweight native macOS Markdown viewer"
   homepage "https://github.com/stpork/mdvu"
 
-  depends_on macos: :ventura
+  depends_on macos: ">= :ventura"
 
   app "mdvu.app"
   binary "#{appdir}/mdvu.app/Contents/MacOS/mdvu", target: "mdvu"

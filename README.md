@@ -54,9 +54,12 @@ To update in the future:
 brew upgrade --cask mdvu
 ```
 
-> [!TIP]
-> **Installing without root / admin privileges:**
-> If your user account does not have write access to `/Applications`, install into your user directory with `--appdir=~/Applications`:
+> [!NOTE]
+> **Standard Installation:**
+> `brew install --cask` installs directly into `/Applications` and links the `mdvu` CLI command without requiring `root` or `sudo`.
+>
+> **Restricted / Non-Admin Environments:**
+> If your Mac is restricted by corporate MDM policies and your account does not have write access to `/Applications`, install into your home directory:
 > ```sh
 > brew install --cask --appdir=~/Applications stpork/tap/mdvu
 > ```
