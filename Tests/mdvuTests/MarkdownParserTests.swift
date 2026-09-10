@@ -549,12 +549,35 @@ struct MarkdownParserTests {
         // Diagram and Math placeholders
         #expect(doc.body.contains("data-renderer=\"mermaid\""))
         #expect(doc.body.contains("data-renderer=\"plantuml\""))
-        #expect(doc.body.contains("math-inline"))
+        #expect(doc.body.contains("<span class=\"math-inline\">E = mc^2</span>"))
         #expect(doc.body.contains("math-display"))
 
         // Obsidian dialect validation on complete fixture
         let obsidianDoc = MarkdownPipeline(dialect: .obsidian, mermaid: true).render(source)
         #expect(obsidianDoc.body.contains("Architecture Overview.md"))
+    }
+
+    @Test func testAllMathCasesInFixture() throws {
+        let fixture = Self.fixtureURL("test-complete.md")
+        let data = try Data(contentsOf: fixture)
+        let source = String(decoding: data, as: UTF8.self)
+
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+
+        for i in 1...42 {
+            let caseID = String(format: "MATH-%03d", i)
+            guard let beginRange = source.range(of: "<!-- mdvu-case-begin: \(caseID) -->"),
+                  let endRange = source.range(of: "<!-- mdvu-case-end: \(caseID) -->", range: beginRange.upperBound..<source.endIndex) else {
+                continue
+            }
+            let rawSnippet = String(source[beginRange.upperBound..<endRange.lowerBound])
+            let renderedSnippet = pipeline.render(rawSnippet).body
+            let hasMath = renderedSnippet.contains("math-inline") || renderedSnippet.contains("math-display")
+            if !hasMath {
+                print("FAILED MATH CASE: \(caseID) -> raw: [\(rawSnippet)] rendered: [\(renderedSnippet)]")
+            }
+            #expect(hasMath, "Expected math in case \(caseID)")
+        }
     }
 
     @Test func testRuntimeSecurityAndErrorFixtures() throws {

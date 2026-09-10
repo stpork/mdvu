@@ -438,17 +438,19 @@ private struct SubSuperscriptExtension: MarkdownExtension {
 }
 
 private struct MathExtension: MarkdownExtension {
-    private static let mathCodeBlockRegex = try! NSRegularExpression(pattern: #"(?m)^```(?:math|latex|katex)[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$"#)
+    private static let mathCodeBlockRegex = try! NSRegularExpression(pattern: #"(?m)^[ \t]{0,3}(`{3,}|~{3,})(?:math|latex|katex)[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]{0,3}\1[ \t]*$"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard FastScan.contains(source, ascii: UInt8(ascii: "$")) || FastScan.contains(source, token: "```math") || FastScan.contains(source, token: "```latex") || FastScan.contains(source, token: "```katex") else {
+        let hasMathToken = FastScan.contains(source, token: "math") || FastScan.contains(source, token: "latex") || FastScan.contains(source, token: "katex")
+        let hasDollar = FastScan.contains(source, ascii: UInt8(ascii: "$"))
+        guard hasDollar || hasMathToken else {
             return source
         }
 
         var text = source
-        if FastScan.contains(text, token: "```math") || FastScan.contains(text, token: "```latex") || FastScan.contains(text, token: "```katex") {
+        if hasMathToken {
             text = RegexHelper.replace(text, regex: Self.mathCodeBlockRegex) { match in
-                let tex = match[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                let tex = match[2].trimmingCharacters(in: .whitespacesAndNewlines)
                 return "<div class=\"math-display\">\(HTML.escape(tex))</div>"
             }
         }
