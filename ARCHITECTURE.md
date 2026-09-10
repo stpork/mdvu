@@ -11,10 +11,12 @@
         │
         ▼
  ┌─────────────────────────────────────────────────────────────┐
- │ MarkdownPipeline (Background Queue)                         │
- │  1. CodeFenceProtector: Isolates all code fences (```, ~~~, │
- │     and nested ````) from inline transformations            │
- │  2. Dialect Preprocessing Pipeline:                         │
+ │ MarkdownPipeline (Background Queue / Eager Loader)          │
+ │  1. FastScan: Hardware-vectorized byte scanning (memchr,    │
+ │     memmem) pre-checks extensions at gigabytes/sec          │
+ │  2. CodeFenceScanner: Streaming zero-allocation cursor      │
+ │     isolates code fences (```, ~~~) from transformations    │
+ │  3. Dialect Preprocessing Pipeline:                         │
  │     • FrontMatterExtension: YAML metadata table conversion  │
  │     • GitLabTOCExtension: [[_TOC_]] & [TOC] placeholders    │
  │     • AdmonitionExtension: MkDocs (!!!, ???) & Docusaurus/  │
@@ -25,11 +27,13 @@
  │       {~~old~>new~~}, {==mark==}, and {>>comment<<}         │
  │     • SubSuperscriptExtension: ~sub~, ^sup^, ^^underline^^  │
  │       (strictly preserving GFM ~~strikethrough~~)           │
- │  3. Parsing: cmark-gfm AST parsing with extensions:         │
+ │     • MathExtension: Linear O(N) scanner for $inline$ and   │
+ │       $$display$$ math skipping backticks and escapes       │
+ │  4. Parsing: cmark-gfm AST parsing with extensions:         │
  │     tables, task lists, autolinks, footnotes, strikethrough │
  │     and tagfilter XSS prevention                            │
- │  4. AST Extraction: Extracts H1-H6 metadata for native TOC  │
- │  5. HTML Assembly: HTMLDocument embeds inline CSS, prism    │
+ │  5. AST Extraction: Extracts H1-H6 metadata for native TOC  │
+ │  6. HTML Assembly: HTMLDocument embeds inline CSS, prism    │
  │     tokens, and async diagram placeholders                  │
  └─────────────────────────────────────────────────────────────┘
         │
@@ -131,13 +135,15 @@
 
 ## 3. Memory & Performance Optimizations
 
-1. **Prewarmed WebKit**: `WebKitPrewarmer` initializes a lightweight background `WKWebView` during `applicationWillFinishLaunching`, shaving ~150 ms off initial document paint time.
-2. **Cancellable Background Pipelines**: Parsing runs on a dedicated user-initiated `OperationQueue`. Quickly switching files in directory mode cancels in-flight operations immediately.
-3. **Zero Reflection & Metadata**: Compiled with `-Osize -Xfrontend -disable-reflection-metadata -Xfrontend -disable-reflection-names`, stripping Swift metadata overhead.
-4. **Stripped Binary**: Single-architecture Mach-O executable is **572 KB** (`strip -u -r`). The complete `.app` bundle is only **3.2 MB** (Universal bundle **4.2 MB**, compressed release archive **~2.2 MB**).
-5. **High-Throughput Markdown Pipeline**: Reference C parsing via `cmark-gfm` processes content at **4.5+ MB/s** (~35 ms for 4,600+ line documents; ~350 ms for 13,900+ line stress files).
-6. **Lazy Client-Side Processing**: In-page syntax highlighting uses `IntersectionObserver` (800px margin) to stream code tokenization lazily without blocking initial display. Preprocessor directives (`#include`, `#define`) and C-style block comments are recognized cleanly without allocating intermediate token arrays. Heading anchors and TOC serialization are deduplicated to eliminate redundant WebKit IPC messages.
-7. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
+1. **Startup Pipelining (`EagerDocumentLoader`)**: Asynchronously begins document mapping (`.mappedIfSafe`) and markdown parsing on a detached background task at CLI invocation, executing concurrently with AppKit runloop and window initialization.
+2. **Prewarmed WebKit**: `WebKitPrewarmer` initializes a lightweight background `WKWebView` during `applicationWillFinishLaunching` and automatically preheats the next view upon usage, shaving ~150 ms off initial document paint time.
+3. **Hardware-Vectorized FastScan**: Replaced standard library string searches with POSIX `memchr` and `memmem` byte matching, eliminating grapheme cluster normalization overhead and accelerating extension filtering by **30x–800x**.
+4. **Cancellable Background Pipelines**: Parsing runs on a dedicated user-initiated `OperationQueue`. Operations decouple `self` and retain only immutable pipeline state, allowing immediate window controller deallocation on close.
+5. **Zero Reflection & Metadata**: Compiled with `-O -cross-module-optimization -Xfrontend -disable-reflection-metadata -Xfrontend -disable-reflection-names -dead_strip -dead_strip_dylibs`, enabling whole-module dead-code stripping.
+6. **Stripped Binary**: Single-architecture Mach-O executable is **638 KB** (`strip -u -r`). The complete `.app` bundle is only **3.3 MB** (Universal bundle **4.3 MB**, compressed release archive **~2.3 MB**) including all offline diagram engines, fonts, and assets.
+7. **High-Throughput Markdown Pipeline**: Reference C parsing via `cmark-gfm` coupled with linear extension scanning processes content at **14.3+ MB/s** (~4.9 ms for 44 KB real-world documents, ~70 ms for 1 MB, ~1.77 s for 25 MB files).
+8. **Lifecycle & Memory Hygiene**: `WeakScriptMessageHandler` trampoline permanently breaks WebKit script handler retain cycles; `FileWatcher.invalidate()` immediately closes file descriptors and cancels dispatch sources on window close; and `DiagramCache` memory cache is strictly capped at 16 MB.
+9. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
 
 ---
 
@@ -173,5 +179,5 @@ Commit & Push to develop
 * **Two-Stage Publication (`./build.sh publish [-y|--yes]`)**:
   * Default invocation runs a non-destructive **Dry Run**: compiles and validates all 4 slices/bundles and checks release notes from `CHANGELOG.md` without pushing remote commits or uploading assets.
   * `-y` / `--yes` flag initiates the complete live release lifecycle, pushing to `stpork/mdvu`, creating the GitHub Release, and publishing to `stpork/homebrew-tap`.
-* **Isolated `main` Branch**: The `main` branch contains only clean, tagged release commits. All active development occurs on `develop`. Following a release, `publish-release.sh` switches back to `develop`, automatically increments the `Y` counter (`0.2.0` $\to$ `0.3.0`), and pushes the bump commit.
+* **Isolated `main` Branch**: The `main` branch contains only clean, tagged release commits. All active development occurs on `develop`. Following a release, `publish-release.sh` switches back to `develop`, automatically increments the `Y` counter (`0.3.0` $\to$ `0.4.0`), and pushes the bump commit.
 * **Native About Panel**: Integrated via `AppDelegate.showAboutPanel(_:)` providing dynamic version reporting from bundle metadata, author credits (Finn de Bear), and direct link routing to the source repository.

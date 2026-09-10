@@ -1,4 +1,30 @@
+import Darwin
 import Foundation
+
+enum FastScan {
+    @inline(__always)
+    static func contains(_ string: String, ascii: UInt8) -> Bool {
+        string.utf8.withContiguousStorageIfAvailable { buf in
+            guard let base = buf.baseAddress else { return false }
+            return memchr(base, Int32(ascii), buf.count) != nil
+        } ?? string.utf8.contains(ascii)
+    }
+
+    @inline(__always)
+    static func contains(_ string: String, token: StaticString) -> Bool {
+        token.withUTF8Buffer { tokenBuf in
+            guard !tokenBuf.isEmpty else { return true }
+            if tokenBuf.count == 1 {
+                return contains(string, ascii: tokenBuf[0])
+            }
+            return string.utf8.withContiguousStorageIfAvailable { hayBuf in
+                guard hayBuf.count >= tokenBuf.count else { return false }
+                guard let base = hayBuf.baseAddress, let tBase = tokenBuf.baseAddress else { return false }
+                return memmem(base, hayBuf.count, tBase, tokenBuf.count) != nil
+            } ?? (string.range(of: String(decoding: tokenBuf, as: UTF8.self), options: .literal) != nil)
+        }
+    }
+}
 
 protocol MarkdownExtension {
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String
@@ -57,8 +83,8 @@ private struct ObsidianExtension: MarkdownExtension {
     private static let wikiLinkPattern = try! NSRegularExpression(pattern: #"\[\[([^\]|#]+)(#[^\]|]+)?(?:\|([^\]]+))?\]\]"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        let hasCallout = source.contains("[!")
-        let hasWikiSyntax = dialect == .obsidian && source.contains("[[")
+        let hasCallout = FastScan.contains(source, token: "[!")
+        let hasWikiSyntax = dialect == .obsidian && FastScan.contains(source, token: "[[")
         guard hasCallout || hasWikiSyntax else { return source }
         var result = ""
         var cursor = source.startIndex
@@ -69,12 +95,22 @@ private struct ObsidianExtension: MarkdownExtension {
             let nextNewline = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
             let line = source[cursor..<nextNewline]
 
-            let candidate = line.drop(while: { $0 == " " || $0 == "\t" })
-            let marker: Character? = candidate.hasPrefix("```") ? "`" : (candidate.hasPrefix("~~~") ? "~" : nil)
-            if let marker {
-                if fence == nil { fence = marker }
-                else if fence == marker { fence = nil }
-            } else if fence == nil {
+            var firstNonSpace: Character?
+            for ch in line {
+                if ch != " " && ch != "\t" {
+                    firstNonSpace = ch
+                    break
+                }
+            }
+
+            if let first = firstNonSpace, first == "`" || first == "~" {
+                let candidate = line.drop(while: { $0 == " " || $0 == "\t" })
+                let marker: Character? = candidate.hasPrefix("```") ? "`" : (candidate.hasPrefix("~~~") ? "~" : nil)
+                if let marker {
+                    if fence == nil { fence = marker }
+                    else if fence == marker { fence = nil }
+                }
+            } else if fence == nil && line.utf8.contains(UInt8(ascii: "[")) {
                 let needsCallout = line.contains("[!")
                 let needsWiki = hasWikiSyntax && line.contains("[[")
                 if needsCallout || needsWiki {
@@ -133,48 +169,92 @@ private struct ObsidianExtension: MarkdownExtension {
     }
 }
 
-private struct CodeFenceProtector {
+private struct CodeFenceScanner {
     static func process(_ source: String, transform: (String) -> String) -> String {
-        guard source.contains("```") || source.contains("~~~") else {
+        guard FastScan.contains(source, token: "```") || FastScan.contains(source, token: "~~~") else {
             return transform(source)
         }
-        let lines = source.components(separatedBy: "\n")
-        var output: [String] = []
-        var activeFence: String?
-        var textChunk: [String] = []
+        var result = ""
+        result.reserveCapacity(source.utf8.count)
+        var cursor = source.startIndex
+        var nonFenceChunkStart = cursor
+        var activeFenceChar: Character?
+        var activeFenceLength = 0
+        var fenceStart = cursor
 
-        func flushChunk() {
-            if !textChunk.isEmpty {
-                let joined = textChunk.joined(separator: "\n")
-                output.append(transform(joined))
-                textChunk.removeAll()
+        while cursor < source.endIndex {
+            let lineStart = cursor
+            let lineEnd = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
+
+            // Scan leading indentation up to 3 spaces (CommonMark spec)
+            var indent = 0
+            var charIdx = lineStart
+            while charIdx < lineEnd && (source[charIdx] == " " || source[charIdx] == "\t") {
+                indent += 1
+                charIdx = source.index(after: charIdx)
+            }
+
+            if let fenceChar = activeFenceChar {
+                // Inside a fence: check if this line closes the fence
+                if indent <= 3 && charIdx < lineEnd && source[charIdx] == fenceChar {
+                    var count = 0
+                    var scan = charIdx
+                    while scan < lineEnd && source[scan] == fenceChar {
+                        count += 1
+                        scan = source.index(after: scan)
+                    }
+                    if count >= activeFenceLength {
+                        let rest = source[scan..<lineEnd]
+                        if rest.allSatisfy({ $0 == " " || $0 == "\t" || $0 == "\r" }) {
+                            activeFenceChar = nil
+                            activeFenceLength = 0
+                            let nextCursor = lineEnd < source.endIndex ? source.index(after: lineEnd) : source.endIndex
+                            result.append(contentsOf: source[fenceStart..<nextCursor])
+                            cursor = nextCursor
+                            nonFenceChunkStart = cursor
+                            continue
+                        }
+                    }
+                }
+            } else {
+                // Outside a fence: check if an opening fence starts here
+                if indent <= 3 && charIdx < lineEnd {
+                    let first = source[charIdx]
+                    if first == "`" || first == "~" {
+                        var count = 0
+                        var scan = charIdx
+                        while scan < lineEnd && source[scan] == first {
+                            count += 1
+                            scan = source.index(after: scan)
+                        }
+                        if count >= 3 {
+                            if nonFenceChunkStart < lineStart {
+                                let chunk = String(source[nonFenceChunkStart..<lineStart])
+                                result.append(transform(chunk))
+                            }
+                            activeFenceChar = first
+                            activeFenceLength = count
+                            fenceStart = lineStart
+                        }
+                    }
+                }
+            }
+
+            if lineEnd < source.endIndex {
+                cursor = source.index(after: lineEnd)
+            } else {
+                cursor = source.endIndex
             }
         }
 
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if let currentFence = activeFence {
-                if trimmed.hasPrefix(currentFence) {
-                    activeFence = nil
-                }
-                output.append(line)
-                continue
-            }
-
-            if let fenceChar = trimmed.first, fenceChar == "`" || fenceChar == "~" {
-                let count = trimmed.prefix(while: { $0 == fenceChar }).count
-                if count >= 3 {
-                    flushChunk()
-                    activeFence = String(repeating: fenceChar, count: count)
-                    output.append(line)
-                    continue
-                }
-            }
-
-            textChunk.append(line)
+        if activeFenceChar != nil {
+            result.append(contentsOf: source[fenceStart...])
+        } else if nonFenceChunkStart < source.endIndex {
+            let chunk = String(source[nonFenceChunkStart...])
+            result.append(transform(chunk))
         }
-        flushChunk()
-        return output.joined(separator: "\n")
+
+        return result
     }
 }
 
@@ -182,7 +262,7 @@ private struct GitLabTOCExtension: MarkdownExtension {
     private static let tocPattern = try! NSRegularExpression(pattern: #"(?m)^[ \t]*(?:\[\[_TOC_\]\]|\[TOC\])[ \t]*$"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.contains("[[_TOC_]]") || source.contains("[TOC]") else { return source }
+        guard FastScan.contains(source, token: "[[_TOC_]]") || FastScan.contains(source, token: "[TOC]") else { return source }
         return RegexHelper.replace(source, regex: Self.tocPattern) { _ in
             "<p class=\"toc-placeholder\"><a href=\"#table-of-contents\">Table of Contents</a></p>"
         }
@@ -195,9 +275,10 @@ private struct AdmonitionExtension: MarkdownExtension {
     private static let colonEnd = try! NSRegularExpression(pattern: #"^[ \t]*:{3,4}[ \t]*$"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.contains("!!!") || source.contains("???") || source.contains(":::") else { return source }
-        let lines = source.components(separatedBy: "\n")
+        guard FastScan.contains(source, token: "!!!") || FastScan.contains(source, token: "???") || FastScan.contains(source, token: ":::") else { return source }
+        let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
         var output: [String] = []
+        output.reserveCapacity(lines.count)
         var inMkDocs = false
         var mkdocsPendingBlankLines = 0
         var inColonAdmonition = false
@@ -220,7 +301,7 @@ private struct AdmonitionExtension: MarkdownExtension {
                 if trimmed.hasPrefix(currentFence) {
                     activeFence = nil
                 }
-                output.append(line)
+                output.append(String(line))
                 continue
             }
 
@@ -229,20 +310,21 @@ private struct AdmonitionExtension: MarkdownExtension {
                 if count >= 3 {
                     endMkDocs()
                     activeFence = String(repeating: fenceChar, count: count)
-                    output.append(line)
+                    output.append(String(line))
                     continue
                 }
             }
 
             if inColonAdmonition {
-                if Self.colonEnd.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil {
+                let lineStr = String(line)
+                if Self.colonEnd.firstMatch(in: lineStr, range: NSRange(lineStr.startIndex..., in: lineStr)) != nil {
                     inColonAdmonition = false
                     output.append("")
                     output.append("<!-- -->")
                     output.append("")
                     continue
                 }
-                output.append("> " + line)
+                output.append("> " + lineStr)
                 continue
             }
 
@@ -264,10 +346,11 @@ private struct AdmonitionExtension: MarkdownExtension {
             }
 
             if let first = trimmed.first, first == "!" || first == "?" || first == ":" {
-                let nsLine = line as NSString
+                let lineStr = String(line)
+                let nsLine = lineStr as NSString
                 let fullRange = NSRange(location: 0, length: nsLine.length)
 
-                if let m = Self.mkdocsStart.firstMatch(in: line, range: fullRange) {
+                if let m = Self.mkdocsStart.firstMatch(in: lineStr, range: fullRange) {
                     endMkDocs()
                     inMkDocs = true
                     let marker = nsLine.substring(with: m.range(at: 2))
@@ -278,7 +361,7 @@ private struct AdmonitionExtension: MarkdownExtension {
                     continue
                 }
 
-                if let m = Self.colonStart.firstMatch(in: line, range: fullRange) {
+                if let m = Self.colonStart.firstMatch(in: lineStr, range: fullRange) {
                     endMkDocs()
                     inColonAdmonition = true
                     let type = nsLine.substring(with: m.range(at: 2)).uppercased()
@@ -288,7 +371,7 @@ private struct AdmonitionExtension: MarkdownExtension {
                 }
             }
 
-            output.append(line)
+            output.append(String(line))
         }
         return output.joined(separator: "\n")
     }
@@ -302,11 +385,11 @@ private struct CriticMarkupExtension: MarkdownExtension {
     private static let commentRegex = try! NSRegularExpression(pattern: #"\{>>([\s\S]*?)<<\}"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.contains("{+") || source.contains("{-") || source.contains("{~") || source.contains("{=") || source.contains("{>") else {
+        guard FastScan.contains(source, token: "{+") || FastScan.contains(source, token: "{-") || FastScan.contains(source, token: "{~") || FastScan.contains(source, token: "{=") || FastScan.contains(source, token: "{>") else {
             return source
         }
-        return CodeFenceProtector.process(source) { chunk in
-            guard chunk.contains("{+") || chunk.contains("{-") || chunk.contains("{~") || chunk.contains("{=") || chunk.contains("{>") else {
+        return CodeFenceScanner.process(source) { chunk in
+            guard FastScan.contains(chunk, token: "{+") || FastScan.contains(chunk, token: "{-") || FastScan.contains(chunk, token: "{~") || FastScan.contains(chunk, token: "{=") || FastScan.contains(chunk, token: "{>") else {
                 return chunk
             }
             var text = chunk
@@ -336,17 +419,17 @@ private struct SubSuperscriptExtension: MarkdownExtension {
     private static let subRegex = try! NSRegularExpression(pattern: #"(?<!~)~([^~\s\n\r]+)~(?!~)"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.contains("~") || source.contains("^") else {
+        guard FastScan.contains(source, ascii: UInt8(ascii: "~")) || FastScan.contains(source, ascii: UInt8(ascii: "^")) else {
             return source
         }
-        return CodeFenceProtector.process(source) { chunk in
-            guard chunk.contains("~") || chunk.contains("^") else { return chunk }
+        return CodeFenceScanner.process(source) { chunk in
+            guard FastScan.contains(chunk, ascii: UInt8(ascii: "~")) || FastScan.contains(chunk, ascii: UInt8(ascii: "^")) else { return chunk }
             var text = chunk
-            if text.contains("^") {
+            if FastScan.contains(text, ascii: UInt8(ascii: "^")) {
                 text = Self.underRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<u>$1</u>")
                 text = Self.supRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sup>$1</sup>")
             }
-            if text.contains("~") {
+            if FastScan.contains(text, ascii: UInt8(ascii: "~")) {
                 text = Self.subRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sub>$1</sub>")
             }
             return text
@@ -356,64 +439,138 @@ private struct SubSuperscriptExtension: MarkdownExtension {
 
 private struct MathExtension: MarkdownExtension {
     private static let mathCodeBlockRegex = try! NSRegularExpression(pattern: #"(?m)^```(?:math|latex|katex)[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$"#)
-    private static let inlineCodeRegex = try! NSRegularExpression(pattern: #"`+[^`\n]+?`+"#)
-    private static let displayRegex = try! NSRegularExpression(pattern: #"(?<!\\)\$\$([\s\S]+?)(?<!\\)\$\$"#)
-    private static let inlineMathRegex = try! NSRegularExpression(pattern: #"(?<![\$\\])\$(?!\s)((?:\\\$|[^\$\n\r])+?)(?<![\s\\])\$(?!\$)"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard source.contains("$") || source.contains("```math") || source.contains("```latex") || source.contains("```katex") else {
+        guard FastScan.contains(source, ascii: UInt8(ascii: "$")) || FastScan.contains(source, token: "```math") || FastScan.contains(source, token: "```latex") || FastScan.contains(source, token: "```katex") else {
             return source
         }
 
         var text = source
-        if text.contains("```math") || text.contains("```latex") || text.contains("```katex") {
+        if FastScan.contains(text, token: "```math") || FastScan.contains(text, token: "```latex") || FastScan.contains(text, token: "```katex") {
             text = RegexHelper.replace(text, regex: Self.mathCodeBlockRegex) { match in
                 let tex = match[1].trimmingCharacters(in: .whitespacesAndNewlines)
                 return "<div class=\"math-display\">\(HTML.escape(tex))</div>"
             }
         }
 
-        guard text.contains("$") else { return text }
+        guard FastScan.contains(text, ascii: UInt8(ascii: "$")) else { return text }
 
-        return CodeFenceProtector.process(text) { chunk in
-            guard chunk.contains("$") else { return chunk }
-
-            var codeSpans: [String] = []
-            let prefix = "@@MDVU_MATH_CODE_"
-            let suffix = "@@"
-
-            var intermediate = chunk
-            if intermediate.contains("`") {
-                intermediate = RegexHelper.replace(intermediate, regex: Self.inlineCodeRegex) { match in
-                    let code = match[0]
-                    let idx = codeSpans.count
-                    codeSpans.append(code)
-                    return "\(prefix)\(idx)\(suffix)"
-                }
-            }
-
-            if intermediate.contains("$$") {
-                intermediate = RegexHelper.replace(intermediate, regex: Self.displayRegex) { match in
-                    let tex = match[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                    return "<div class=\"math-display\">\(HTML.escape(tex))</div>"
-                }
-            }
-
-            if intermediate.contains("$") {
-                intermediate = RegexHelper.replace(intermediate, regex: Self.inlineMathRegex) { match in
-                    let tex = match[1]
-                    return "<span class=\"math-inline\">\(HTML.escape(tex))</span>"
-                }
-            }
-
-            if !codeSpans.isEmpty {
-                for (idx, code) in codeSpans.enumerated() {
-                    intermediate = intermediate.replacingOccurrences(of: "\(prefix)\(idx)\(suffix)", with: code)
-                }
-            }
-
-            return intermediate
+        return CodeFenceScanner.process(text) { chunk in
+            guard FastScan.contains(chunk, ascii: UInt8(ascii: "$")) else { return chunk }
+            return Self.scanMathInChunk(chunk)
         }
+    }
+
+    private static func scanMathInChunk(_ chunk: String) -> String {
+        var result = ""
+        result.reserveCapacity(chunk.utf8.count)
+        var cursor = chunk.startIndex
+        var chunkStart = cursor
+
+        while cursor < chunk.endIndex {
+            let ch = chunk[cursor]
+
+            // 1. Skip inline code backticks: `...` or ``...``
+            if ch == "`" {
+                var scan = cursor
+                while scan < chunk.endIndex && chunk[scan] == "`" {
+                    scan = chunk.index(after: scan)
+                }
+                let ticks = chunk[cursor..<scan]
+                if let closeRange = chunk[scan...].range(of: ticks, options: .literal) {
+                    cursor = closeRange.upperBound
+                    continue
+                } else {
+                    cursor = scan
+                    continue
+                }
+            }
+
+            // 2. Skip escaped backslash
+            if ch == "\\" {
+                let next = chunk.index(after: cursor)
+                if next < chunk.endIndex {
+                    cursor = chunk.index(after: next)
+                    continue
+                }
+                cursor = next
+                continue
+            }
+
+            // 3. Display math: $$
+            if ch == "$" {
+                let next = chunk.index(after: cursor)
+                if next < chunk.endIndex && chunk[next] == "$" {
+                    let mathStart = chunk.index(after: next)
+                    var search = mathStart
+                    var foundClosing: Range<String.Index>?
+                    while let r = chunk[search...].range(of: "$$", options: .literal) {
+                        let prev = chunk.index(before: r.lowerBound)
+                        if prev >= mathStart && chunk[prev] == "\\" {
+                            search = r.upperBound
+                            continue
+                        }
+                        foundClosing = r
+                        break
+                    }
+
+                    if let closeRange = foundClosing {
+                        result.append(contentsOf: chunk[chunkStart..<cursor])
+                        let tex = chunk[mathStart..<closeRange.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                        result.append("<div class=\"math-display\">\(HTML.escape(tex))</div>")
+                        cursor = closeRange.upperBound
+                        chunkStart = cursor
+                        continue
+                    }
+                } else {
+                    // 4. Inline math: $...$
+                    // Opening $ cannot be followed by whitespace, newline, or $
+                    if next < chunk.endIndex && chunk[next] != " " && chunk[next] != "\t" && chunk[next] != "\n" && chunk[next] != "\r" && chunk[next] != "$" {
+                        let mathStart = next
+                        var search = mathStart
+                        var foundClosing: String.Index?
+                        while search < chunk.endIndex {
+                            let c = chunk[search]
+                            if c == "\n" || c == "\r" {
+                                break
+                            }
+                            if c == "\\" {
+                                search = chunk.index(after: search)
+                                if search < chunk.endIndex { search = chunk.index(after: search) }
+                                continue
+                            }
+                            if c == "$" {
+                                let prev = chunk.index(before: search)
+                                if chunk[prev] != " " && chunk[prev] != "\t" {
+                                    let after = chunk.index(after: search)
+                                    if after == chunk.endIndex || chunk[after] != "$" {
+                                        foundClosing = search
+                                        break
+                                    }
+                                }
+                            }
+                            search = chunk.index(after: search)
+                        }
+
+                        if let closeIdx = foundClosing {
+                            result.append(contentsOf: chunk[chunkStart..<cursor])
+                            let tex = String(chunk[mathStart..<closeIdx])
+                            result.append("<span class=\"math-inline\">\(HTML.escape(tex))</span>")
+                            cursor = chunk.index(after: closeIdx)
+                            chunkStart = cursor
+                            continue
+                        }
+                    }
+                }
+            }
+
+            cursor = chunk.index(after: cursor)
+        }
+
+        if chunkStart < chunk.endIndex {
+            result.append(contentsOf: chunk[chunkStart...])
+        }
+        return result
     }
 }
 

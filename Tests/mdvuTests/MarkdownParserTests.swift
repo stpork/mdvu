@@ -326,12 +326,12 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func aboutPanelContentAndLinks() {
-        let attrString = AboutPanelController.makeAttributedString(version: "0.2.0")
+        let attrString = AboutPanelController.makeAttributedString(version: "0.3.0")
         let plain = attrString.string
 
         #expect(plain.contains("mdvu\n"))
         #expect(plain.contains("Markdown and Mermaid Viewer\n"))
-        #expect(plain.contains("Version: 0.2.0\n"))
+        #expect(plain.contains("Version: 0.3.0\n"))
         #expect(plain.contains("Copyright © 2026 Finn de Bear"))
         #expect(!plain.contains("(1)"))
         #expect(!plain.contains("("))
@@ -347,7 +347,7 @@ struct MarkdownParserTests {
             if url.absoluteString == "https://github.com/stpork/mdvu" && substring == "mdvu\n" {
                 foundRepoLink = true
             }
-            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.2.0" && substring.contains("0.2.0") {
+            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.3.0" && substring.contains("0.3.0") {
                 foundReleaseLink = true
             }
             if url.absoluteString == "mailto:finndebear@gmail.com" && substring == "Finn de Bear" {
@@ -647,7 +647,11 @@ struct MarkdownParserTests {
         let md = """
         Для объявленных границы $B$, контура $\\ell$, возмущений $D$ и регуляторной способности $G$:
 
-        $$ \\Delta_{\\mathrm{maint}}(B,\\ell,D) =\\mathbb E[G\\mid\\pi_{\\mathrm{aligned}}] -\\mathbb E[G\\mid\\pi_{\\mathrm{misaligned}}]. $$
+        $$
+        \\Delta_{\\mathrm{maint}}(B,\\ell,D)
+        =\\mathbb E[G\\mid\\pi_{\\mathrm{aligned}}]
+        -\\mathbb E[G\\mid\\pi_{\\mathrm{misaligned}}].
+        $$
 
         Здесь $\\pi$ — политика последовательных вмешательств.
         """
@@ -675,6 +679,35 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("<code>$not_math$</code>"))
         #expect(!doc.body.contains("<span class=\"math-inline\">10 and "))
         #expect(doc.body.contains("$10 and $20"))
+    }
+
+    @Test func testFastScanTokensAndAscii() {
+        let text = "Hello world with [!NOTE] and $math$ and ```code```"
+        #expect(FastScan.contains(text, token: "[!"))
+        #expect(FastScan.contains(text, token: "```"))
+        #expect(FastScan.contains(text, ascii: UInt8(ascii: "$")))
+        #expect(!FastScan.contains(text, token: "missing"))
+        #expect(!FastScan.contains(text, ascii: UInt8(ascii: "%")))
+    }
+
+    @Test func testEagerDocumentLoaderLifecycle() {
+        let fixture = Self.fixtureURL("test-light.md")
+        EagerDocumentLoader.start(path: fixture.path, options: .default)
+        let task = EagerDocumentLoader.take(for: fixture)
+        #expect(task != nil)
+        #expect(EagerDocumentLoader.take(for: fixture) == nil)
+    }
+
+    @Test @MainActor func testDocumentWindowControllerDeallocationWithoutRetainCycle() {
+        weak var weakController: DocumentWindowController?
+        let fixture = Self.fixtureURL("test-light.md")
+        autoreleasepool {
+            let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: StartupProfiler())
+            weakController = controller
+            #expect(weakController != nil)
+            controller.window?.close()
+        }
+        #expect(weakController == nil)
     }
 }
 

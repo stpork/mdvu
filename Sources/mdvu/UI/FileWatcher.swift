@@ -6,6 +6,7 @@ final class FileWatcher {
     private let callback: () -> Void
     private let queue = DispatchQueue(label: "com.mdvu.file-watcher", qos: .utility)
     private let url: URL
+    private var isInvalidated = false
 
     init?(url: URL, callback: @escaping () -> Void) {
         self.url = url
@@ -13,10 +14,22 @@ final class FileWatcher {
         guard startWatching() else { return nil }
     }
 
-    deinit { source?.cancel() }
+    deinit {
+        invalidate()
+    }
+
+    func invalidate() {
+        if isInvalidated { return }
+        isInvalidated = true
+        pending?.cancel()
+        pending = nil
+        source?.cancel()
+        source = nil
+    }
 
     @discardableResult
     private func startWatching() -> Bool {
+        guard !isInvalidated else { return false }
         let fd = open(url.path, O_EVTONLY)
         guard fd >= 0 else { return false }
         let source = DispatchSource.makeFileSystemObjectSource(
@@ -25,7 +38,7 @@ final class FileWatcher {
             queue: queue
         )
         source.setEventHandler { [weak self, weak source] in
-            guard let self, let source else { return }
+            guard let self, let source, !self.isInvalidated else { return }
             let data = source.data
             if data.contains(.delete) || data.contains(.rename) {
                 source.cancel()
@@ -40,20 +53,27 @@ final class FileWatcher {
     }
 
     private func rearm() {
+        guard !isInvalidated else { return }
         queue.asyncAfter(deadline: .now() + .milliseconds(100)) { [weak self] in
-            guard let self else { return }
+            guard let self, !self.isInvalidated else { return }
             if !self.startWatching() {
                 self.queue.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
-                    _ = self?.startWatching()
+                    guard let self, !self.isInvalidated else { return }
+                    _ = self.startWatching()
                 }
             }
         }
     }
 
     private func changed() {
+        guard !isInvalidated else { return }
         pending?.cancel()
         let item = DispatchWorkItem { [weak self] in
-            DispatchQueue.main.async { self?.callback() }
+            guard let self, !self.isInvalidated else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.isInvalidated else { return }
+                self.callback()
+            }
         }
         pending = item
         queue.asyncAfter(deadline: .now() + .milliseconds(180), execute: item)

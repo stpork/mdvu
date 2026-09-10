@@ -183,6 +183,14 @@ final class NavigationHistory {
     }
 }
 
+private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private weak var handler: WKScriptMessageHandler?
+    init(_ handler: WKScriptMessageHandler) { self.handler = handler }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        handler?.userContentController(userContentController, didReceive: message)
+    }
+}
+
 final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSTableViewDataSource, NSTableViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
     var onOpenURL: ((URL) -> Void)?
     var onDocumentChange: ((URL) -> Void)?
@@ -253,6 +261,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         return queue
     }()
     private var renderOperation: Operation?
+    private var directoryOperation: Operation?
     private var renderGeneration = 0
     private var pendingScrollRatio: Double?
     private var systemAppearanceIsDark: Bool?
@@ -305,7 +314,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             self.updateZoomControls()
         }
         webView.navigationDelegate = self
-        Self.scriptHandlerNames.forEach { webView.configuration.userContentController.add(self, name: $0) }
+        Self.scriptHandlerNames.forEach { webView.configuration.userContentController.add(WeakScriptMessageHandler(self), name: $0) }
         configureLayout(directoryMode: directoryMode)
         if directoryMode { loadDirectory(url) } else { openDocument(url) }
         profiler.mark("window.created")
@@ -313,8 +322,25 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     deinit {
+        tearDown()
+    }
+
+    func tearDown() {
         magnificationObservation?.invalidate()
+        magnificationObservation = nil
+        directoryOperation?.cancel()
+        directoryOperation = nil
+        renderOperation?.cancel()
+        renderOperation = nil
+        renderQueue.cancelAllOperations()
+        watcher?.invalidate()
+        watcher = nil
         unregisterScriptMessageHandlers()
+    }
+
+    override func close() {
+        tearDown()
+        super.close()
     }
 
     private func unregisterScriptMessageHandlers() {
@@ -326,11 +352,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if !hasShown { hasShown = true; profiler.mark("window.visible") }
     }
     func windowWillClose(_ notification: Notification) {
-        magnificationObservation?.invalidate()
-        magnificationObservation = nil
-        renderQueue.cancelAllOperations()
-        watcher = nil
-        unregisterScriptMessageHandlers()
+        tearDown()
         onClose?()
     }
 
@@ -557,6 +579,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     private func loadDirectory(_ directory: URL) {
+        directoryOperation?.cancel()
         let operation = BlockOperation()
         operation.addExecutionBlock { [weak self, weak operation] in
             guard let operation, !operation.isCancelled else { return }
@@ -599,6 +622,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 }
             }
         }
+        directoryOperation = operation
         renderQueue.addOperation(operation)
     }
 
@@ -628,6 +652,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let scrollScript = preserveScroll ? Self.measureScrollJS : nil
         let render: (Any?) -> Void = { [weak self] position in self?.render(documentURL, position: position) }
         if let scrollScript { webView.evaluateJavaScript(scrollScript) { position, _ in render(position) } } else { render(nil) }
+        watcher?.invalidate()
         watcher = FileWatcher(url: documentURL) { [weak self] in self?.openDocument(documentURL, preserveScroll: true) }
     }
 
@@ -644,14 +669,37 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             return y / h
         }()
         renderOperation?.cancel()
+
+        if position == nil, let eagerTask = EagerDocumentLoader.take(for: url) {
+            Task { @MainActor [weak self] in
+                guard self?.renderGeneration == generation else { return }
+                do {
+                    let rendered = try await eagerTask.value
+                    guard let self, self.renderGeneration == generation else { return }
+                    let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth)
+                    self.isRestoringDocumentZoom = true
+                    self.pendingScrollRatio = scrollRatio
+                    self.profiler.mark("markdown.ready")
+                    self.webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+                    self.profiler.mark("html.loaded")
+                } catch {
+                    guard let self, self.renderGeneration == generation else { return }
+                    self.isRestoringDocumentZoom = false
+                    self.showMessage("Unable to open document", detail: error.localizedDescription)
+                }
+            }
+            return
+        }
+
         let operation = BlockOperation()
+        let pipeline = self.pipeline
         operation.addExecutionBlock { [weak self, weak operation] in
-            guard let self, let operation, !operation.isCancelled else { return }
+            guard let operation, !operation.isCancelled else { return }
             do {
                 let data = try Data(contentsOf: url, options: .mappedIfSafe)
                 guard !operation.isCancelled else { return }
                 let source = String(decoding: data, as: UTF8.self)
-                let rendered = self.pipeline.render(source, diagramTheme: diagramTheme)
+                let rendered = pipeline.render(source, diagramTheme: diagramTheme)
                 guard !operation.isCancelled else { return }
                 let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth)
                 DispatchQueue.main.async { [weak self] in
@@ -1379,6 +1427,13 @@ final class DocumentWindow: NSWindow {
     private var titleClickStartPoint: NSPoint?
     private weak var cachedTitleField: NSTextField?
 
+    override func close() {
+        if !isVisible {
+            controller?.tearDown()
+        }
+        super.close()
+    }
+
     private enum SwipeState {
         case idle
         case tracking(isBack: Bool)
@@ -1654,7 +1709,10 @@ enum WebKitPrewarmer {
     }
 
     static func takePrewarmedWebView() -> WKWebView? {
-        defer { prewarmedView = nil }
+        defer {
+            prewarmedView = nil
+            DispatchQueue.main.async { prewarm() }
+        }
         return prewarmedView
     }
 }
