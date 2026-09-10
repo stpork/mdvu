@@ -1,10 +1,19 @@
 ---
-title: "mdvu Complete Ecosystem Validation — Markdown Dialects, Mermaid, ZenUML & PlantUML"
+title: "mdvu Complete Ecosystem Validation — Markdown, Native MathML/KaTeX, Mermaid, ZenUML & PlantUML"
 subtitle: "Global Knowledge Delivery Platform — Architecture, Operations, Localization and Renderer Conformance"
-fixture_version: "2026.09.05-complete-extensions"
+fixture_version: "2026.09.10-native-math-contracts"
 encoding: "UTF-8"
 mermaid_target: "11.17.2"
-plantuml_target: "1.2026.6"
+plantuml_target: "1.2026.7"
+zenuml_target: "0.2.3"
+vizjs_target: "3.24.0"
+graphviz_target: "14.1.1"
+markdown_parser_target: "swiftlang/swift-cmark (cmark-gfm); pin actual commit in run report"
+katex_target: "bundled application version; not specified in product claim"
+math_output_target: "mathml, rendered by native WebKit"
+compression_target: "LZMA; Ultra for diagram bundles; measure actual build artifacts"
+katex_compressed_size_claim: "approximately 64 KB; unit and build measurement required"
+fixture_policy: "required-native and required-literal are strict; compatibility probes are separate"
 purpose: "maximum practical functional coverage of Markdown ecosystems and diagram formats without pathological stress"
 markdown_ecosystem_target: "CommonMark/GFM plus major public Markdown dialects and extensions current in 2026"
 ---
@@ -13,7 +22,7 @@ markdown_ecosystem_target: "CommonMark/GFM plus major public Markdown dialects a
 
 # mdvu Complete Ecosystem Validation 🌍🧪
 
-**A realistic technical handbook and renderer-conformance fixture for Markdown ecosystems, Mermaid, ZenUML and PlantUML.**
+**A realistic technical handbook and renderer-conformance fixture for Markdown ecosystems, native MathML/KaTeX, Mermaid, ZenUML and PlantUML.**
 
 This document is designed to test **as much real content behavior as practical in one normal-sized document**.
 It deliberately avoids pathological stress patterns: there are no hundreds of duplicate diagrams, 300-row synthetic
@@ -21,8 +30,11 @@ tables, giant 300-node graphs, exhaustive Unicode code-point dumps, invisible bi
 malformed syntax. Instead, each capability appears in a compact, meaningful context.
 
 > [!IMPORTANT]
-> **Target benchmark:** Mermaid **11.17.2** and PlantUML **1.2026.6 stable**. Newer Mermaid diagram families,
-> ZenUML, and the current PlantUML diagram families are expected behavior for this fixture, not optional probes.
+> **Declared product targets (not measured results):** Mermaid **11.17.2**, ZenUML **0.2.3**, PlantUML Core **1.2026.7**,
+> Viz.js **3.24.0** / Graphviz **14.1.1**, and bundled KaTeX producing native WebKit MathML.
+> Record the actual shipped versions and hashes. The legacy diagram gallery remains a coverage target;
+> a source example or a readable error does not prove that the bundled engine supports it.
+> Sections 19–23 define strict acceptance cases for the advertised features and a separate compatibility profile.
 
 **Validation markers:** `MDVU-COMPLETE-BEGIN`, `MDVU-COMPLETE-MIDDLE`, `MDVU-COMPLETE-END`.
 
@@ -30,7 +42,7 @@ malformed syntax. Instead, each capability appears in a compact, meaningful cont
 
 | Area | Practical coverage |
 |---|---|
-| Markdown core | CommonMark/GFM-style blocks and inline syntax, tables, tasks, callouts, HTML, details, footnotes, math probes, links, anchors, code fences |
+| Markdown core | CommonMark/GFM-style blocks and inline syntax, tables, tasks, callouts, HTML, details, footnotes, native math, links, anchors, code fences |
 | Markdown ecosystems | GitHub/GFM, GitLab, Obsidian, Pandoc, MultiMarkdown/Markdown Extra, kramdown/Jekyll, MkDocs/Python-Markdown/PyMdown, MDX/Docusaurus, Hugo/Goldmark, MyST, Quarto/R Markdown/bookdown, VuePress/VitePress, Markdoc, DocFX/Markdig, Marp/Marpit, Jupyter Markdown |
 | Navigation | linked TOCs, explicit anchors, automatic heading slugs, duplicate headings, back-links, multilingual navigation targets |
 | Mermaid | every diagram family in the Mermaid 11.17.2 syntax catalog, all five C4 views, ZenUML, plus compact feature probes for major grammars |
@@ -38,6 +50,8 @@ malformed syntax. Instead, each capability appears in a compact, meaningful cont
 | Unicode | Latin Extended, Cyrillic, Greek, Hebrew, Arabic/Persian, Indic, Thai, CJK, Japanese, Korean, Georgian, Armenian, emoji and grapheme clusters |
 | RTL/LTR | Arabic and Hebrew paragraphs, mixed direction, URLs/numbers inside RTL content |
 | Code | common programming/configuration fence languages and punctuation-heavy samples |
+| Native math | dollar inline/display and math fences; algebra, calculus, matrices, MathML structure, nesting, exclusions and recovery |
+| Runtime claims | fixture-driven cold/warm offline runs, per-engine loading, Java-free execution, scheduling, cache invalidation and bundle inspection |
 
 <a id="multilingual-toc"></a>
 
@@ -57,18 +71,23 @@ malformed syntax. Instead, each capability appears in a compact, meaningful cont
 - [10. Localization, Accessibility and Unicode](#section-10)
 - [11. Markdown Feature Appendix](#section-11)
 - [12. Mermaid 11.17.2 Reference Appendix](#section-12)
-- [13. PlantUML 1.2026.6 Reference Appendix](#section-13)
+- [13. PlantUML 1.2026.7 Reference Appendix](#section-13)
 - [14. Code and Configuration Appendix](#section-14)
 - [15. Markdown Dialects & Ecosystem Extensions](#section-15)
 - [16. Cross-Dialect Interaction Tests](#section-16)
 - [17. Extension Coverage Matrix](#section-17)
 - [18. Validation Checklist](#section-18)
+- [19. Declared Product Contract and Case Protocol](#section-19)
+- [20. Native Math / KaTeX / MathML Cases](#section-20)
+- [21. CommonMark, GFM and Advertised Extension Regressions](#section-21)
+- [22. Offline Diagram Integration and Runtime Cases](#section-22)
+- [23. Acceptance Matrix and Reproducible Run Protocol](#section-23)
 
 ### Русский
 
 - [1. Краткое описание](#section-1) · [2. Контекст](#section-2) · [3. Архитектура](#section-3)
 - [10. Локализация и Unicode](#section-10) · [11. Markdown](#section-11) · [12. Mermaid](#section-12) · [13. PlantUML](#section-13)
-- [15. Диалекты и расширения Markdown](#section-15) · [18. Проверка](#section-18)
+- [15. Диалекты](#section-15) · [18. Проверка](#section-18) · [20. Формулы](#section-20) · [21. Регрессии](#section-21) · [23. Протокол](#section-23)
 - [Навигационная цель на русском](#nav-ru)
 
 ### 中文
@@ -1862,7 +1881,13 @@ Symbols: `& < > " ' / \ | { } [ ] ( ) # + - _ = ~ ^ % $ € £ ¥ ₹ ₪ ₩ ©
 <a id="explicit-test-anchor"></a>
 [Absolute](https://example.com) · [Relative](./docs/architecture.md) · [Anchor](#explicit-test-anchor) · <https://example.org/autolink>
 
+![Local offline image syntax example](./assets/mdvu-checker.png "Local image, no network")
+
+The old remote-image case is retained as literal source so opening the offline fixture does not request a remote asset:
+
+```markdown
 ![Remote image syntax example](https://dummyimage.com/320x80/eeeeee/333333.png&text=mdvu+image+test "Remote image")
+```
 
 Reference-style link: [Mermaid documentation][mermaid-docs].
 
@@ -1884,12 +1909,13 @@ Markdown inside details: **bold**, `code`, and a short list:
 
 <!-- HTML comments should not become visible document text. -->
 
-### 11.8 Footnotes and Math Dialect Probes
+### 11.8 Footnotes and Native Math Smoke Test
 
-A normal sentence may contain a footnote reference.[^rendering] Another paragraph contains inline math `$E = mc^2$`.
+A normal sentence may contain a footnote reference.[^rendering] This is active inline math: $E = mc^2$.
+The code span `$E = mc^2$` is intentionally literal and must NOT become a second formula.
 
 $$
-R = \frac{successful\ renders}{total\ renders} \times 100\%
+R = \frac{\text{successful renders}}{\text{total renders}} \times 100\%
 $$
 
 [^rendering]: Footnote syntax is supported by some Markdown dialects and is included as a compatibility probe.
@@ -2573,13 +2599,13 @@ flowchart LR
 
 
 
-`MDVU-COMPLETE-MIDDLE`
+`MDVU-DIAGRAMS-END`
 
 <a id="section-13"></a>
 
-## 13. PlantUML 1.2026.6 Reference Appendix
+## 13. PlantUML 1.2026.7 Reference Appendix
 
-This section targets **PlantUML 1.2026.6 stable**. It intentionally covers every diagram family listed on the
+This section targets **PlantUML 1.2026.7 stable**. It intentionally covers every diagram family listed on the
 current PlantUML home page, plus the current Board and Wire start-tag families. Examples are compact and use
 normal documentation content rather than synthetic large graphs. Unless a subsection says otherwise, each
 block is expected to render successfully in the target benchmark.
@@ -2735,7 +2761,7 @@ package "Viewer" {
   [Diagram Router] as Router
 }
 component "Mermaid 11.17.2" as Mermaid
-component "PlantUML 1.2026.6" as PUML
+component "PlantUML 1.2026.7" as PUML
 Loader --> Parser
 Parser --> Nav
 Parser --> Router
@@ -2973,7 +2999,7 @@ title mdvu fixture chronology
 ** Mermaid
 *** 11.17.2
 ** PlantUML
-*** 1.2026.6
+*** 1.2026.7
 ** Languages
 *** Русский
 *** 中文
@@ -3154,7 +3180,7 @@ componentDiagram {
 ```plantuml
 @startuml
 !define PRODUCT mdvu
-!$version = "1.2026.6"
+!$version = "1.2026.7"
 !include <archimate/Archimate>
 title PRODUCT + " — stdlib / preprocessor probe"
 Application_Component(app, "mdvu")
@@ -3218,7 +3244,7 @@ viewer:
   "renderer": {
     "markdown": "gfm-compatible",
     "mermaid": "11.17.2",
-    "plantuml": "1.2026.6"
+    "plantuml": "1.2026.7"
   },
   "integrity": "sha256:example"
 }
@@ -3290,8 +3316,8 @@ features such as alerts and footnotes.
 |---|---|---|
 | Strikethrough | ~~obsolete~~ | deleted text |
 | Autolink | https://example.com/path?q=mdvu | clickable URL |
-| Task | [x] complete | checked |
-| Task | [ ] pending | unchecked |
+| Task-shaped table text | [x] complete | literal text; not a task-list item |
+| Task-shaped table text | [ ] pending | literal text; not a task-list item |
 
 - [x] Render Markdown
 - [x] Render Mermaid
@@ -3349,7 +3375,7 @@ These are platform-sensitive references/emoji aliases and may remain literal in 
 
 This paragraph is a block-reference target for the Obsidian fixture. ^mdvu-block-target
 
-Link to the block: [[test-complete-extensions#^mdvu-block-target]]
+Link to the block: [[test-complete#^mdvu-block-target]]
 
 A structured block follows:
 
@@ -3357,7 +3383,7 @@ A structured block follows:
 
 ^mdvu-quoted-block
 
-Reference: [[test-complete-extensions#^mdvu-quoted-block]]
+Reference: [[test-complete#^mdvu-quoted-block]]
 
 #### Embeds / transclusion
 
@@ -3365,7 +3391,7 @@ Reference: [[test-complete-extensions#^mdvu-quoted-block]]
 
 ![[Architecture Overview#Deployment]]
 
-![[test-complete-extensions#^mdvu-block-target]]
+![[test-complete#^mdvu-block-target]]
 
 ![[diagram.png]]
 
@@ -4136,11 +4162,11 @@ This is a Quarto fenced-div callout.
 
 ## Linux
 
-`mdvu test-complete-extensions.md`
+`mdvu test-complete.md`
 
 ## macOS
 
-`open -a mdvu test-complete-extensions.md`
+`open -a mdvu test-complete.md`
 
 :::
 
@@ -4603,7 +4629,10 @@ A test runner can classify each construct as:
 3. **Block-local diagnostic** — unsupported executable/diagram construct reports a local error.
 4. **Failure** — parser/render failure corrupts unrelated content, navigation, or later sections.
 
-The benchmark treats classes 1–3 as observable implementation behavior. Class 4 is always a renderer defect.
+For **advertised native features**, only class 1 satisfies the capability claim; class 2 or 3 is a failed
+capability test even when the document survives. For explicitly unadvertised compatibility probes, classes 1–3
+are recorded separately and may satisfy the documented fallback policy. Class 4 always fails.
+Do not silently reclassify a required case as optional after seeing a renderer error. See section 19.
 
 <a id="section-18"></a>
 
@@ -4617,10 +4646,12 @@ A successful normal validation should confirm:
 - [ ] Major Markdown ecosystem dialects either render natively or degrade locally without corrupting subsequent content.
 - [ ] Obsidian wikilinks, block IDs, embeds, tags, comments and callouts are distinguishable from ordinary Markdown.
 - [ ] GitLab, Pandoc, kramdown/Jekyll, MkDocs/PyMdown, MDX/Docusaurus, MyST, Quarto and VuePress/VitePress probes remain navigable.
-- [ ] Code fences retain indentation and punctuation.
-- [ ] Every Mermaid 11.17.2 diagram family in this fixture renders or reports a block-local failure without corrupting the document.
+- [ ] Code fences retain indentation and punctuation; math/extension preprocessing does not alter code, URLs or attributes.
+- [ ] Required native math cases render as visible MathML, including inline, display and math fences.
+- [ ] Literal-math cases create no math nodes; error probes remain isolated.
+- [ ] Required Mermaid cases render; legacy catalog gaps are enumerated individually, never counted as successful rendering.
 - [ ] ZenUML diagrams render as part of the Mermaid target profile.
-- [ ] Every PlantUML 1.2026.6 family in this fixture renders or reports a block-local failure without corrupting the document.
+- [ ] Required PlantUML cases render; Core/stdlib/output-format limitations in the legacy catalog are reported explicitly.
 - [ ] Both `plantuml` and `puml` fenced-code routing behave as expected.
 - [ ] RTL samples remain readable and do not corrupt neighboring LTR text.
 - [ ] CJK, Cyrillic, Greek, Indic and Latin-extended scripts use usable fallback fonts.
@@ -4641,8 +4672,1692 @@ A successful normal validation should confirm:
 | Performance | realistic large document | maximum CPU/memory stress |
 | Errors | normal compatibility differences | intentionally invalid parser inputs |
 
-The document ends with an explicit marker so automated smoke tests can distinguish successful full-file
-traversal from partial rendering. Reaching this section proves that the viewer remained usable through the entire functional validation corpus. Diagram failures are still reported separately and should be treated as benchmark gaps against the declared target versions.
+The final marker now follows section 23. Finding it in **rendered visible content** checks traversal only:
+its existence in the source, a search index or a hidden DOM node is not proof of successful rendering or responsiveness.
+Required-case outcomes, compatibility gaps and runtime measurements must be reported independently.
+
+
+
+---
+
+<a id="section-19"></a>
+
+## 19. Declared Product Contract and Case Protocol
+
+This extension preserves the handbook, dialect gallery and diagram gallery above. The product statements
+supplied for this revision are **requirements**, not evidence that the implementation has passed these tests.
+The added cases are authored regression inputs, not upstream conformance-suite excerpts.
+
+### 19.1 What is required, and what is not silently promised
+
+| Layer | Required product behavior | Separate or conditional coverage |
+|---|---|---|
+| Parser | Swift cmark-gfm baseline; CommonMark blocks/inlines and enabled GFM extensions | Full conformance also requires the pinned upstream CommonMark/GFM test suites |
+| Callouts | Obsidian NOTE, TIP, WARNING, DANGER; MkDocs `!!!`, `???`, `???+`; Docusaurus/VuePress note containers | Full Obsidian vault semantics, arbitrary JSX/MDX evaluation, all unrelated dialects are not implied |
+| Links/assets | Wiki-link label/target routing; local image embeds | PDF/audio/canvas transclusion and custom vault resolution are additional capabilities |
+| Inline extensions | All five CriticMarkup operations; `~sub~`, `^sup^`, `^^underline^^`; GitLab TOC | Review accept/reject modes and alternative delimiter families require explicit configuration |
+| Native math | Inline dollars, display dollars and `math` fences; KaTeX-compatible TeX to visible native MathML | MathJax-only packages, a complete TeX compiler, mhchem, auto-numbering and cross-document equation references are not implied |
+| Diagrams | Offline Mermaid, ZenUML and PlantUML routing, each tested independently | The full legacy diagram catalog has unverified grammar/build-specific probes; list individual gaps |
+| Packaging/runtime | Bundled engines, LZMA integrity, lazy loading, bounded scheduling, SHA-256 disk caching, no Java or network dependency | These cannot be proved by a successful screenshot or by the Markdown source alone |
+
+### 19.2 Test identity and result semantics
+
+Every new case has a unique `MDVU`-style case ID, a pair of `mdvu-case-begin` / `mdvu-case-end` HTML comments,
+a description and a source hash in `fixture-manifest.json`. The payload is the text **between** those comments.
+Render that payload in isolation for exact counts, and render this whole document for interaction/visual tests.
+Comments are source markers, not a requirement that the renderer preserve comments in its DOM.
+
+`required-native` means a literal code block or a local error is **FAIL**, not PASS.
+`required-literal` means the content must not be promoted to an extension/formula.
+`required-rejection` means unsafe/invalid input is rejected locally with surrounding content retained.
+`optional-native` means an unadvertised syntax is tested only under its named capability profile.
+`runtime` means a procedural run with instrumentation is necessary; source validation yields NOT RUN.
+
+Use distinct results: PASS, FAIL, NOT RUN, and N/A (only for a predeclared optional profile).
+A test without actual evidence is NOT RUN. No prechecked boxes in the illustrative handbook are test results.
+Do not infer whole-document counts from a regex counting fence-looking strings: examples also occur in code,
+quotes, lists, details, tabs and unsupported dialect containers.
+
+### 19.3 Math parsing boundaries
+
+Required math delimiters are `$...$`, standalone multiline `$$...$$`, and a code fence whose language token
+is exactly `math`. Both backtick and tilde fences use the same dispatcher. A `latex`, `tex`, `mathx`, or
+ordinary code fence is **not** promoted in the default profile. Optional aliases are tested separately.
+
+For inline dollars, use the following **fixture policy**, not an assertion that CommonMark standardizes math:
+an unescaped opening dollar is followed by non-whitespace; an unescaped closing dollar follows non-whitespace
+and is not followed by a digit. Matching does not cross a paragraph, code span/block, link destination, HTML
+attribute, or another block boundary. Display delimiters take precedence over single dollars. Escaped dollar
+signs stay literal even after the Markdown parser has consumed the escape. Unescaped ambiguous prices are
+compatibility probes; authors can use `\$` when literal currency is intended.
+
+Pass the original TeX source to KaTeX. Markdown emphasis, subscript, CriticMarkup, autolink, entity decoding
+and quote transformations must not corrupt TeX control sequences, braces, underscores, `&` or `\\`.
+Escape the final source annotation correctly; do not execute TeX-shaped HTML or any source fence.
+
+For the advertised path, render with MathML output, not a hidden MathML accessibility copy behind KaTeX HTML.
+Check the visible `<math>` element, the MathML namespace, inline/display behavior and the accessibility tree.
+No remote font downloads is a network assertion, not a claim that good mathematical fonts are unnecessary.
+
+### 19.4 Security, state and visual policy
+
+Use untrusted-input policy (`trust: false` or an equally restrictive audited allowlist), finite expansion and
+size limits, and local error handling. This fixture does not prescribe a new application API or expose an
+actual bundled KaTeX version that was not supplied. Record configured limits and the shipped version.
+Formula-local macro tests must work without cross-expression global state. Separate runtime files test that
+one document cannot mutate macros in another. Document-local shared macros, if implemented, require a fresh
+macro dictionary on each document and a cache key that incorporates that state.
+
+Compare light and dark themes, 100%/200% zoom, narrow/wide windows, initial and post-expansion layout.
+Long display math may scroll **inside its own container**; it must not clip, overlap prose, or force the whole
+document sideways. Semantic correctness, accessibility and geometry are separate from pixel-perfect equality.
+
+<a id="section-20"></a>
+
+## 20. Native Math / KaTeX / MathML Cases
+
+Only marked payloads contribute to their case counts. The prose explains the test; it is not part of its input.
+
+### 20.1 Delimiters and representative mathematical structure
+
+<a id="case-math-001"></a>
+
+#### MATH-001 — Inline dollar smoke
+
+**Classification:** `required-native`. **Expected:** Exactly one inline MathML formula, with a superscript; neither dollar is visible.
+
+<!-- mdvu-case-begin: MATH-001 -->
+Energy is $E = mc^2$, and this sentence continues normally.
+<!-- mdvu-case-end: MATH-001 -->
+
+<a id="case-math-002"></a>
+
+#### MATH-002 — Display dollars and nested fractions
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-002 -->
+$$
+x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}
+$$
+<!-- mdvu-case-end: MATH-002 -->
+
+<a id="case-math-003"></a>
+
+#### MATH-003 — Indexed roots
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-003 -->
+$$
+\sqrt[3]{x^3+y^3}+\sqrt{1+\sqrt{x}}
+$$
+<!-- mdvu-case-end: MATH-003 -->
+
+<a id="case-math-004"></a>
+
+#### MATH-004 — Subscript and superscript groups
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-004 -->
+$$
+T_{ij}^{(k+1)}=T_{ij}^{(k)}+\Delta t\,F_i^{\;j}
+$$
+<!-- mdvu-case-end: MATH-004 -->
+
+<a id="case-math-005"></a>
+
+#### MATH-005 — Summation and limits
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-005 -->
+$$
+\lim_{n\to\infty}\frac{1}{n}\sum_{k=1}^{n}\left(\frac{k}{n}\right)^2=\frac{1}{3}
+$$
+<!-- mdvu-case-end: MATH-005 -->
+
+<a id="case-math-006"></a>
+
+#### MATH-006 — Integrals and differential spacing
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-006 -->
+$$
+\int_0^1 x^2\,\mathrm{d}x=\frac{1}{3},\qquad \iint_D f(x,y)\,\mathrm{d}x\,\mathrm{d}y
+$$
+<!-- mdvu-case-end: MATH-006 -->
+
+<a id="case-math-007"></a>
+
+#### MATH-007 — Partial derivatives and vector notation
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-007 -->
+$$
+\nabla\cdot\mathbf{E}=\frac{\rho}{\varepsilon_0},\qquad \frac{\partial u}{\partial t}=\alpha\nabla^2u
+$$
+<!-- mdvu-case-end: MATH-007 -->
+
+<a id="case-math-008"></a>
+
+#### MATH-008 — Set notation and scalable delimiters
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-008 -->
+$$
+S=\left\{x\in\mathbb{R}\mid \left|x-\frac{1}{2}\right|\le 1\right\}
+$$
+<!-- mdvu-case-end: MATH-008 -->
+
+<a id="case-math-009"></a>
+
+#### MATH-009 — Probability and conditional bars
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-009 -->
+$$
+P(A\mid B)=\frac{P(B\mid A)P(A)}{P(B)},\qquad \mathbb{E}[X]=\sum_x x\,p(x)
+$$
+<!-- mdvu-case-end: MATH-009 -->
+
+<a id="case-math-010"></a>
+
+#### MATH-010 — Accents, braces and arrows
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-010 -->
+$$
+\hat{\theta}+\bar{x}+\vec{v}+\overbrace{a+b+c}^{\text{three terms}}\xrightarrow{\text{update}}\theta^{\prime}
+$$
+<!-- mdvu-case-end: MATH-010 -->
+
+<a id="case-math-011"></a>
+
+#### MATH-011 — Named operators, units and text
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-011 -->
+$$
+\operatorname{rank}(A)=2,\qquad v=12\,\mathrm{m}\,\mathrm{s}^{-1},\qquad p=95\%
+$$
+<!-- mdvu-case-end: MATH-011 -->
+
+<a id="case-math-012"></a>
+
+#### MATH-012 — Cases with comparisons
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-012 -->
+$$
+f(x)=\begin{cases}
+x^2 & \text{if } x\ge 0 \\
+-x & \text{if } x<0
+\end{cases}
+$$
+<!-- mdvu-case-end: MATH-012 -->
+
+<a id="case-math-013"></a>
+
+#### MATH-013 — Aligned multi-line equations
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-013 -->
+$$
+\begin{aligned}
+(a+b)^2 &= a^2+2ab+b^2 \\
+(a-b)^2 &= a^2-2ab+b^2
+\end{aligned}
+$$
+<!-- mdvu-case-end: MATH-013 -->
+
+<a id="case-math-014"></a>
+
+#### MATH-014 — Gathered equations
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-014 -->
+$$
+\begin{gathered}
+x+y=5 \\
+x-y=1
+\end{gathered}
+$$
+<!-- mdvu-case-end: MATH-014 -->
+
+<a id="case-math-015"></a>
+
+#### MATH-015 — Parenthesized and bracketed matrices
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-015 -->
+$$
+A=\begin{pmatrix}1&2\\3&4\end{pmatrix},\qquad
+b=\begin{bmatrix}5\\6\end{bmatrix}
+$$
+<!-- mdvu-case-end: MATH-015 -->
+
+<a id="case-math-016"></a>
+
+#### MATH-016 — Determinant and array separators
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-016 -->
+$$
+\det A=\begin{vmatrix}a&b\\c&d\end{vmatrix}=ad-bc,\qquad
+\begin{array}{c|r}n&n^2\\\hline 1&1\\2&4\end{array}
+$$
+<!-- mdvu-case-end: MATH-016 -->
+
+<a id="case-math-017"></a>
+
+#### MATH-017 — Mathematical alphabets
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-017 -->
+$$
+\mathbb{R}\supset\mathbb{Q},\qquad \mathcal{L},\quad \mathfrak{g},\quad \mathbf{v},\quad \boldsymbol{\alpha}
+$$
+<!-- mdvu-case-end: MATH-017 -->
+
+<a id="case-math-018"></a>
+
+#### MATH-018 — Text with escaped reserved characters
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-018 -->
+$$
+\text{cost: \$5; success: 95\%; A\&B; item\_id; \{ok\}}
+$$
+<!-- mdvu-case-end: MATH-018 -->
+
+<a id="case-math-019"></a>
+
+#### MATH-019 — Formula-local macro expansion
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-019 -->
+$$
+\newcommand{\mdvusq}[1]{#1^{2}}\mdvusq{x}+\mdvusq{y}=\mdvusq{z}
+$$
+<!-- mdvu-case-end: MATH-019 -->
+
+<a id="case-math-020"></a>
+
+#### MATH-020 — Stretching, fraction rules and bounding box
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-020 -->
+$$
+\left\langle\frac{1}{1+\frac{1}{x}},\sqrt{\frac{a+b}{c+d}}\right\rangle
+$$
+<!-- mdvu-case-end: MATH-020 -->
+
+<a id="case-math-021"></a>
+
+#### MATH-021 — Whitespace and TeX comments
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-021 -->
+$$
+a+b % this TeX comment must not become visible
+=c
+$$
+<!-- mdvu-case-end: MATH-021 -->
+
+<a id="case-math-022"></a>
+
+#### MATH-022 — Long but bounded expression
+
+**Classification:** `required-native`. **Expected:** One display formula; preserve TeX grouping and mathematical structure. Check layout in both themes and at narrow width.
+
+<!-- mdvu-case-begin: MATH-022 -->
+$$
+\mathcal{J}(\theta)=\sum_{i=1}^{8}\left[y_i\log p_\theta(x_i)+(1-y_i)\log(1-p_\theta(x_i))\right]+\lambda\sum_{j=1}^{6}\theta_j^2
+$$
+<!-- mdvu-case-end: MATH-022 -->
+
+<a id="case-math-023"></a>
+
+#### MATH-023 — Backtick math fence
+
+**Classification:** `required-native`. **Expected:** One display formula, not a highlighted code block. Strip the fence once; preserve backslashes.
+
+<!-- mdvu-case-begin: MATH-023 -->
+```math
+\begin{aligned}a_1&=1\\a_{n+1}&=a_n+2\end{aligned}
+```
+<!-- mdvu-case-end: MATH-023 -->
+
+<a id="case-math-024"></a>
+
+#### MATH-024 — Tilde math fence
+
+**Classification:** `required-native`. **Expected:** One display formula, with the same routing as the backtick math fence.
+
+<!-- mdvu-case-begin: MATH-024 -->
+~~~math
+\prod_{k=1}^{n} k=n!
+~~~
+<!-- mdvu-case-end: MATH-024 -->
+
+<a id="case-math-025"></a>
+
+#### MATH-025 — Four-backtick math fence
+
+**Classification:** `required-native`. **Expected:** One display formula; fence length must not be hardcoded to three.
+
+<!-- mdvu-case-begin: MATH-025 -->
+````math
+\frac{a}{b}=\frac{2a}{2b}
+````
+<!-- mdvu-case-end: MATH-025 -->
+
+<a id="case-math-026"></a>
+
+#### MATH-026 — Three independent inline expressions
+
+**Classification:** `required-native`. **Expected:** Exactly three inline formulas. Punctuation and whitespace stay outside the math nodes.
+
+<!-- mdvu-case-begin: MATH-026 -->
+First $a_1$, then $b^2$; finally $\sqrt{c}$.
+<!-- mdvu-case-end: MATH-026 -->
+
+<a id="case-math-027"></a>
+
+#### MATH-027 — Inline and display precedence
+
+**Classification:** `required-native`. **Expected:** Three formulas in source order: inline, display, inline; no empty formula from double dollars.
+
+<!-- mdvu-case-begin: MATH-027 -->
+Inline $x=1$.
+
+$$
+x=2
+$$
+
+After display, inline $x=3$.
+<!-- mdvu-case-end: MATH-027 -->
+
+<a id="case-math-028"></a>
+
+#### MATH-028 — Emphasis and math nesting
+
+**Classification:** `required-native`. **Expected:** Two formulas inside the surrounding emphasis; no TeX corruption by inline preprocessors.
+
+<!-- mdvu-case-begin: MATH-028 -->
+**Energy $E=mc^2$ remains bold prose**; *probability $p\in[0,1]$ remains italic prose*.
+<!-- mdvu-case-end: MATH-028 -->
+
+<a id="case-math-029"></a>
+
+#### MATH-029 — Inline text baseline
+
+**Classification:** `required-native`. **Expected:** Three inline formulas, no clipped fraction or script, no unexpected block break.
+
+<!-- mdvu-case-begin: MATH-029 -->
+Before $x$ between $\frac{1}{2}$ after $x_i^2$ tail.
+
+This paragraph must not overlap the previous line.
+<!-- mdvu-case-end: MATH-029 -->
+
+<a id="case-math-030"></a>
+
+#### MATH-030 — UTF-8 text and Greek
+
+**Classification:** `required-native`. **Expected:** Three inline formulas with readable surrounding multilingual text. Do not silently rewrite Unicode.
+
+<!-- mdvu-case-begin: MATH-030 -->
+Русский: $\alpha+\beta=\gamma$. 中文：$x^2\ge0$。 Suomi: $\text{lämpö}=T$.
+<!-- mdvu-case-end: MATH-030 -->
+
+<a id="case-math-031"></a>
+
+#### MATH-031 — RTL prose around LTR mathematics
+
+**Classification:** `required-native`. **Expected:** Two inline formulas. Arabic/Hebrew words keep their reading order and mathematics remains intelligible.
+
+<!-- mdvu-case-begin: MATH-031 -->
+العلاقة $a^2+b^2=c^2$ صحيحة.
+
+הנוסחה $E=mc^2$ מופיעה בתוך המשפט.
+<!-- mdvu-case-end: MATH-031 -->
+
+### 20.2 Math inside Markdown and supported extension containers
+
+<a id="case-math-032"></a>
+
+#### MATH-032 — Table cells and TeX bars
+
+**Classification:** `required-native`. **Expected:** Four inline formulas; table has three columns and four body rows. Use TeX commands rather than raw table separators.
+
+<!-- mdvu-case-begin: MATH-032 -->
+| Quantity | Formula | Check |
+|---|---|---|
+| Norm | $\lVert x\rVert_2$ | remains one cell |
+| Conditional | $P(A\mid B)$ | remains one cell |
+| Ratio | $\frac{a}{b}$ | fraction remains visible |
+| Escaped table pipe | $\lvert a\rvert$ | no extra column |
+<!-- mdvu-case-end: MATH-032 -->
+
+<a id="case-math-033"></a>
+
+#### MATH-033 — Lists, tasks and nested math fence
+
+**Classification:** `required-native`. **Expected:** Three formulas: inline, display in ordered item 2, inline in checked task; list/task structure remains intact.
+
+<!-- mdvu-case-begin: MATH-033 -->
+1. Compute $x^2$.
+2. Verify the identity:
+
+   ```math
+   (a+b)^2=a^2+2ab+b^2
+   ```
+
+- [x] Bound checked: $0\le p\le1$.
+- [ ] Await review.
+<!-- mdvu-case-end: MATH-033 -->
+
+<a id="case-math-034"></a>
+
+#### MATH-034 — Blockquote with display dollars
+
+**Classification:** `required-native`. **Expected:** One inline and one display formula, both inside the quote.
+
+<!-- mdvu-case-begin: MATH-034 -->
+> The inline value is $x=2$.
+>
+> $$
+> x^2=4
+> $$
+>
+> End of quoted mathematics.
+<!-- mdvu-case-end: MATH-034 -->
+
+<a id="case-math-035"></a>
+
+#### MATH-035 — Required NOTE callout with math fence
+
+**Classification:** `required-native`. **Expected:** Native NOTE callout containing two formulas; stripping quote prefixes must preserve TeX and the math fence.
+
+<!-- mdvu-case-begin: MATH-035 -->
+> [!NOTE] Formula and source
+> Inline: $a+b=c$.
+>
+> ```math
+> c^2=a^2+2ab+b^2
+> ```
+>
+> The note ends here.
+<!-- mdvu-case-end: MATH-035 -->
+
+<a id="case-math-036"></a>
+
+#### MATH-036 — MkDocs fixed admonition
+
+**Classification:** `required-native`. **Expected:** One native admonition, two formulas; outside paragraph is not captured by indentation.
+
+<!-- mdvu-case-begin: MATH-036 -->
+!!! note "Inline and display"
+    An inline value $r=2$.
+
+    $$
+    A=\pi r^2
+    $$
+
+Outside the admonition.
+<!-- mdvu-case-end: MATH-036 -->
+
+<a id="case-math-037"></a>
+
+#### MATH-037 — MkDocs collapsed and expanded containers
+
+**Classification:** `required-native`. **Expected:** First container starts closed, second open. After expanding both, exactly two formulas exist with correct geometry; repeated toggles do not duplicate them.
+
+<!-- mdvu-case-begin: MATH-037 -->
+??? note "Collapsed formula"
+    $x_1=1$
+
+???+ tip "Expanded formula"
+    ```math
+    x_2=2
+    ```
+<!-- mdvu-case-end: MATH-037 -->
+
+<a id="case-math-038"></a>
+
+#### MATH-038 — Docusaurus note and VuePress tip
+
+**Classification:** `required-native`. **Expected:** Two native containers and two formulas. Closing delimiters do not appear as formula text.
+
+<!-- mdvu-case-begin: MATH-038 -->
+:::note
+Inline $v=\frac{d}{t}$ inside a note.
+:::
+
+::: tip Units
+```math
+v=10\,\mathrm{m}\,\mathrm{s}^{-1}
+```
+:::
+<!-- mdvu-case-end: MATH-038 -->
+
+<a id="case-math-039"></a>
+
+#### MATH-039 — Details open/close lifecycle
+
+**Classification:** `required-native`. **Expected:** After expansion, two formulas have nonzero bounds; no clipped display math, duplicated nodes or stale height on repeated toggles.
+
+<!-- mdvu-case-begin: MATH-039 -->
+<details>
+<summary>Expand the local math test</summary>
+
+Inside: $x=5$.
+
+$$
+x^2=25
+$$
+
+</details>
+
+After the details container.
+<!-- mdvu-case-end: MATH-039 -->
+
+<a id="case-math-040"></a>
+
+#### MATH-040 — Markdown indices versus TeX scripts
+
+**Classification:** `required-native`. **Expected:** Three formulas; independent text subscript, superscript and underline. TeX scripts use math structure, not Markdown HTML substitution.
+
+<!-- mdvu-case-begin: MATH-040 -->
+H~2~O and x^2^ are text extensions; ^^underlined^^ is not an exponent.
+
+The mathematical counterparts are $\mathrm{H}_2\mathrm{O}$ and $x^2$.
+
+Inside TeX, $a_{i_j}^{n+1}$ must not be parsed as Markdown subscript.
+<!-- mdvu-case-end: MATH-040 -->
+
+<a id="case-math-041"></a>
+
+#### MATH-041 — Math and CriticMarkup in one sentence
+
+**Classification:** `required-native`. **Expected:** Two formulas and all five CriticMarkup operations. Neither parser consumes the other parser’s delimiters.
+
+<!-- mdvu-case-begin: MATH-041 -->
+Use {++the revised estimate++} $\hat{\theta}=2$; remove {--the old note--}; {~~slow~>fast~~}; {==reviewed==}; {>>check units<<}.
+
+Inside the formula, $a^{++}+b_{--}=c$ keeps its TeX signs.
+<!-- mdvu-case-end: MATH-041 -->
+
+<a id="case-math-042"></a>
+
+#### MATH-042 — Backslash and entity preservation
+
+**Classification:** `required-native`. **Expected:** Three formulas; TeX braces/ampersands/row separator survive exactly one Markdown-to-math handoff.
+
+<!-- mdvu-case-begin: MATH-042 -->
+$\{x\in\mathbb{R}:x<3\}$ and $\text{A\&B}<C$.
+
+```math
+\begin{aligned}
+a_1&=2\\
+a_2&=3
+\end{aligned}
+```
+<!-- mdvu-case-end: MATH-042 -->
+
+### 20.3 Literal protection: these payloads must create zero formulas
+
+<a id="case-lit-001"></a>
+
+#### LIT-001 — Inline code
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-001 -->
+Literal `$E=mc^2$`, `$$x=1$$`, `\(x\)` and `\[x\]`.
+<!-- mdvu-case-end: LIT-001 -->
+
+<a id="case-lit-002"></a>
+
+#### LIT-002 — Double-backtick code span
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-002 -->
+``Code containing `backticks` and $x^2$ stays code.``
+<!-- mdvu-case-end: LIT-002 -->
+
+<a id="case-lit-003"></a>
+
+#### LIT-003 — Ordinary fenced source
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-003 -->
+```python
+price = "$5"
+tex = r"$\frac{a}{b}$"
+print("$$not mathematics$$", "[[Page|label]]", "{++not a review++}")
+```
+<!-- mdvu-case-end: LIT-003 -->
+
+<a id="case-lit-004"></a>
+
+#### LIT-004 — Indented code
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-004 -->
+Indented source follows:
+
+    $x^2$
+    $$y^2$$
+    [[Page|literal]]
+<!-- mdvu-case-end: LIT-004 -->
+
+<a id="case-lit-005"></a>
+
+#### LIT-005 — LaTeX code is not a math alias by default
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-005 -->
+```latex
+\documentclass{article}
+\begin{document}
+$x^2$
+\end{document}
+```
+<!-- mdvu-case-end: LIT-005 -->
+
+<a id="case-lit-006"></a>
+
+#### LIT-006 — Unknown language containing math prefix
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-006 -->
+```mathx
+$not_a_formula$
+```
+<!-- mdvu-case-end: LIT-006 -->
+
+<a id="case-lit-007"></a>
+
+#### LIT-007 — Outer fence protects inner math fence
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-007 -->
+````markdown
+```math
+\frac{1}{2}
+```
+$outside_inner_but_inside_outer$
+````
+<!-- mdvu-case-end: LIT-007 -->
+
+<a id="case-lit-008"></a>
+
+#### LIT-008 — Escaped currency
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-008 -->
+Costs are \$5, \$12.50 and US\$30. Use \$x\$ as literal notation.
+<!-- mdvu-case-end: LIT-008 -->
+
+<a id="case-lit-009"></a>
+
+#### LIT-009 — Dollar signs in URL destinations
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-009 -->
+[Price link](https://example.invalid/prices/$5?other=$10 "Dollar $title$ remains an attribute")
+<!-- mdvu-case-end: LIT-009 -->
+
+<a id="case-lit-010"></a>
+
+#### LIT-010 — Raw HTML code and attributes
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-010 -->
+<code>$x^2$</code>
+
+<span title="$not_math$">The title is not mathematics.</span>
+
+<pre>$$raw preformatted source$$</pre>
+<!-- mdvu-case-end: LIT-010 -->
+
+<a id="case-lit-011"></a>
+
+#### LIT-011 — HTML comments
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-011 -->
+<!-- $hidden$ and $$hidden too$$; [[Page]]; {++comment++} -->
+Visible tail after the comment.
+<!-- mdvu-case-end: LIT-011 -->
+
+<a id="case-lit-012"></a>
+
+#### LIT-012 — Code in a callout
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-012 -->
+> [!NOTE]
+> `$x^2$` is code.
+>
+> ```text
+> $$y^2$$
+> ```
+<!-- mdvu-case-end: LIT-012 -->
+
+<a id="case-lit-013"></a>
+
+#### LIT-013 — Literal extension syntax
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-013 -->
+`[!NOTE]` `[[target|label]]` `![[image.png]]` `{++add++}` `{--del--}` `{~~old~>new~~}` `{==mark==}` `{>>comment<<}` `~sub~` `^sup^` `^^underline^^` `[[_TOC_]]`
+<!-- mdvu-case-end: LIT-013 -->
+
+<a id="case-lit-014"></a>
+
+#### LIT-014 — Math-like text split across code boundary
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-014 -->
+Opening $a then `code $b$` and a final dollar$.
+<!-- mdvu-case-end: LIT-014 -->
+
+<a id="case-lit-015"></a>
+
+#### LIT-015 — TeX source protected in tilde fence
+
+**Classification:** `required-literal`. **Expected:** Zero rendered math nodes. Preserve literal content and its Markdown context; do not invoke a math engine for this payload.
+
+<!-- mdvu-case-begin: LIT-015 -->
+~~~text
+$$
+\begin{aligned}a&=b\\c&=d\end{aligned}
+$$
+~~~
+<!-- mdvu-case-end: LIT-015 -->
+
+### 20.4 Explicitly optional syntax profiles
+
+These extend coverage without inventing promises in the supplied product description. Run in isolation with the named capability enabled.
+
+<a id="case-opt-math-001"></a>
+
+#### OPT-MATH-001 — Backslash inline/display delimiters
+
+**Classification:** `optional-native`. **Expected:** When enabled, two formulas. In the default profile preserve ordinary CommonMark behavior; do not claim this alias is required.
+
+<!-- mdvu-case-begin: OPT-MATH-001 -->
+Inline \(x^2\).
+
+\[
+\frac{a}{b}
+\]
+<!-- mdvu-case-end: OPT-MATH-001 -->
+
+<a id="case-opt-math-002"></a>
+
+#### OPT-MATH-002 — GitLab backtick math
+
+**Classification:** `optional-native`. **Expected:** When explicitly enabled, one formula. Otherwise preserve the code span and surrounding dollars.
+
+<!-- mdvu-case-begin: OPT-MATH-002 -->
+GitLab form: $`a^2+b^2=c^2`$.
+<!-- mdvu-case-end: OPT-MATH-002 -->
+
+<a id="case-opt-math-003"></a>
+
+#### OPT-MATH-003 — Tagged equation
+
+**Classification:** `optional-native`. **Expected:** When enabled, one display equation with one readable tag. Verify the native MathML path does not lose the tag.
+
+<!-- mdvu-case-begin: OPT-MATH-003 -->
+$$
+E=mc^2\tag{A1}
+$$
+<!-- mdvu-case-end: OPT-MATH-003 -->
+
+<a id="case-opt-math-004"></a>
+
+#### OPT-MATH-004 — Math in link labels and headings
+
+**Classification:** `optional-native`. **Expected:** When enabled, two formulas, correct links and a deterministic heading/TOC label. No dollar parsing of the link destination.
+
+<!-- mdvu-case-begin: OPT-MATH-004 -->
+##### Conservation $E=mc^2$
+
+[Identity $x=x$](#section-20)
+<!-- mdvu-case-end: OPT-MATH-004 -->
+
+<a id="case-opt-math-005"></a>
+
+#### OPT-MATH-005 — Math in a footnote
+
+**Classification:** `optional-native`. **Expected:** When footnotes are enabled, one formula in the footnote with a working backlink; no duplicate hidden copy.
+
+<!-- mdvu-case-begin: OPT-MATH-005 -->
+Footnote reference.[^mdvu-native-math]
+
+[^mdvu-native-math]: Formula in a footnote: $x^2=4$.
+<!-- mdvu-case-end: OPT-MATH-005 -->
+
+<a id="case-opt-math-006"></a>
+
+#### OPT-MATH-006 — Unescaped price ambiguity
+
+**Classification:** `optional-native`. **Expected:** Under the section 19 dollar policy, only the final expression is math. Other delimiter policies must record the difference, not claim universal Markdown behavior.
+
+<!-- mdvu-case-begin: OPT-MATH-006 -->
+The price rose from $5 to $10; the separate value is $x=2$.
+<!-- mdvu-case-end: OPT-MATH-006 -->
+
+<a id="section-21"></a>
+
+## 21. CommonMark, GFM and Advertised Extension Regressions
+
+### 21.1 Baseline parser tests
+
+For exact upstream conformance, also run the pinned upstream suites. These are integration regression cases, not a replacement.
+
+<a id="case-cm-001"></a>
+
+#### CM-001 — Softbreak and both hardbreak forms
+
+**Classification:** `required-native`. **Expected:** Three paragraphs: first has a softbreak, the other two contain explicit hardbreaks. Do not erase trailing source spaces.
+
+<!-- mdvu-case-begin: CM-001 -->
+Soft first line
+soft second line.
+
+Hard two spaces.  
+Next hardbreak line.
+
+Hard backslash.\
+Next backslash line.
+<!-- mdvu-case-end: CM-001 -->
+
+<a id="case-cm-002"></a>
+
+#### CM-002 — Intraword underscores and nested emphasis
+
+**Classification:** `required-native`. **Expected:** Identifier has no emphasis; nested emphasis is preserved.
+
+<!-- mdvu-case-begin: CM-002 -->
+identifier_with_underscores stays literal. **Strong with *emphasis* inside** and ***both***.
+<!-- mdvu-case-end: CM-002 -->
+
+<a id="case-cm-003"></a>
+
+#### CM-003 — List start value and delimiter
+
+**Classification:** `required-native`. **Expected:** Two ordered lists; first starts at 3. Delimiter change starts a different list.
+
+<!-- mdvu-case-begin: CM-003 -->
+3. Third in source
+4. Fourth in source
+
+1) Alternate delimiter
+2) Second item
+<!-- mdvu-case-end: CM-003 -->
+
+<a id="case-cm-004"></a>
+
+#### CM-004 — Entities, escapes and literal angle text
+
+**Classification:** `required-native`. **Expected:** Entities decode in prose, not in the code span. Escaped emphasis is literal.
+
+<!-- mdvu-case-begin: CM-004 -->
+Fish &amp; chips; &#169;; &#x03A9;; &lt;tag&gt;; \*not emphasis\*; `&amp;`.
+<!-- mdvu-case-end: CM-004 -->
+
+<a id="case-cm-005"></a>
+
+#### CM-005 — Reference resolution, case and title
+
+**Classification:** `required-native`. **Expected:** Two links with the same destination/title; reference labels resolve case-insensitively.
+
+<!-- mdvu-case-begin: CM-005 -->
+[Reference][MDVU REF] and [mdvu ref][].
+
+[mdvu ref]: https://example.invalid/ref "Reference title"
+<!-- mdvu-case-end: CM-005 -->
+
+<a id="case-cm-006"></a>
+
+#### CM-006 — Backtick fence with shorter internal run
+
+**Classification:** `required-native`. **Expected:** One literal code block containing a triple-backtick line, not an inner diagram.
+
+<!-- mdvu-case-begin: CM-006 -->
+````text
+```
+not an inner code fence
+````
+<!-- mdvu-case-end: CM-006 -->
+
+<a id="case-cm-007"></a>
+
+#### CM-007 — Tab-indented code
+
+**Classification:** `required-native`. **Expected:** The tab-indented lines form code; no math or wiki-links.
+
+<!-- mdvu-case-begin: CM-007 -->
+Paragraph before.
+
+	$literal$
+	[[literal]]
+<!-- mdvu-case-end: CM-007 -->
+
+<a id="case-gfm-001"></a>
+
+#### GFM-001 — Table alignment and escaped pipes
+
+**Classification:** `required-native`. **Expected:** Three columns, two body rows; literal pipes stay in their cells, including the code span. Header alignment is respected.
+
+<!-- mdvu-case-begin: GFM-001 -->
+| Left | Center | Right |
+|:---|:---:|---:|
+| A\|B | `x\|y` | 12 |
+| **bold** | ~~old~~ | 30 |
+<!-- mdvu-case-end: GFM-001 -->
+
+<a id="case-gfm-002"></a>
+
+#### GFM-002 — Task-list context and case
+
+**Classification:** `required-native`. **Expected:** Exactly three task markers: two checked, one unchecked. Prose/table tokens do not become checkboxes.
+
+<!-- mdvu-case-begin: GFM-002 -->
+- [x] Checked lowercase
+- [X] Checked uppercase
+- [ ] Unchecked
+
+[x] Not a list item.
+
+| Token | Meaning |
+|---|---|
+| [x] | literal table text |
+<!-- mdvu-case-end: GFM-002 -->
+
+<a id="case-gfm-003"></a>
+
+#### GFM-003 — Extended autolinks and punctuation
+
+**Classification:** `required-native`. **Expected:** Three extended autolinks. Do not request the URLs merely to render text.
+
+<!-- mdvu-case-begin: GFM-003 -->
+Visit https://example.invalid/docs and www.example.invalid.
+
+Contact qa@example.invalid; punctuation remains outside each destination.
+<!-- mdvu-case-end: GFM-003 -->
+
+<a id="case-gfm-004"></a>
+
+#### GFM-004 — Strike versus subscript
+
+**Classification:** `required-native`. **Expected:** One strikethrough and one text subscript in the product profile; code copies remain literal. In pure GFM the single-tilde extension is disabled.
+
+<!-- mdvu-case-begin: GFM-004 -->
+~~old~~ and H~2~O; `~~literal~~` and `H~2~O`.
+<!-- mdvu-case-end: GFM-004 -->
+
+<a id="case-gfm-005"></a>
+
+#### GFM-005 — Raw HTML safety does not imply execution
+
+**Classification:** `required-rejection`. **Expected:** Safe semantic markup follows policy. No iframe navigation or automatic network request; tail stays visible. Record sanitizer policy separately from parser conformance.
+
+<!-- mdvu-case-begin: GFM-005 -->
+<strong>Allowed semantic HTML</strong>
+
+<iframe src="https://example.invalid/not-loaded"></iframe>
+
+Visible tail after the rejected or escaped iframe.
+<!-- mdvu-case-end: GFM-005 -->
+
+### 21.2 Advertised dialect primitives and non-capture boundaries
+
+<a id="case-obs-001"></a>
+
+#### OBS-001 — Obsidian NOTE callout
+
+**Classification:** `required-native`. **Expected:** One native NOTE callout with appropriate semantic styling; its outside paragraph is not captured.
+
+<!-- mdvu-case-begin: OBS-001 -->
+> [!NOTE] NOTE title
+> A **formatted** body with `code` and [local link](#section-21).
+
+Outside NOTE.
+<!-- mdvu-case-end: OBS-001 -->
+
+<a id="case-obs-002"></a>
+
+#### OBS-002 — Obsidian TIP callout
+
+**Classification:** `required-native`. **Expected:** One native TIP callout with appropriate semantic styling; its outside paragraph is not captured.
+
+<!-- mdvu-case-begin: OBS-002 -->
+> [!TIP] TIP title
+> A **formatted** body with `code` and [local link](#section-21).
+
+Outside TIP.
+<!-- mdvu-case-end: OBS-002 -->
+
+<a id="case-obs-003"></a>
+
+#### OBS-003 — Obsidian WARNING callout
+
+**Classification:** `required-native`. **Expected:** One native WARNING callout with appropriate semantic styling; its outside paragraph is not captured.
+
+<!-- mdvu-case-begin: OBS-003 -->
+> [!WARNING] WARNING title
+> A **formatted** body with `code` and [local link](#section-21).
+
+Outside WARNING.
+<!-- mdvu-case-end: OBS-003 -->
+
+<a id="case-obs-004"></a>
+
+#### OBS-004 — Obsidian DANGER callout
+
+**Classification:** `required-native`. **Expected:** One native DANGER callout with appropriate semantic styling; its outside paragraph is not captured.
+
+<!-- mdvu-case-begin: OBS-004 -->
+> [!DANGER] DANGER title
+> A **formatted** body with `code` and [local link](#section-21).
+
+Outside DANGER.
+<!-- mdvu-case-end: OBS-004 -->
+
+<a id="case-obs-005"></a>
+
+#### OBS-005 — Wiki-link targets and labels
+
+**Classification:** `required-native`. **Expected:** Three native wiki-links with correct visible labels and resolvable local destinations from the bundle.
+
+<!-- mdvu-case-begin: OBS-005 -->
+[[Architecture Overview]]
+
+[[Architecture Overview|Architecture alias]]
+
+[[Projects/Renderer Compatibility|Renderer compatibility]]
+<!-- mdvu-case-end: OBS-005 -->
+
+<a id="case-obs-006"></a>
+
+#### OBS-006 — Local PNG embed
+
+**Classification:** `required-native`. **Expected:** A decoded local image with nonzero dimensions, not literal wiki syntax or a broken image. No network access.
+
+<!-- mdvu-case-begin: OBS-006 -->
+![[assets/mdvu-checker.png]]
+<!-- mdvu-case-end: OBS-006 -->
+
+<a id="case-obs-007"></a>
+
+#### OBS-007 — Paths with spaces and Unicode
+
+**Classification:** `required-native`. **Expected:** Two local decoded images. File paths are resolved once, preserving spaces/UTF-8 rather than double percent-decoding.
+
+<!-- mdvu-case-begin: OBS-007 -->
+![[assets/diagram light.png]]
+
+![[assets/схема-图.png]]
+<!-- mdvu-case-end: OBS-007 -->
+
+<a id="case-obs-008"></a>
+
+#### OBS-008 — Missing embed has a local failure
+
+**Classification:** `required-rejection`. **Expected:** Local missing-asset indication or preserved source; no crash, traversal outside allowed root, or loss of following text.
+
+<!-- mdvu-case-begin: OBS-008 -->
+![[assets/mdvu-intentionally-missing.png]]
+
+Visible text after the missing image.
+<!-- mdvu-case-end: OBS-008 -->
+
+<a id="case-obs-009"></a>
+
+#### OBS-009 — Unadvertised heading link, sized embed and folding
+
+**Classification:** `optional-native`. **Expected:** Under the extended Obsidian profile, starts folded and reveals working heading link and sized image. Default profile may report a local capability gap.
+
+<!-- mdvu-case-begin: OBS-009 -->
+> [!note]- Folded
+> [[Architecture Overview#Deployment|Deployment]]
+>
+> ![[assets/mdvu-checker.png|64]]
+<!-- mdvu-case-end: OBS-009 -->
+
+<a id="case-mkd-001"></a>
+
+#### MKD-001 — MkDocs fixed, closed and open admonitions
+
+**Classification:** `required-native`. **Expected:** Three native containers; only the second starts collapsed; third starts expanded; outside paragraph stays outside.
+
+<!-- mdvu-case-begin: MKD-001 -->
+!!! note "Fixed"
+    First **body**.
+
+??? warning "Closed"
+    Second body.
+
+???+ tip "Open"
+    Third body.
+
+Outside all three.
+<!-- mdvu-case-end: MKD-001 -->
+
+<a id="case-mkd-002"></a>
+
+#### MKD-002 — Code protects directive-looking text
+
+**Classification:** `required-native`. **Expected:** One admonition and one code block. Inner directive-looking lines remain literal.
+
+<!-- mdvu-case-begin: MKD-002 -->
+!!! note "Source example"
+    ```text
+    ???+ warning "not a nested block"
+    :::danger
+    [!NOTE]
+    ```
+
+After the admonition.
+<!-- mdvu-case-end: MKD-002 -->
+
+<a id="case-colon-001"></a>
+
+#### COLON-001 — Docusaurus and VuePress forms
+
+**Classification:** `required-native`. **Expected:** Two native containers with the expected body/title and an outside paragraph.
+
+<!-- mdvu-case-begin: COLON-001 -->
+:::note
+Docusaurus note.
+:::
+
+::: tip Read this
+VuePress tip.
+:::
+
+Outside both containers.
+<!-- mdvu-case-end: COLON-001 -->
+
+<a id="case-colon-002"></a>
+
+#### COLON-002 — Colon delimiter inside code
+
+**Classification:** `required-native`. **Expected:** One note container, one code block; colons in code do not close or reopen containers.
+
+<!-- mdvu-case-begin: COLON-002 -->
+:::note
+```text
+:::danger
+literal text
+:::
+```
+The outer note continues here.
+:::
+
+Outside note.
+<!-- mdvu-case-end: COLON-002 -->
+
+<a id="case-colon-003"></a>
+
+#### COLON-003 — Nested different-length containers
+
+**Classification:** `optional-native`. **Expected:** When nested-container support is enabled, two correctly nested containers. Record as an optional capability, not an implication of basic :::note support.
+
+<!-- mdvu-case-begin: COLON-003 -->
+::::note
+Outer paragraph.
+
+:::warning
+Inner paragraph.
+:::
+
+Outer tail.
+::::
+<!-- mdvu-case-end: COLON-003 -->
+
+<a id="case-crit-001"></a>
+
+#### CRIT-001 — All five CriticMarkup operations
+
+**Classification:** `required-native`. **Expected:** Review view distinguishes insertion, deletion, both sides of substitution, highlight and comment; source delimiters disappear only for the intended operation.
+
+<!-- mdvu-case-begin: CRIT-001 -->
+A {++new++} phrase; a {--removed--} phrase; {~~old~>new~~}; {==marked==}; {>>review comment<<}.
+<!-- mdvu-case-end: CRIT-001 -->
+
+<a id="case-crit-002"></a>
+
+#### CRIT-002 — Repeated operations and Unicode
+
+**Classification:** `required-native`. **Expected:** Five separate operations. A greedy match must not merge adjacent changes; Unicode is preserved.
+
+<!-- mdvu-case-begin: CRIT-002 -->
+{++Первое++} и {++第二个++}; {--old--} then {--older--}; {~~α~>β~~}.
+<!-- mdvu-case-end: CRIT-002 -->
+
+<a id="case-crit-003"></a>
+
+#### CRIT-003 — CriticMarkup in table and list
+
+**Classification:** `required-native`. **Expected:** All operations render within their cell/item; no extra rows, columns or list items.
+
+<!-- mdvu-case-begin: CRIT-003 -->
+| Before | Review |
+|---|---|
+| old | {~~old~>new~~} |
+| note | {==checked==} |
+
+- {++Added list text++}
+- {--Deleted list text--}
+<!-- mdvu-case-end: CRIT-003 -->
+
+<a id="case-inline-001"></a>
+
+#### INLINE-001 — Subscript, superscript and underline
+
+**Classification:** `required-native`. **Expected:** Two text subscripts, two text superscripts, one underline and one strikethrough; double delimiters take precedence.
+
+<!-- mdvu-case-begin: INLINE-001 -->
+H~2~O; CO~2~; x^2^; 2^10^; ^^underlined^^; ~~deleted~~.
+<!-- mdvu-case-end: INLINE-001 -->
+
+<a id="case-inline-002"></a>
+
+#### INLINE-002 — Escaped inline-extension delimiters
+
+**Classification:** `required-literal`. **Expected:** No text subscript/superscript/underline from escaped delimiters or code.
+
+<!-- mdvu-case-begin: INLINE-002 -->
+\~literal\~; \^literal\^; \^\^literal\^\^; `H~2~O`; `x^2^`; `^^literal^^`.
+<!-- mdvu-case-end: INLINE-002 -->
+
+<a id="case-toc-001"></a>
+
+#### TOC-001 — GitLab TOC dispatch before wiki-link parsing
+
+**Classification:** `required-native`. **Expected:** Generate one TOC with three links to the three headings when rendering this payload alone. Token is not a wiki-link named _TOC_.
+
+<!-- mdvu-case-begin: TOC-001 -->
+[[_TOC_]]
+
+## MDVU TOC Alpha
+
+### MDVU TOC Beta
+
+## MDVU TOC Gamma
+<!-- mdvu-case-end: TOC-001 -->
+
+<a id="case-toc-002"></a>
+
+#### TOC-002 — TOC ignores fenced headings
+
+**Classification:** `required-native`. **Expected:** One TOC entry for the real heading; fenced heading/token remain literal and cause no recursive TOC generation.
+
+<!-- mdvu-case-begin: TOC-002 -->
+[[_TOC_]]
+
+## MDVU Real Heading
+
+```markdown
+## MDVU Fake Heading
+[[_TOC_]]
+```
+<!-- mdvu-case-end: TOC-002 -->
+
+<a id="case-toc-003"></a>
+
+#### TOC-003 — Duplicate and multilingual TOC targets
+
+**Classification:** `required-native`. **Expected:** Three TOC links with distinct resolvable IDs; duplicate headings are disambiguated. Verify click targets, not just displayed text.
+
+<!-- mdvu-case-begin: TOC-003 -->
+[[_TOC_]]
+
+## MDVU Repeat
+
+## MDVU Repeat
+
+### Формулы 中文 العربية
+<!-- mdvu-case-end: TOC-003 -->
+
+<a id="section-22"></a>
+
+## 22. Offline Diagram Integration and Runtime Cases
+
+### 22.1 Independent dispatch and mixed-content integration
+
+The new smoke diagrams below are compact. The original family gallery above is retained; its presence is not a parser-version certificate.
+
+<a id="case-dia-001"></a>
+
+#### DIA-001 — Mermaid flowchart smoke
+
+**Classification:** `required-native`. **Expected:** One locally rendered Mermaid diagram with two nodes and one edge. No PlantUML or ZenUML initialization is needed.
+
+<!-- mdvu-case-begin: DIA-001 -->
+```mermaid
+flowchart LR
+    A[Source] --> B[Rendered]
+```
+<!-- mdvu-case-end: DIA-001 -->
+
+<a id="case-dia-002"></a>
+
+#### DIA-002 — ZenUML via Mermaid dispatcher
+
+**Classification:** `required-native`. **Expected:** One ZenUML sequence with two participants and two messages; the ZenUML adapter is registered before dispatch.
+
+<!-- mdvu-case-begin: DIA-002 -->
+```mermaid
+zenuml
+    Viewer->Parser: parse
+    Parser->Viewer: blocks
+```
+<!-- mdvu-case-end: DIA-002 -->
+
+<a id="case-dia-003"></a>
+
+#### DIA-003 — PlantUML sequence, no Graphviz layout needed
+
+**Classification:** `required-native`. **Expected:** One local PlantUML sequence. No Java process or remote PlantUML server; Viz.js may stay unloaded for a sequence-only path.
+
+<!-- mdvu-case-begin: DIA-003 -->
+```plantuml
+@startuml
+Alice -> Bob : open
+Bob --> Alice : ready
+@enduml
+```
+<!-- mdvu-case-end: DIA-003 -->
+
+<a id="case-dia-004"></a>
+
+#### DIA-004 — PlantUML graph layout through Viz.js
+
+**Classification:** `required-native`. **Expected:** One component diagram with connected nodes; exercise the bundled graph-layout bridge, not only a sequence renderer.
+
+<!-- mdvu-case-begin: DIA-004 -->
+```plantuml
+@startuml
+left to right direction
+package Viewer {
+  [Parser] --> [Renderer]
+  [Renderer] --> [Cache]
+}
+@enduml
+```
+<!-- mdvu-case-end: DIA-004 -->
+
+<a id="case-dia-005"></a>
+
+#### DIA-005 — Bounded inline PlantUML preprocessor
+
+**Classification:** `required-native`. **Expected:** Title contains mdvu. Built-in preprocessing does not require a file include or network.
+
+<!-- mdvu-case-begin: DIA-005 -->
+```plantuml
+@startuml
+!$product = "mdvu"
+title $product
+Alice -> Bob : local preprocessor
+@enduml
+```
+<!-- mdvu-case-end: DIA-005 -->
+
+<a id="case-dia-006"></a>
+
+#### DIA-006 — Math delimiter exclusion inside Mermaid
+
+**Classification:** `required-native`. **Expected:** One Mermaid diagram; ordinary single-dollar label text is not extracted as document math. Do not equate Mermaid’s own optional math syntax with Markdown math.
+
+<!-- mdvu-case-begin: DIA-006 -->
+```mermaid
+flowchart LR
+    A["Price $5"] --> B["Code $x$"]
+```
+<!-- mdvu-case-end: DIA-006 -->
+
+<a id="case-dia-007"></a>
+
+#### DIA-007 — Math and wiki-link exclusion inside PlantUML
+
+**Classification:** `required-native`. **Expected:** One PlantUML diagram; zero document-level formulas/wiki-links. PlantUML owns its hyperlink syntax and security policy.
+
+<!-- mdvu-case-begin: DIA-007 -->
+```plantuml
+@startuml
+Alice -> Bob : price $5; expression $x$
+note over Alice,Bob
+  [[https://example.invalid/docs diagram-owned link]]
+end note
+@enduml
+```
+<!-- mdvu-case-end: DIA-007 -->
+
+<a id="case-dia-008"></a>
+
+#### DIA-008 — Full mixed renderer pipeline
+
+**Classification:** `required-native`. **Expected:** Two native math formulas, one Mermaid flowchart, one ZenUML sequence, one PlantUML sequence, one TIP callout and one decoded image. No duplicate dispatch.
+
+<!-- mdvu-case-begin: DIA-008 -->
+First the inline equation $a^2+b^2=c^2$.
+
+```mermaid
+flowchart LR
+    A[Read] --> B[Render]
+```
+
+```math
+\begin{pmatrix}1&0\\0&1\end{pmatrix}
+```
+
+```mermaid
+zenuml
+    Reader->Viewer: open
+```
+
+```plantuml
+@startuml
+Reader -> Viewer : render
+@enduml
+```
+
+> [!TIP]
+> A local image follows: ![[assets/mdvu-checker.png]]
+
+End of the mixed pipeline.
+<!-- mdvu-case-end: DIA-008 -->
+
+<a id="case-dia-009"></a>
+
+#### DIA-009 — Math inside callout next to Mermaid
+
+**Classification:** `required-native`. **Expected:** One WARNING callout, two formulas and one Mermaid diagram. No quoting-prefix loss or nested dispatch confusion.
+
+<!-- mdvu-case-begin: DIA-009 -->
+> [!WARNING]
+> A threshold $p<0.05$ is illustrative, not a statistical conclusion.
+>
+> ```mermaid
+> flowchart LR
+>     Sample --> Review
+> ```
+>
+> ```math
+> p=\frac{k}{n}
+> ```
+<!-- mdvu-case-end: DIA-009 -->
+
+<a id="case-dia-010"></a>
+
+#### DIA-010 — Standalone zenuml fence alias
+
+**Classification:** `optional-native`. **Expected:** If the standalone alias is advertised/enabled, render one ZenUML diagram; otherwise keep it as a code block. Required ZenUML coverage uses the Mermaid fence.
+
+<!-- mdvu-case-begin: DIA-010 -->
+```zenuml
+Viewer->Parser: parse
+```
+<!-- mdvu-case-end: DIA-010 -->
+
+### 22.2 Runtime procedure catalog
+
+These procedures are in `runtime-cases.json`; their inputs are shipped in `runtime/`. They are NOT RUN until the real application produces evidence.
+
+| ID | Purpose | Inputs |
+|---|---|---|
+| RT-001 | Actual dependency identity | `runtime/mixed.md` |
+| RT-002 | LZMA packaging and claimed footprint | `runtime/mixed.md` |
+| RT-003 | Cold offline with empty application caches | `runtime/mixed.md` |
+| RT-004 | Plain input loads no heavy renderers | `runtime/plain.md` |
+| RT-005 | Math-only dependency isolation | `runtime/math-only.md` |
+| RT-006 | Mermaid-only dependency isolation | `runtime/mermaid-only.md` |
+| RT-007 | ZenUML load ordering | `runtime/zenuml-only.md` |
+| RT-008 | PlantUML and graph-layout bridge | `runtime/plantuml-sequence-only.md`, `runtime/plantuml-layout-only.md` |
+| RT-009 | No Java or external dot requirement | `runtime/plantuml-sequence-only.md`, `runtime/plantuml-layout-only.md` |
+| RT-010 | Finite progressive queue and frame budgeting | `runtime/queue.md`, `runtime/mixed.md` |
+| RT-011 | Warm reopen and persistent disk cache | `runtime/cache-v1.md` |
+| RT-012 | Source mutation invalidates stale results | `runtime/cache-v1.md`, `runtime/cache-v2.md` |
+| RT-013 | Theme/config/runtime-aware cache identity | `runtime/cache-v1.md` |
+| RT-014 | Duplicate-source instances and inline/display identity | `runtime/cache-v1.md` |
+| RT-015 | Corrupt cache and unavailable cache directory | `runtime/cache-v1.md` |
+| RT-016 | Theme, zoom and native MathML geometry | `runtime/math-only.md`, `test-complete.md` |
+| RT-017 | Accessibility and source preservation | `runtime/math-only.md`, `test-complete.md` |
+| RT-018 | Macro isolation between documents | `runtime/macro-a.md`, `runtime/macro-b.md` |
+| RT-019 | Close/reopen cancellation and stale result suppression | `runtime/queue.md`, `runtime/plain.md`, `runtime/mixed.md` |
+| RT-020 | Error locality and subsequent successful engines | `runtime/err-001.md`, `runtime/err-002.md`, `runtime/err-003.md`, `runtime/mixed.md` |
+| RT-021 | Standard library and forbidden remote includes | `runtime/plantuml-stdlib.md`, `runtime/plantuml-includeurl-blocked.md` |
+| RT-022 | Concurrent first use and duplicate registration | `runtime/mixed.md`, `runtime/math-only.md` |
+| RT-023 | Equivalent line endings and UTF-8 inputs | `runtime/unicode-lf.md`, `runtime/unicode-crlf.md` |
+| RT-024 | Compressed resource corruption fails locally | `runtime/mixed.md` |
+| RT-025 | Exact-case and whole-document acceptance | `test-complete.md` |
+
+### 22.3 Isolated negative and security fixtures
+
+Invalid TeX, unmatched delimiters, bounded recursive expansion, disallowed TeX URLs/HTML, oversized dimensions
+and optional chemistry are kept in separate `runtime/err-*.md`, `runtime/sec-*.md` and `runtime/opt-*.md` files.
+They must not be concatenated into the ordinary positive-run document. A rejection case passes only if its
+safety assertion and following-content assertion both hold; an unhandled exception never passes.
+
+PlantUML AsciiMath/JLaTeXMath in section 13 uses the **PlantUML path**. It does not test native Markdown math
+or prove that a particular Java-free Core build includes all upstream math/ditaa/stdlib implementations.
+Likewise, Mermaid-owned math labels are not a substitute for the KaTeX/MathML Markdown cases.
+
+<a id="section-23"></a>
+
+## 23. Acceptance Matrix and Reproducible Run Protocol
+
+### 23.1 Product statements mapped to evidence
+
+| Supplied claim | Direct fixture cases | Evidence beyond a visual sample |
+|---|---|---|
+| Reference cmark-gfm / CommonMark | CM-001–007, original section 11 | Actual parser identity and full pinned upstream suite in RT-001/025 |
+| GFM tables, tasks, strike, autolinks | GFM-001–005 | Structural results, not a “looks like Markdown” screenshot |
+| Obsidian NOTE/TIP/WARNING/DANGER | OBS-001–004; MATH-035; DIA-009 | Container identity, body boundary and interactions |
+| Wiki-links and image embeds | OBS-005–008; DIA-008 | Resolve shipped target files/images; no remote fetch |
+| MkDocs `!!!`, `???`, `???+` | MKD-001–002; MATH-036–037 | Initial state, keyboard/toggle behavior and correct formula geometry |
+| Docusaurus / VuePress containers | COLON-001–002; MATH-038 | Opening/closing recognition, code exclusion, content boundaries |
+| Five CriticMarkup operations | CRIT-001–003; MATH-041 | Distinct review semantics; no greedy matching across changes |
+| Sub/super/underline | INLINE-001–002; GFM-004; MATH-040 | Delimiter precedence and TeX isolation |
+| GitLab TOC | TOC-001–003 | Correct targets, duplicate disambiguation, no code/fake headings |
+| Inline, display, fenced math | MATH-001–042 | Exact marked-payload counts and KaTeX/MathML structure |
+| Math does not corrupt code/currency | LIT-001–015; ERR-004–005 | Zero unintended formulas, preserved source and local recovery |
+| Native WebKit MathML and typography | MATH-002–022, 029–031, 037–039 | RT-016/017 in the actual WKWebView and OS fonts |
+| Offline, no font downloads | Local math/diagram/asset inputs | Cold-cache RT-003, request trace including failed attempts |
+| Mermaid 11.17.2 / ZenUML 0.2.3 | DIA-001–002, 006, 008–009, original gallery | Actual versions; RT-006/007; individual gallery results |
+| PlantUML Core 1.2026.7 + Viz.js / Graphviz | DIA-003–005, 007–008, original gallery | Actual identities, bridge trace and RT-008/009/021 |
+| LZMA / Ultra / about 64 KB | Same cold renderer inputs | RT-002/024: actual artifacts, bytes, hash and build settings |
+| Independent lazy loading | Engine-only files, literal-only file | RT-004–008/022; per-scope decode/init counters |
+| Frame-budgeted execution | Bounded queue + full fixture | RT-010/019: predeclared budgets, input/frame/queue traces |
+| SHA-256 disk caching | Cache v1/v2 and duplicate instances | RT-011–015/023: key-input audit, process restart and mutation |
+
+### 23.2 Run order and reporting
+
+Run source integrity checks first. Then run positive marked cases, literal-protection cases, negative cases
+in isolation, and only then the whole document and runtime scenarios. Exercise the pure parser separately
+from the enriched renderer: a dialect feature deliberately changes some baseline interpretations.
+
+`fixture-manifest.json` contains exact payload text, source hashes, case IDs, classifications and expected
+math-node counts where defined. `math-cases.json` contains TeX and per-expression MathML structural checks,
+not an alternate source of truth for document parsing. `runtime-cases.json` contains steps and required
+evidence. `tools/validate_fixture.py` checks corpus integrity, not the renderer. `tools/verify_math.mjs`
+checks extracted TeX with a **caller-supplied** KaTeX module, not WKWebView or Markdown integration.
+
+Use `python3 tools/validate_fixture.py --extract /tmp/mdvu-cases` to produce isolated case inputs. Open only
+trusted temporary paths and retain the supplied asset-root context for local-link/embed cases. The extractor
+copies local support assets and keeps each case at the original relative directory depth.
+
+Record results per case, not a single “supported” flag. Keep native rendering failures, security failures,
+legacy compatibility gaps, missing optional features, packaging evidence and unexecuted runtime checks separate.
+Keep app/build/OS/WebKit versions, theme, viewport, zoom, font resolution, source hashes and artifact hashes
+with screenshots/traces so results are reproducible. Do not relabel an unexecuted case PASS.
+
+### 23.3 Primary references used for the added contracts
+
+These are documentation references, not runtime dependencies. Their pages can evolve independently of the
+pinned product targets. The examples added here are authored for this fixture, not copied conformance tests.
+
+- [Swift cmark-gfm source and baseline](https://github.com/swiftlang/swift-cmark)
+- [Swift Markdown parser relationship](https://github.com/swiftlang/swift-markdown)
+- [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/)
+- [GFM specification](https://github.github.com/gfm/)
+- [KaTeX supported functions](https://katex.org/docs/supported)
+- [KaTeX output, trust, errors and resource limits](https://katex.org/docs/options)
+- [KaTeX delimiter ordering and ignored tags](https://katex.org/docs/autorender)
+- [KaTeX security](https://katex.org/docs/security)
+- [Mermaid syntax reference](https://mermaid.js.org/intro/syntax-reference.html)
+- [Mermaid ZenUML integration](https://mermaid.js.org/syntax/zenuml.html)
+- [PlantUML layout engines](https://plantuml.com/layout-engines)
+- [Material for MkDocs admonitions](https://squidfunk.github.io/mkdocs-material/reference/admonitions/)
+- [Docusaurus admonitions](https://docusaurus.io/docs/markdown-features/admonitions)
+- [PyMdown CriticMarkup](https://facelessuser.github.io/pymdown-extensions/extensions/critic/)
+- [PyMdown caret/underline](https://facelessuser.github.io/pymdown-extensions/extensions/caret/)
+- [GitLab Markdown and TOC](https://docs.gitlab.com/user/markdown/)
+
+### 23.4 Final sentinel
+
+The final marker must be visible, searchable and reachable by navigation after pending rendering work settles.
+This verifies document traversal only; all required-case and runtime assertions still need independent evidence.
+
+[Back to top](#top) · [Math cases](#section-20) · [Runtime cases](#section-22)
 
 `MDVU-COMPLETE-END`
-

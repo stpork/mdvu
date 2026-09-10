@@ -6,9 +6,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
   <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/version-0.2.0-emerald" alt="Version 0.2.0"></a>
-  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.2_MB-brightgreen" alt="Bundle Size 3.2 MB"></a>
+  <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
+  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
 </p>
 
@@ -21,13 +22,15 @@
 ## Why mdvu?
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
-* **Ultra-Fast**: Window visible in ~150 ms, first WebKit content painted in ~300 ms. Parsing throughput **4.5+ MB/s** (~35 ms for 4,600+ line documents; ~350 ms for massive 13,900+ line stress files).
-* **Ultra-Compact**: **3.2 MB** app bundle, under **2.2 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Stripped Mach-O binary is just **572 KB**.
+* **Ultra-Fast**: Window visible in ~70–150 ms, first WebKit content painted almost instantaneously via pipelined `EagerDocumentLoader` and continuous `WebKitPrewarmer`. Hardware-vectorized `FastScan` byte matching achieves throughput of **14.3+ MB/s** (~5 ms for 44 KB scientific papers; ~70 ms for 1 MB; ~1.77 s for 25 MB documents).
+* **Ultra-Compact**: **3.3 MB** app bundle, under **2.3 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Stripped Mach-O binary is just **638 KB** with cross-module optimization and dead-stripping.
 * **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
+* **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native WebKit MathML Core rendering, featuring dark/light mode integration, zero font download overhead, and textbook-quality typography.
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
 * **Standardized 120 FPS Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
 * **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
+* **Zero Leaks & Resource Hygiene**: Memory is rigorously audited with weak message-handler trampolines, non-retaining background queues, bounded 16 MB diagram caches, and deterministic file watcher teardown.
 
 ---
 
@@ -53,6 +56,17 @@ To update in the future:
 ```sh
 brew upgrade --cask mdvu
 ```
+
+> [!NOTE]
+> **Standard Installation:**
+> `brew install --cask` installs directly into `/Applications` and links the `mdvu` CLI command without requiring `root` or `sudo`.
+>
+> **Restricted / Non-Admin Environments:**
+> If your Mac is restricted by corporate MDM policies and your account does not have write access to `/Applications`, install into your home directory:
+> ```sh
+> brew install --cask --appdir=~/Applications stpork/tap/mdvu
+> ```
+> To make this default for all Homebrew casks, add `export HOMEBREW_CASK_OPTS="--appdir=~/Applications"` to your `~/.zshrc`.
 
 ---
 
@@ -256,12 +270,12 @@ mdvu --snapshot output.png README.md
 
 | Metric | mdvu (Native) | Typical Electron Viewers |
 | :--- | :--- | :--- |
-| **App Bundle Size** | **3.2 MB** (Single Arch) / **4.2 MB** (Universal) | 150 – 250 MB |
-| **Mach-O Executable** | **572 KB** (Stripped) | N/A (Embedded Chromium) |
-| **Release Archive** | **~2.2 MB** (`.zip` / `.dmg`) | 80 – 120 MB |
-| **Cold Startup Time** | **~150 ms** window / **~300 ms** first paint | 1,200 – 3,500 ms |
+| **App Bundle Size** | **3.3 MB** (Single Arch) / **4.3 MB** (Universal) | 150 – 250 MB |
+| **Mach-O Executable** | **638 KB** (Stripped, `-O -cross-module-optimization`) | N/A (Embedded Chromium) |
+| **Release Archive** | **~2.3 MB** (`.zip` / `.dmg`) | 80 – 120 MB |
+| **Cold Startup Time** | **~70–150 ms** window / **~180–250 ms** first paint | 1,200 – 3,500 ms |
 | **RAM Footprint (Idle)**| **~35 – 45 MB** (Host UI Process) | 250 – 500 MB |
-| **Markdown Throughput** | **4.5+ MB/s** (~35 ms for 4.6k lines) | 0.8 – 1.5 MB/s |
+| **Markdown Throughput** | **14.3+ MB/s** (~4.9 ms for 44 KB, ~70 ms for 1 MB) | 0.8 – 1.5 MB/s |
 | **Zoom Rendering** | **120 FPS** (CoreAnimation GPU native) | 30 – 60 FPS (DOM reflow) |
 | **External Dependencies**| **0** (No Node, no Java/JVM, no Python) | Node.js, V8, Chromium |
 

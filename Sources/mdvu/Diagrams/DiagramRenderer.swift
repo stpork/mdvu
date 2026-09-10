@@ -62,6 +62,7 @@ final class DiagramCache: @unchecked Sendable {
         directoryPath = dir.path
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         memoryCache.countLimit = 128
+        memoryCache.totalCostLimit = 16 * 1024 * 1024 // 16 MB max
     }
 
     func key(renderer: String, version: String, source: String, theme: String, options: String) -> String {
@@ -97,13 +98,13 @@ final class DiagramCache: @unchecked Sendable {
         let filePath = directoryPath + "/" + key + ".svg"
         guard access(filePath, R_OK) == 0 else { return nil }
         guard let diskContent = try? String(contentsOfFile: filePath, encoding: .utf8) else { return nil }
-        memoryCache.setObject(diskContent as NSString, forKey: nsKey)
+        memoryCache.setObject(diskContent as NSString, forKey: nsKey, cost: diskContent.utf8.count)
         return diskContent
     }
 
     func write(key: String, svg: String) {
         guard key.utf8.count == 64 && key.allSatisfy({ $0.isHexDigit }), svg.hasPrefix("<svg"), svg.utf8.count < 10_000_000 else { return }
-        memoryCache.setObject(svg as NSString, forKey: key as NSString)
+        memoryCache.setObject(svg as NSString, forKey: key as NSString, cost: svg.utf8.count)
         let filePath = directoryPath + "/" + key + ".svg"
         try? svg.write(toFile: filePath, atomically: true, encoding: .utf8)
     }

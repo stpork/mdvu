@@ -6,13 +6,19 @@ if arguments.contains("--help") || arguments.contains("-h") {
     exit(EXIT_SUCCESS)
 }
 if arguments.contains("--version") || arguments.contains("-v") {
-    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
+    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0"
     print("mdvu \(version)")
     exit(EXIT_SUCCESS)
 }
 if BenchmarkRunner.runIfRequested(arguments) { exit(EXIT_SUCCESS) }
 
+let options = CLIOptions.parse(arguments)
+if let first = options.paths.first {
+    EagerDocumentLoader.start(path: first, options: options)
+}
+
 let app = NSApplication.shared
+WebKitPrewarmer.prewarm()
 let delegate = AppDelegate(arguments: arguments)
 app.delegate = delegate
 app.setActivationPolicy(.regular)

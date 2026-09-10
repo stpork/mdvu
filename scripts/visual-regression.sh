@@ -7,6 +7,6 @@ ACTUAL=$(mktemp -t mdvu-snapshot).png
 trap 'rm -f "$ACTUAL"' EXIT
 test -f "$REFERENCE" || { echo "Missing reference; run make update-snapshot" >&2; exit 1; }
 caffeinate -u -t 2 || true
-"$BIN" --theme light --snapshot "$ACTUAL" "$ROOT/Tests/Fixtures/kitchen-sink.md"
+"$BIN" --theme light --snapshot "$ACTUAL" "$ROOT/Tests/Fixtures/test-complete.md"
 python3 "$ROOT/scripts/compare_snapshots.py" "$REFERENCE" "$ACTUAL"
 echo "Visual regression passed"

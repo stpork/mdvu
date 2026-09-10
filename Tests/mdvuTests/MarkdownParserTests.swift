@@ -326,12 +326,12 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func aboutPanelContentAndLinks() {
-        let attrString = AboutPanelController.makeAttributedString(version: "0.2.0")
+        let attrString = AboutPanelController.makeAttributedString(version: "0.3.0")
         let plain = attrString.string
 
         #expect(plain.contains("mdvu\n"))
         #expect(plain.contains("Markdown and Mermaid Viewer\n"))
-        #expect(plain.contains("Version: 0.2.0\n"))
+        #expect(plain.contains("Version: 0.3.0\n"))
         #expect(plain.contains("Copyright © 2026 Finn de Bear"))
         #expect(!plain.contains("(1)"))
         #expect(!plain.contains("("))
@@ -347,7 +347,7 @@ struct MarkdownParserTests {
             if url.absoluteString == "https://github.com/stpork/mdvu" && substring == "mdvu\n" {
                 foundRepoLink = true
             }
-            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.2.0" && substring.contains("0.2.0") {
+            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.3.0" && substring.contains("0.3.0") {
                 foundReleaseLink = true
             }
             if url.absoluteString == "mailto:finndebear@gmail.com" && substring == "Finn de Bear" {
@@ -538,10 +538,112 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("MDVU-COMPLETE-BEGIN"))
         #expect(doc.body.contains("MDVU-COMPLETE-MIDDLE"))
         #expect(doc.body.contains("MDVU-COMPLETE-END"))
+        #expect(doc.body.contains("MDVU-DIAGRAMS-END"))
 
-        // Diagram placeholders
+        // Expanded sections 19-23 contracts
+        #expect(doc.body.contains("MATH-001"))
+        #expect(doc.body.contains("LIT-001"))
+        #expect(doc.body.contains("GFM-001"))
+        #expect(doc.body.contains("OBS-001"))
+
+        // Diagram and Math placeholders
         #expect(doc.body.contains("data-renderer=\"mermaid\""))
         #expect(doc.body.contains("data-renderer=\"plantuml\""))
+        #expect(doc.body.contains("<span class=\"math-inline\">E = mc^2</span>"))
+        #expect(doc.body.contains("math-display"))
+
+        // Obsidian dialect validation on complete fixture
+        let obsidianDoc = MarkdownPipeline(dialect: .obsidian, mermaid: true).render(source)
+        #expect(obsidianDoc.body.contains("Architecture Overview.md"))
+    }
+
+    @Test func testAllMathCasesInFixture() throws {
+        let fixture = Self.fixtureURL("test-complete.md")
+        let data = try Data(contentsOf: fixture)
+        let source = String(decoding: data, as: UTF8.self)
+
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+
+        for i in 1...42 {
+            let caseID = String(format: "MATH-%03d", i)
+            guard let beginRange = source.range(of: "<!-- mdvu-case-begin: \(caseID) -->"),
+                  let endRange = source.range(of: "<!-- mdvu-case-end: \(caseID) -->", range: beginRange.upperBound..<source.endIndex) else {
+                continue
+            }
+            let rawSnippet = String(source[beginRange.upperBound..<endRange.lowerBound])
+            let renderedSnippet = pipeline.render(rawSnippet).body
+            let hasMath = renderedSnippet.contains("math-inline") || renderedSnippet.contains("math-display")
+            if !hasMath {
+                print("FAILED MATH CASE: \(caseID) -> raw: [\(rawSnippet)] rendered: [\(renderedSnippet)]")
+            }
+            #expect(hasMath, "Expected math in case \(caseID)")
+        }
+    }
+
+    @Test func testRuntimeSecurityAndErrorFixtures() throws {
+        let runtimeDir = Self.fixtureURL("runtime")
+        let fileManager = FileManager.default
+        let items = try fileManager.contentsOfDirectory(at: runtimeDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "md" }
+
+        #expect(items.count >= 25)
+
+        let ghPipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+        let obsPipeline = MarkdownPipeline(dialect: .obsidian, mermaid: true)
+
+        for fileURL in items {
+            let data = try Data(contentsOf: fileURL)
+            let content = String(decoding: data, as: UTF8.self)
+
+            // Resiliency test: invalid math, recursive macros, and stress tokens must not crash
+            let ghDoc = ghPipeline.render(content)
+            #expect(!ghDoc.body.isEmpty)
+
+            let obsDoc = obsPipeline.render(content)
+            #expect(!obsDoc.body.isEmpty)
+
+            // Security assertion: disallowed schemes and script tags must not produce executable unescaped tags
+            if fileURL.lastPathComponent.hasPrefix("sec-") {
+                #expect(!ghDoc.body.contains("<script>alert("))
+                #expect(!obsDoc.body.contains("<script>alert("))
+            }
+        }
+    }
+
+    @Test func testCompanionFixtureAssetsIntegrity() {
+        let assetsDir = Self.fixtureURL("assets")
+        let archDoc = Self.fixtureURL("Architecture Overview.md")
+        let diagramPng = Self.fixtureURL("diagram.png")
+        let projectsDir = Self.fixtureURL("Projects")
+        let docsDir = Self.fixtureURL("docs")
+
+        let fm = FileManager.default
+        #expect(fm.fileExists(atPath: assetsDir.path))
+        #expect(fm.fileExists(atPath: archDoc.path))
+        #expect(fm.fileExists(atPath: diagramPng.path))
+        #expect(fm.fileExists(atPath: projectsDir.path))
+        #expect(fm.fileExists(atPath: docsDir.path))
+    }
+
+    @Test func testHeavyTortureFixtureValidation() throws {
+        let fixture = Self.fixtureURL("test-heavy.md")
+        let data = try Data(contentsOf: fixture)
+        let source = String(decoding: data, as: UTF8.self)
+
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+        let doc = pipeline.render(source)
+
+        // Title extracted from frontmatter / first heading
+        #expect(doc.title?.contains("mdvu Full Torture Test") == true)
+
+        // Verifying torture markers and constructs rendered
+        #expect(doc.body.contains("GENERATED-STATS-BEGIN"))
+        #expect(doc.body.contains("MDVU-TORTURE-TEST-END"))
+
+        // Stress check: mermaid blocks rendered to placeholders and headings generated
+        #expect(doc.body.contains("data-renderer=\"mermaid\""))
+        #expect(doc.body.contains("<h1") || doc.body.contains("<h2"))
+        #expect(doc.body.count > 100_000)
     }
 
     @Test func testCriticMarkupRendering() {
@@ -632,6 +734,80 @@ struct MarkdownParserTests {
         // Outside snapping tolerance remains exact
         #expect(ZoomPolicy.formatPercentage(1.34) == "134%")
         #expect(ZoomPolicy.formatPercentage(1.26) == "126%")
+    }
+
+    @Test func testCompressedKaTeXResourceLoads() {
+        let js = ResourceLoader.katexJavaScript
+        #expect(!js.isEmpty)
+        #expect(js.contains("katex"))
+    }
+
+    @Test func testInlineAndDisplayMathParsing() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        Для объявленных границы $B$, контура $\\ell$, возмущений $D$ и регуляторной способности $G$:
+
+        $$
+        \\Delta_{\\mathrm{maint}}(B,\\ell,D)
+        =\\mathbb E[G\\mid\\pi_{\\mathrm{aligned}}]
+        -\\mathbb E[G\\mid\\pi_{\\mathrm{misaligned}}].
+        $$
+
+        Здесь $\\pi$ — политика последовательных вмешательств.
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("<span class=\"math-inline\">B</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">\\ell</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">D</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">G</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">\\pi</span>"))
+        #expect(doc.body.contains("<div class=\"math-display\">"))
+        #expect(doc.body.contains("\\Delta_{\\mathrm{maint}}"))
+    }
+
+    @Test func testMathCodeBlockAndFences() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        ```math
+        E = mc^2
+        ```
+
+        Here is code: `$not_math$` and price: $10 and $20 for items.
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("<div class=\"math-display\">E = mc^2</div>"))
+        #expect(doc.body.contains("<code>$not_math$</code>"))
+        #expect(!doc.body.contains("<span class=\"math-inline\">10 and "))
+        #expect(doc.body.contains("$10 and $20"))
+    }
+
+    @Test func testFastScanTokensAndAscii() {
+        let text = "Hello world with [!NOTE] and $math$ and ```code```"
+        #expect(FastScan.contains(text, token: "[!"))
+        #expect(FastScan.contains(text, token: "```"))
+        #expect(FastScan.contains(text, ascii: UInt8(ascii: "$")))
+        #expect(!FastScan.contains(text, token: "missing"))
+        #expect(!FastScan.contains(text, ascii: UInt8(ascii: "%")))
+    }
+
+    @Test func testEagerDocumentLoaderLifecycle() {
+        let fixture = Self.fixtureURL("test-light.md")
+        EagerDocumentLoader.start(path: fixture.path, options: .default)
+        let task = EagerDocumentLoader.take(for: fixture)
+        #expect(task != nil)
+        #expect(EagerDocumentLoader.take(for: fixture) == nil)
+    }
+
+    @Test @MainActor func testDocumentWindowControllerDeallocationWithoutRetainCycle() {
+        weak var weakController: DocumentWindowController?
+        let fixture = Self.fixtureURL("test-light.md")
+        autoreleasepool {
+            let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: StartupProfiler())
+            weakController = controller
+            #expect(weakController != nil)
+            controller.window?.close()
+        }
+        #expect(weakController == nil)
     }
 }
 

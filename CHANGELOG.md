@@ -4,6 +4,47 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-10
+
+### Added
+- **Native LaTeX Formula Support (KaTeX + WebKit MathML)**:
+  - Full offline rendering for inline (`$...$`) and display (`$$...$$` and ````math````, ````latex````, ````katex```` blocks) mathematical formulas.
+  - Translated client-side via embedded LZMA-compressed KaTeX engine (~64 KB) into native WebKit MathML Core markup.
+  - 100% offline with zero font download delays, dark/light theme integration, and crisp Retina scaling.
+- **Hardware-Vectorized FastScan**:
+  - Replaced Swift `String.contains("...")` pre-checks with POSIX `memchr` and `memmem` byte-matching routines.
+  - Bypasses grapheme cluster normalization on multi-megabyte documents, delivering a **30x–800x** speedup in extension pre-checks.
+- **Linear $O(N)$ Streaming Math & Code Fence Scanner**:
+  - Single-pass cursor scanning that natively skips inline code spans (`` `...` ``) and escaped backslashes (`\$`) without token replacement arrays.
+  - Streaming `CodeFenceScanner` replaces memory-heavy string splitting for fenced code blocks.
+- **Startup Pipelining (`EagerDocumentLoader`)**:
+  - Detached background reading and parsing launched immediately upon CLI invocation, running concurrently with AppKit runloop and window initialization.
+  - Continuous WebKit prewarming keeps subsequent document windows instant.
+- **Zero-Leak Memory & Lifecycle Hygiene**:
+  - `WeakScriptMessageHandler` trampoline breaks the hidden `WKUserContentController` retain cycle.
+  - Decoupled background rendering in `DocumentWindowController` captures only immutable `MarkdownPipeline` state, eliminating controller retain across background parse tasks.
+  - Deterministic `tearDown()` and `FileWatcher.invalidate()` cancel GCD dispatch sources, debounce timers, and close file descriptors immediately upon window close.
+  - `DiagramCache` memory cache bounded strictly to 16 MB.
+- **Corporate & Non-Admin Installation**:
+  - `make install` and Homebrew cask automatically detect write permissions on `/Applications`, installing without `root` or falling back seamlessly to `~/Applications`.
+- **GitHub Actions CI Pipeline**:
+  - Automated continuous integration on native Apple Silicon `macos-14` (M1) runners with Xcode 16.
+  - Validates full test suites, release builds, binary stripping and sizes, streaming throughput benchmarks, universal lipo binaries, and artifact generation.
+- **Full Fixture Coverage & Torture Testing**:
+  - Audited and activated 100% of test fixtures in `Tests/Fixtures/`: `test-light.md` (109 KB), `test-medium.md` (174 KB), `test-complete.md` (228 KB), and `test-heavy.md` (1.65 MB).
+  - Added torture test verifying `test-heavy.md` (13,916 lines, 324 Mermaid diagrams, 1,100 headings, multi-script Unicode) parses end-to-end in **0.35 seconds**.
+  - Expanded `test-complete.md` with sections 19–23 covering 120 content-cases: formulas inside tables, blockquotes, callouts, CriticMarkup, false-positive currency protection, and isolated security fixtures (`Tests/Fixtures/runtime/`).
+  - Programmatic verification suite (`testAllMathCasesInFixture`) asserting all 42 LaTeX formula cases.
+  - Extended math code fence scanner to support CommonMark tildes (`~~~math`) and multi-backtick (````math````) fences with variable indentation.
+  - Unit and integration suite expanded to **43 tests** executing in **< 0.8 seconds** with **> 92% line coverage** on core rendering modules.
+
+### Changed
+- **Compiler Optimization**:
+  - Updated release build configuration to `-O -cross-module-optimization -disable-reflection-metadata -disable-reflection-names -dead_strip -dead_strip_dylibs`.
+  - Stripped single-arch binary is **638 KB**; entire `.app` bundle is **3.3 MB** (including KaTeX, Mermaid, PlantUML).
+- **Throughput & Latency Gains**:
+  - Parsing throughput boosted from 3.0 MB/s to **14.3+ MB/s** (~4.8x faster on large documents; 1 MB in 70 ms, 25 MB in 1.77 s, 44 KB real-world documents in 4.97 ms).
+
 ## [0.2.0] - 2026-09-05
 
 ### Added
