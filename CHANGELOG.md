@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `DiagramCache` memory cache bounded strictly to 16 MB.
 - **Corporate & Non-Admin Installation**:
   - `make install` and Homebrew cask automatically detect write permissions on `/Applications`, installing without `root` or falling back seamlessly to `~/Applications`.
+- **GitHub Actions CI Pipeline**:
+  - Automated continuous integration on native Apple Silicon `macos-14` (M1) runners with Xcode 16.
+  - Validates full test suites, release builds, binary stripping and sizes, streaming throughput benchmarks, universal lipo binaries, and artifact generation.
+- **Full Fixture Coverage & Torture Testing**:
+  - Audited and activated 100% of test fixtures in `Tests/Fixtures/`: `test-light.md` (109 KB), `test-medium.md` (174 KB), `test-complete.md` (228 KB), and `test-heavy.md` (1.65 MB).
+  - Added torture test verifying `test-heavy.md` (13,916 lines, 324 Mermaid diagrams, 1,100 headings, multi-script Unicode) parses end-to-end in **0.35 seconds**.
+  - Expanded `test-complete.md` with sections 19–23 covering 120 content-cases: formulas inside tables, blockquotes, callouts, CriticMarkup, false-positive currency protection, and isolated security fixtures (`Tests/Fixtures/runtime/`).
+  - Programmatic verification suite (`testAllMathCasesInFixture`) asserting all 42 LaTeX formula cases.
+  - Extended math code fence scanner to support CommonMark tildes (`~~~math`) and multi-backtick (````math````) fences with variable indentation.
+  - Unit and integration suite expanded to **43 tests** executing in **< 0.8 seconds** with **> 92% line coverage** on core rendering modules.
 
 ### Changed
 - **Compiler Optimization**:

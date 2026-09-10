@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
   <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
   <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
   <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
