@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    name: Test & Build (macOS)
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name 'Xcode_16*.app' | sort -V | tail -n 1)
+          if [ -n "$XCODE_PATH" ]; then
+            echo "Selecting $XCODE_PATH"
+            sudo xcode-select -s "$XCODE_PATH"
+          fi
+          echo "Active Developer Directory: $(xcode-select -p)"
+          swift --version
+
+      - name: Run Test Suite (all fixtures)
+        run: make test
+
+      - name: Build Application Bundle
+        run: make app
+
+      - name: Validate Binary & Code Signature
+        run: |
+          BINARY="dist/mdvu.app/Contents/MacOS/mdvu"
+          file "$BINARY"
+          codesign -v --deep --strict dist/mdvu.app
+          SIZE=$(stat -f %z "$BINARY")
+          echo "Binary size: $SIZE bytes"
+          # Ensure binary is stripped and compact (< 2MB)
+          test $SIZE -lt 2097152
+
+      - name: Run Performance Benchmark
+        run: make benchmark
+
+      - name: Package Universal Release
+        run: make archive
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdvu-release-packages
+          path: |
+            dist/mdvu-*.zip
+            dist/mdvu-*.zip.sha256
+            dist/mdvu-*.dmg
+            dist/mdvu-*.dmg.sha256
+            dist/mdvu.rb
+          retention-days: 14

@@ -546,6 +546,27 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("math-display"))
     }
 
+    @Test func testHeavyTortureFixtureValidation() throws {
+        let fixture = Self.fixtureURL("test-heavy.md")
+        let data = try Data(contentsOf: fixture)
+        let source = String(decoding: data, as: UTF8.self)
+
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+        let doc = pipeline.render(source)
+
+        // Title extracted from frontmatter / first heading
+        #expect(doc.title?.contains("mdvu Full Torture Test") == true)
+
+        // Verifying torture markers and constructs rendered
+        #expect(doc.body.contains("GENERATED-STATS-BEGIN"))
+        #expect(doc.body.contains("MDVU-TORTURE-TEST-END"))
+
+        // Stress check: mermaid blocks rendered to placeholders and headings generated
+        #expect(doc.body.contains("data-renderer=\"mermaid\""))
+        #expect(doc.body.contains("<h1") || doc.body.contains("<h2"))
+        #expect(doc.body.count > 100_000)
+    }
+
     @Test func testCriticMarkupRendering() {
         let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
         let md = """
