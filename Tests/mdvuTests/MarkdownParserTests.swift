@@ -538,12 +538,68 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("MDVU-COMPLETE-BEGIN"))
         #expect(doc.body.contains("MDVU-COMPLETE-MIDDLE"))
         #expect(doc.body.contains("MDVU-COMPLETE-END"))
+        #expect(doc.body.contains("MDVU-DIAGRAMS-END"))
+
+        // Expanded sections 19-23 contracts
+        #expect(doc.body.contains("MATH-001"))
+        #expect(doc.body.contains("LIT-001"))
+        #expect(doc.body.contains("GFM-001"))
+        #expect(doc.body.contains("OBS-001"))
 
         // Diagram and Math placeholders
         #expect(doc.body.contains("data-renderer=\"mermaid\""))
         #expect(doc.body.contains("data-renderer=\"plantuml\""))
         #expect(doc.body.contains("math-inline"))
         #expect(doc.body.contains("math-display"))
+
+        // Obsidian dialect validation on complete fixture
+        let obsidianDoc = MarkdownPipeline(dialect: .obsidian, mermaid: true).render(source)
+        #expect(obsidianDoc.body.contains("Architecture Overview.md"))
+    }
+
+    @Test func testRuntimeSecurityAndErrorFixtures() throws {
+        let runtimeDir = Self.fixtureURL("runtime")
+        let fileManager = FileManager.default
+        let items = try fileManager.contentsOfDirectory(at: runtimeDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "md" }
+
+        #expect(items.count >= 25)
+
+        let ghPipeline = MarkdownPipeline(dialect: .github, mermaid: true)
+        let obsPipeline = MarkdownPipeline(dialect: .obsidian, mermaid: true)
+
+        for fileURL in items {
+            let data = try Data(contentsOf: fileURL)
+            let content = String(decoding: data, as: UTF8.self)
+
+            // Resiliency test: invalid math, recursive macros, and stress tokens must not crash
+            let ghDoc = ghPipeline.render(content)
+            #expect(!ghDoc.body.isEmpty)
+
+            let obsDoc = obsPipeline.render(content)
+            #expect(!obsDoc.body.isEmpty)
+
+            // Security assertion: disallowed schemes and script tags must not produce executable unescaped tags
+            if fileURL.lastPathComponent.hasPrefix("sec-") {
+                #expect(!ghDoc.body.contains("<script>alert("))
+                #expect(!obsDoc.body.contains("<script>alert("))
+            }
+        }
+    }
+
+    @Test func testCompanionFixtureAssetsIntegrity() {
+        let assetsDir = Self.fixtureURL("assets")
+        let archDoc = Self.fixtureURL("Architecture Overview.md")
+        let diagramPng = Self.fixtureURL("diagram.png")
+        let projectsDir = Self.fixtureURL("Projects")
+        let docsDir = Self.fixtureURL("docs")
+
+        let fm = FileManager.default
+        #expect(fm.fileExists(atPath: assetsDir.path))
+        #expect(fm.fileExists(atPath: archDoc.path))
+        #expect(fm.fileExists(atPath: diagramPng.path))
+        #expect(fm.fileExists(atPath: projectsDir.path))
+        #expect(fm.fileExists(atPath: docsDir.path))
     }
 
     @Test func testHeavyTortureFixtureValidation() throws {
