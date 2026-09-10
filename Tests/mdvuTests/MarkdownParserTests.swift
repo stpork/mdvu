@@ -539,9 +539,11 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("MDVU-COMPLETE-MIDDLE"))
         #expect(doc.body.contains("MDVU-COMPLETE-END"))
 
-        // Diagram placeholders
+        // Diagram and Math placeholders
         #expect(doc.body.contains("data-renderer=\"mermaid\""))
         #expect(doc.body.contains("data-renderer=\"plantuml\""))
+        #expect(doc.body.contains("math-inline"))
+        #expect(doc.body.contains("math-display"))
     }
 
     @Test func testCriticMarkupRendering() {
@@ -632,6 +634,47 @@ struct MarkdownParserTests {
         // Outside snapping tolerance remains exact
         #expect(ZoomPolicy.formatPercentage(1.34) == "134%")
         #expect(ZoomPolicy.formatPercentage(1.26) == "126%")
+    }
+
+    @Test func testCompressedKaTeXResourceLoads() {
+        let js = ResourceLoader.katexJavaScript
+        #expect(!js.isEmpty)
+        #expect(js.contains("katex"))
+    }
+
+    @Test func testInlineAndDisplayMathParsing() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        Для объявленных границы $B$, контура $\\ell$, возмущений $D$ и регуляторной способности $G$:
+
+        $$ \\Delta_{\\mathrm{maint}}(B,\\ell,D) =\\mathbb E[G\\mid\\pi_{\\mathrm{aligned}}] -\\mathbb E[G\\mid\\pi_{\\mathrm{misaligned}}]. $$
+
+        Здесь $\\pi$ — политика последовательных вмешательств.
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("<span class=\"math-inline\">B</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">\\ell</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">D</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">G</span>"))
+        #expect(doc.body.contains("<span class=\"math-inline\">\\pi</span>"))
+        #expect(doc.body.contains("<div class=\"math-display\">"))
+        #expect(doc.body.contains("\\Delta_{\\mathrm{maint}}"))
+    }
+
+    @Test func testMathCodeBlockAndFences() {
+        let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
+        let md = """
+        ```math
+        E = mc^2
+        ```
+
+        Here is code: `$not_math$` and price: $10 and $20 for items.
+        """
+        let doc = pipeline.render(md)
+        #expect(doc.body.contains("<div class=\"math-display\">E = mc^2</div>"))
+        #expect(doc.body.contains("<code>$not_math$</code>"))
+        #expect(!doc.body.contains("<span class=\"math-inline\">10 and "))
+        #expect(doc.body.contains("$10 and $20"))
     }
 }
 

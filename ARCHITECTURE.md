@@ -45,13 +45,14 @@
         ▼
  ┌─────────────────────────────────────────────────────────────┐
  │ Asynchronous Post-Render Phase (Decoupled & Lazy)           │
- │  • Evaluates pending diagrams on page:                      │
+ │  • Evaluates pending diagrams & math on page:               │
  │    - Mermaid 11.17.2 + ZenUML 0.2.3 (mermaid.lzma)          │
  │    - PlantUML 1.2026.7 + Viz.js 3.24.0 (plantuml.lzma)      │
+ │    - KaTeX MathML Engine (katex.lzma, 64 KB)                │
  │  • Frame-Budgeted Rendering: Yields every 16 ms to prevent  │
  │    main-thread stalls on 300+ diagram documents             │
  │  • Auto-Quoting Resilience for requirementDiagram           │
- │  • On-Demand Decompression: 0 ms overhead if no diagrams    │
+ │  • On-Demand Decompression: 0 ms overhead if no assets used │
  │  • Renders SVG diagrams to SHA-256 disk cache               │
  │  • In-page find highlights matches & reports live counts    │
  └─────────────────────────────────────────────────────────────┘
@@ -114,10 +115,14 @@
   * Bundled assets are compressed using **LZMA Ultra** (`preset 9 | PRESET_EXTREME`, `nice=273`, `mf=bt4`, `dict=64MB`):
     * `mermaid.lzma`: **1.33 MB** (compresses 7.02 MB of raw minified JS).
     * `plantuml.lzma`: **1.20 MB** (compresses 5.02 MB of raw minified JS + WebAssembly Graphviz).
+    * `katex.lzma`: **64 KB** (compresses 276 KB of raw minified KaTeX engine).
 * **Decoupled Lazy Loading**:
-  * Plain Markdown documents without diagrams incur **0% memory or startup overhead** (neither archive is read from disk).
+  * Plain Markdown documents without diagrams or formulas incur **0% memory or startup overhead** (no archives are read from disk).
   * Documents with only Mermaid diagrams decompress only `mermaid.lzma`.
   * Documents with only PlantUML diagrams decompress only `plantuml.lzma`.
+  * Documents with only Math formulas decompress only `katex.lzma`.
+* **Native WebKit MathML Rendering**:
+  * Formulas are translated via KaTeX to standard MathML Core, allowing macOS WebKit to render them natively with system math typography, crisp Retina scaling, dark/light theme adaptation, and screen-reader accessibility.
 * **SHA-256 SVG Disk Cache**:
   * All diagram SVGs are persisted to `~/Library/Caches/com.mdvu.viewer/diagrams/` keyed by `SHA256(renderer + version + source + theme)`.
   * Renders once asynchronously; subsequent views or window reloads display the cached SVG instantaneously without JavaScript engine evaluation.

@@ -853,13 +853,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if options.snapshotPath != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.captureSnapshotIfRequested() }
         }
-        guard options.mermaid else { captureSnapshotIfRequested(); return }
-        webView.evaluateJavaScript("[(document.querySelector('.diagram-pending[data-renderer=\"mermaid\"]') !== null), (document.querySelector('.diagram-pending[data-renderer=\"plantuml\"]') !== null)]") { [weak self] value, _ in
+        webView.evaluateJavaScript("[(document.querySelector('.diagram-pending[data-renderer=\"mermaid\"]') !== null), (document.querySelector('.diagram-pending[data-renderer=\"plantuml\"]') !== null), (document.querySelector('.math-inline, .math-display') !== null)]") { [weak self] value, _ in
             guard let self else { return }
-            guard let flags = value as? [Bool], flags.count == 2 else { self.captureSnapshotIfRequested(); return }
-            let needsMermaid = flags[0]
-            let needsPlantUML = flags[1]
-            guard needsMermaid || needsPlantUML else { self.captureSnapshotIfRequested(); return }
+            guard let flags = value as? [Bool], flags.count == 3 else { self.captureSnapshotIfRequested(); return }
+            let needsMermaid = options.mermaid && flags[0]
+            let needsPlantUML = options.mermaid && flags[1]
+            let needsMath = flags[2]
+            guard needsMermaid || needsPlantUML || needsMath else { self.captureSnapshotIfRequested(); return }
 
             let group = DispatchGroup()
 
@@ -893,10 +893,25 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 }
             }
 
+            if needsMath {
+                let katex = ResourceLoader.katexJavaScript
+                if !katex.isEmpty {
+                    group.enter()
+                    self.webView.evaluateJavaScript(katex) { _, error in
+                        #if DEBUG
+                        if let error {
+                            FileHandle.standardError.write(Data("mdvu: KaTeX load failed: \(error.localizedDescription)\n".utf8))
+                        }
+                        #endif
+                        group.leave()
+                    }
+                }
+            }
+
             group.notify(queue: .main) { [weak self] in
                 guard let self else { return }
-                self.webView.evaluateJavaScript("window.__mdvuRenderDiagrams && window.__mdvuRenderDiagrams()") { [weak self] _, _ in
-                    self?.profiler.mark("diagrams.complete")
+                self.webView.evaluateJavaScript("(window.__mdvuRenderMath && window.__mdvuRenderMath()), (window.__mdvuRenderDiagrams && window.__mdvuRenderDiagrams())") { [weak self] _, _ in
+                    self?.profiler.mark("render.complete")
                     self?.captureSnapshotIfRequested()
                 }
             }

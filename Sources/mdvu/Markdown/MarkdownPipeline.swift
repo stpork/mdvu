@@ -17,6 +17,7 @@ struct MarkdownPipeline {
             GitLabTOCExtension(),
             AdmonitionExtension(),
             ObsidianExtension(),
+            MathExtension(),
             CriticMarkupExtension(),
             SubSuperscriptExtension()
         ]
@@ -349,6 +350,69 @@ private struct SubSuperscriptExtension: MarkdownExtension {
                 text = Self.subRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sub>$1</sub>")
             }
             return text
+        }
+    }
+}
+
+private struct MathExtension: MarkdownExtension {
+    private static let mathCodeBlockRegex = try! NSRegularExpression(pattern: #"(?m)^```(?:math|latex|katex)[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$"#)
+    private static let inlineCodeRegex = try! NSRegularExpression(pattern: #"`+[^`\n]+?`+"#)
+    private static let displayRegex = try! NSRegularExpression(pattern: #"(?<!\\)\$\$([\s\S]+?)(?<!\\)\$\$"#)
+    private static let inlineMathRegex = try! NSRegularExpression(pattern: #"(?<![\$\\])\$(?!\s)((?:\\\$|[^\$\n\r])+?)(?<![\s\\])\$(?!\$)"#)
+
+    func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
+        guard source.contains("$") || source.contains("```math") || source.contains("```latex") || source.contains("```katex") else {
+            return source
+        }
+
+        var text = source
+        if text.contains("```math") || text.contains("```latex") || text.contains("```katex") {
+            text = RegexHelper.replace(text, regex: Self.mathCodeBlockRegex) { match in
+                let tex = match[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                return "<div class=\"math-display\">\(HTML.escape(tex))</div>"
+            }
+        }
+
+        guard text.contains("$") else { return text }
+
+        return CodeFenceProtector.process(text) { chunk in
+            guard chunk.contains("$") else { return chunk }
+
+            var codeSpans: [String] = []
+            let prefix = "@@MDVU_MATH_CODE_"
+            let suffix = "@@"
+
+            var intermediate = chunk
+            if intermediate.contains("`") {
+                intermediate = RegexHelper.replace(intermediate, regex: Self.inlineCodeRegex) { match in
+                    let code = match[0]
+                    let idx = codeSpans.count
+                    codeSpans.append(code)
+                    return "\(prefix)\(idx)\(suffix)"
+                }
+            }
+
+            if intermediate.contains("$$") {
+                intermediate = RegexHelper.replace(intermediate, regex: Self.displayRegex) { match in
+                    let tex = match[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                    return "<div class=\"math-display\">\(HTML.escape(tex))</div>"
+                }
+            }
+
+            if intermediate.contains("$") {
+                intermediate = RegexHelper.replace(intermediate, regex: Self.inlineMathRegex) { match in
+                    let tex = match[1]
+                    return "<span class=\"math-inline\">\(HTML.escape(tex))</span>"
+                }
+            }
+
+            if !codeSpans.isEmpty {
+                for (idx, code) in codeSpans.enumerated() {
+                    intermediate = intermediate.replacingOccurrences(of: "\(prefix)\(idx)\(suffix)", with: code)
+                }
+            }
+
+            return intermediate
         }
     }
 }
