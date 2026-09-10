@@ -224,7 +224,7 @@ cp "$DIST/mdvu.rb" Casks/mdvu.rb
 
 if command -v brew >/dev/null 2>&1; then
     echo "Running brew audit..."
-    brew audit --cask Casks/mdvu.rb 2>&1 || true
+    brew audit --cask "$TAP_DIR/Casks/mdvu.rb" 2>&1 || brew audit --cask mdvu 2>&1 || true
 fi
 
 git add Casks/mdvu.rb
