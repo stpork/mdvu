@@ -11,6 +11,34 @@ enum FastScan {
     }
 
     @inline(__always)
+    static func count(_ string: String, ascii: UInt8, atLeast: Int) -> Bool {
+        string.utf8.withContiguousStorageIfAvailable { buf in
+            guard let base = buf.baseAddress else { return false }
+            var ptr = UnsafeRawPointer(base)
+            var rem = buf.count
+            var found = 0
+            while rem > 0, let rawP = memchr(ptr, Int32(ascii), rem) {
+                found += 1
+                if found >= atLeast { return true }
+                let p = UnsafeRawPointer(rawP)
+                let consumed = (p - ptr) + 1
+                ptr = p + 1
+                rem -= consumed
+            }
+            return false
+        } ?? {
+            var found = 0
+            for b in string.utf8 {
+                if b == ascii {
+                    found += 1
+                    if found >= atLeast { return true }
+                }
+            }
+            return false
+        }()
+    }
+
+    @inline(__always)
     static func contains(_ string: String, token: StaticString) -> Bool {
         token.withUTF8Buffer { tokenBuf in
             guard !tokenBuf.isEmpty else { return true }
@@ -76,7 +104,7 @@ struct RenderedDocument {
 enum MarkdownDocumentDirective {
     private static let commentRegex = try! NSRegularExpression(pattern: #"<!--([\s\S]*?)-->"#)
     private static let directiveInCommentRegex = try! NSRegularExpression(
-        pattern: #"(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+|(?i)\bin\s+)(["'`]?)([a-zA-Z_-]+)\1(?:\s+dialect)?"#,
+        pattern: #"(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+)(["'`]?)([a-zA-Z_-]+)\1|\bin\s+(["'`]?)([a-zA-Z_-]+)\3\s+dialect\b"#,
         options: .caseInsensitive
     )
 
@@ -96,7 +124,8 @@ enum MarkdownDocumentDirective {
                 let commentNS = commentContent as NSString
                 let commentRange = NSRange(location: 0, length: commentNS.length)
                 if let directiveMatch = directiveInCommentRegex.firstMatch(in: commentContent, range: commentRange) {
-                    let rawVal = commentNS.substring(with: directiveMatch.range(at: 2))
+                    let range = directiveMatch.range(at: 2).location != NSNotFound ? directiveMatch.range(at: 2) : directiveMatch.range(at: 4)
+                    let rawVal = commentNS.substring(with: range)
                     if let dialect = MarkdownDialect.from(string: rawVal) {
                         return dialect
                     }
@@ -158,29 +187,39 @@ private struct ObsidianExtension: MarkdownExtension {
         var result = ""
         var cursor = source.startIndex
         var chunkStart = cursor
-        var fence: Character?
+        var fenceChar: Character?
+        var fenceLen = 0
 
         while cursor < source.endIndex {
             let nextNewline = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
             let line = source[cursor..<nextNewline]
 
-            var firstNonSpace: Character?
-            for ch in line {
-                if ch != " " && ch != "\t" {
-                    firstNonSpace = ch
-                    break
+            var firstNonSpace: UInt8 = 0
+            var hasBracket = false
+            for b in line.utf8 {
+                if firstNonSpace == 0 && b != 0x20 && b != 0x09 && b != 0x0D {
+                    firstNonSpace = b
+                }
+                if b == 0x5B { // '['
+                    hasBracket = true
                 }
             }
 
-            if let first = firstNonSpace, first == "`" || first == "~" {
+            if firstNonSpace == 0x60 || firstNonSpace == 0x7E { // '`' or '~'
                 let candidate = line.drop(while: { $0 == " " || $0 == "\t" })
                 let marker: Character? = candidate.hasPrefix("```") ? "`" : (candidate.hasPrefix("~~~") ? "~" : nil)
                 if let marker {
-                    if fence == nil { fence = marker }
-                    else if fence == marker { fence = nil }
+                    let count = candidate.prefix(while: { $0 == marker }).count
+                    if fenceChar == nil {
+                        fenceChar = marker
+                        fenceLen = count
+                    } else if fenceChar == marker && count >= fenceLen {
+                        fenceChar = nil
+                        fenceLen = 0
+                    }
                 }
-            } else if fence == nil && line.utf8.contains(UInt8(ascii: "[")) {
-                let needsCallout = line.contains("[!")
+            } else if fenceChar == nil && hasBracket {
+                let needsCallout = hasCallout && line.contains("[!")
                 let needsWiki = hasWikiSyntax && line.contains("[[")
                 if needsCallout || needsWiki {
                     let transformed = transform(String(line), wikiLinks: hasWikiSyntax)
@@ -254,17 +293,21 @@ private struct CodeFenceScanner {
         while cursor < source.endIndex {
             let lineStart = cursor
             let lineEnd = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
+            let line = source[cursor..<lineEnd]
 
-            // Scan leading indentation up to 3 spaces (CommonMark spec)
             var indent = 0
             var charIdx = lineStart
-            while charIdx < lineEnd && (source[charIdx] == " " || source[charIdx] == "\t") {
-                indent += 1
-                charIdx = source.index(after: charIdx)
+            for ch in line {
+                if ch == " " || ch == "\t" {
+                    indent += 1
+                    charIdx = source.index(after: charIdx)
+                    if indent > 3 { break }
+                } else {
+                    break
+                }
             }
 
             if let fenceChar = activeFenceChar {
-                // Inside a fence: check if this line closes the fence
                 if indent <= 3 && charIdx < lineEnd && source[charIdx] == fenceChar {
                     var count = 0
                     var scan = charIdx
@@ -286,7 +329,6 @@ private struct CodeFenceScanner {
                     }
                 }
             } else {
-                // Outside a fence: check if an opening fence starts here
                 if indent <= 3 && charIdx < lineEnd {
                     let first = source[charIdx]
                     if first == "`" || first == "~" {
@@ -365,7 +407,8 @@ private struct AdmonitionExtension: MarkdownExtension {
         var cursor = source.startIndex
         while true {
             let nextNewline = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
-            let line = source[cursor..<nextNewline]
+            let rawLine = source[cursor..<nextNewline]
+            let line = rawLine.hasSuffix("\r") ? rawLine.dropLast() : rawLine
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             if let currentFence = activeFence {
@@ -465,7 +508,11 @@ private struct CriticMarkupExtension: MarkdownExtension {
                 text = Self.markRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<mark class=\"critic-mark\">$1</mark>")
             }
             if FastScan.contains(text, token: "{>") {
-                text = Self.commentRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<span class=\"critic-comment\" title=\"$1\">💬 $1</span>")
+                text = RegexHelper.replace(text, regex: Self.commentRegex) { match in
+                    let comment = match[1]
+                    let safeTitle = HTML.escapeAttribute(comment)
+                    return "<span class=\"critic-comment\" title=\"\(safeTitle)\">💬 \(comment)</span>"
+                }
             }
             return text
         }
@@ -478,19 +525,19 @@ private struct SubSuperscriptExtension: MarkdownExtension {
     private static let subRegex = try! NSRegularExpression(pattern: #"(?<!~)~([^~\s\n\r]+)~(?!~)"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        guard FastScan.contains(source, ascii: UInt8(ascii: "~")) || FastScan.contains(source, ascii: UInt8(ascii: "^")) else {
+        guard FastScan.count(source, ascii: UInt8(ascii: "~"), atLeast: 2) || FastScan.count(source, ascii: UInt8(ascii: "^"), atLeast: 2) else {
             return source
         }
         return CodeFenceScanner.process(source) { chunk in
-            guard FastScan.contains(chunk, ascii: UInt8(ascii: "~")) || FastScan.contains(chunk, ascii: UInt8(ascii: "^")) else { return chunk }
+            guard FastScan.count(chunk, ascii: UInt8(ascii: "~"), atLeast: 2) || FastScan.count(chunk, ascii: UInt8(ascii: "^"), atLeast: 2) else { return chunk }
             var text = chunk
-            if FastScan.contains(text, ascii: UInt8(ascii: "^")) {
+            if FastScan.count(text, ascii: UInt8(ascii: "^"), atLeast: 2) {
                 if FastScan.contains(text, token: "^^") {
                     text = Self.underRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<u>$1</u>")
                 }
                 text = Self.supRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sup>$1</sup>")
             }
-            if FastScan.contains(text, ascii: UInt8(ascii: "~")) {
+            if FastScan.count(text, ascii: UInt8(ascii: "~"), atLeast: 2) {
                 text = Self.subRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sub>$1</sub>")
             }
             return text
@@ -502,8 +549,8 @@ private struct MathExtension: MarkdownExtension {
     private static let mathCodeBlockRegex = try! NSRegularExpression(pattern: #"(?m)^[ \t]{0,3}(`{3,}|~{3,})(?:math|latex|katex)[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]{0,3}\1[ \t]*$"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
-        let hasMathToken = FastScan.contains(source, token: "math") || FastScan.contains(source, token: "latex") || FastScan.contains(source, token: "katex")
-        let hasDollar = FastScan.contains(source, ascii: UInt8(ascii: "$"))
+        let hasMathToken = FastScan.contains(source, token: "```math") || FastScan.contains(source, token: "```latex") || FastScan.contains(source, token: "```katex") || FastScan.contains(source, token: "~~~math") || FastScan.contains(source, token: "~~~latex") || FastScan.contains(source, token: "~~~katex")
+        let hasDollar = FastScan.count(source, ascii: UInt8(ascii: "$"), atLeast: 2)
         guard hasDollar || hasMathToken else {
             return source
         }
@@ -516,10 +563,10 @@ private struct MathExtension: MarkdownExtension {
             }
         }
 
-        guard FastScan.contains(text, ascii: UInt8(ascii: "$")) else { return text }
+        guard FastScan.count(text, ascii: UInt8(ascii: "$"), atLeast: 2) else { return text }
 
         return CodeFenceScanner.process(text) { chunk in
-            guard FastScan.contains(chunk, ascii: UInt8(ascii: "$")) else { return chunk }
+            guard FastScan.count(chunk, ascii: UInt8(ascii: "$"), atLeast: 2) else { return chunk }
             return Self.scanMathInChunk(chunk)
         }
     }
@@ -531,6 +578,10 @@ private struct MathExtension: MarkdownExtension {
         var chunkStart = cursor
 
         while cursor < chunk.endIndex {
+            guard let next = chunk[cursor...].firstIndex(where: { $0 == "$" || $0 == "`" || $0 == "\\" }) else {
+                break
+            }
+            cursor = next
             let ch = chunk[cursor]
 
             // 1. Skip inline code backticks: `...` or ``...``
@@ -630,6 +681,7 @@ private struct MathExtension: MarkdownExtension {
             cursor = chunk.index(after: cursor)
         }
 
+        if result.isEmpty { return chunk }
         if chunkStart < chunk.endIndex {
             result.append(contentsOf: chunk[chunkStart...])
         }

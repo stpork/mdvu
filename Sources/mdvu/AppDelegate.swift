@@ -129,6 +129,8 @@ enum AppMenu {
         let dialectItem = NSMenuItem(title: "Dialect", action: nil, keyEquivalent: "")
         let dialectMenu = NSMenu(title: "Dialect")
         dialectItem.submenu = dialectMenu
+        dialectMenu.addItem(withTitle: "Automatic", action: #selector(DocumentWindowController.selectDialectAuto(_:)), keyEquivalent: "")
+        dialectMenu.addItem(.separator())
         dialectMenu.addItem(withTitle: "Generic (CommonMark)", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
         dialectMenu.addItem(withTitle: "GitHub (GFM)", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
         dialectMenu.addItem(withTitle: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")

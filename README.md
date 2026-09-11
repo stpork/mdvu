@@ -12,8 +12,8 @@
       <p>
         <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
         <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.1-emerald" alt="Version 0.3.1"></a>
-        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.2-emerald" alt="Version 0.3.2"></a>
+        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
         <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
       </p>
     </td>
@@ -31,8 +31,8 @@
 ## Why mdvu?
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
-* **Ultra-Fast**: Window visible in ~70–150 ms, first WebKit content painted almost instantaneously via pipelined `EagerDocumentLoader` and continuous `WebKitPrewarmer`. Hardware-vectorized `FastScan` byte matching achieves throughput of **14.3+ MB/s** (~5 ms for 44 KB scientific papers; ~70 ms for 1 MB; ~1.77 s for 25 MB documents).
-* **Ultra-Compact**: **3.3 MB** app bundle, **~2.9 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Stripped Mach-O binary is just **638 KB** with cross-module optimization and dead-stripping.
+* **Ultra-Fast**: Window visible in ~70–150 ms, first WebKit content painted almost instantaneously via pipelined `EagerDocumentLoader` and continuous `WebKitPrewarmer`. Hardware-vectorized `FastScan` byte matching achieves throughput of **16.5 – 52 MB/s** (~52 MB/s on standard documentation, ~16.5 MB/s on rich multi-extension fixtures; ~19 ms for 1 MB plain, ~59 ms for 1 MB extended).
+* **Ultra-Compact**: **3.4 MB** app bundle, **~2.9 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Mach-O binary is just **~670 KB**.
 * **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native WebKit MathML Core rendering, featuring dark/light mode integration, zero font download overhead, and textbook-quality typography.
@@ -280,16 +280,16 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-| Metric | mdvu (Native) | Typical Electron Viewers |
-| :--- | :--- | :--- |
-| **App Bundle Size** | **3.3 MB** (Single Arch) / **4.0 MB** (Universal) | 150 – 250 MB |
-| **Mach-O Executable** | **638 KB** (Stripped, `-O -cross-module-optimization`) | N/A (Embedded Chromium) |
-| **Release Archive** | **~2.9 – 3.2 MB** (`.zip`) / **3.5 MB** (`.dmg`) | 80 – 120 MB |
-| **Cold Startup Time** | **~70–150 ms** window / **~180–250 ms** first paint | 1,200 – 3,500 ms |
-| **RAM Footprint (Idle)**| **~45 – 50 MB** (Physical Footprint, Host UI) | 250 – 500 MB |
-| **Markdown Throughput** | **14.3+ MB/s** (~4.9 ms for 44 KB, ~70 ms for 1 MB) | 0.8 – 1.5 MB/s |
-| **Zoom Rendering** | **120 FPS** (CoreAnimation GPU native) | 30 – 60 FPS (DOM reflow) |
-| **External Dependencies**| **0** (No Node, no Java/JVM, no Python) | Node.js, V8, Chromium |
+| Metric | mdvu (Native) | Native Viewers ([MacDown](https://macdown.uranusjr.com/), [mdv](https://www.mowglii.com/mdv/)) | Electron / Chromium ([Typora](https://typora.io/), Obsidian) |
+| :--- | :--- | :--- | :--- |
+| **App Bundle Size** | **3.4 MB** (Universal: **4.2 MB**) | 8 – 25 MB | 180 – 250 MB |
+| **Mach-O Executable** | **~670 KB** | 2 – 5 MB | 120 – 160 MB |
+| **Release Archive** | **~2.9 – 3.2 MB** (`.zip`) / **3.5 MB** (`.dmg`) | 6 – 12 MB | 80 – 120 MB |
+| **Cold Startup Time** | **~70–150 ms** window / **~180–250 ms** first paint | 200 – 400 ms | 1,200 – 3,500 ms |
+| **RAM Footprint (Idle)**| **~45 – 50 MB** (Host UI Process) | 40 – 70 MB | 250 – 500 MB |
+| **Markdown Throughput** | **16.5 – 52 MB/s** (~16.5 MB/s extended, ~52 MB/s plain) | 10 – 25 MB/s | 0.8 – 2.0 MB/s |
+| **Zoom Rendering** | **120 FPS** (CoreAnimation GPU native) | 60 FPS | 30 – 60 FPS (DOM reflow) |
+| **External Dependencies**| **0** (No Node, no Java/JVM, no Python) | 0 | Node.js, V8, Chromium |
 
 ---
 

@@ -4,6 +4,32 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-09-11
+
+### Added
+- **Automatic Dialect Option & Document State Reset**:
+  - Added `Automatic` option to `View → Dialect` menu, allowing dynamic frontmatter and comment directive detection while retaining menu fallback.
+  - Switching or opening documents now automatically resets manual dialect overrides to the document's detected default, unless `--dialect` was explicitly passed via CLI.
+
+### Changed
+- **Linear Callout Scanner & Pipeline Throughput**:
+  - Replaced regular expressions in callout block processing with linear bounded scans and literal string matching, reducing callout postprocessing time by ~8.5x.
+  - Pipeline throughput boosted to **16.5 – 52 MB/s** (~52 MB/s on standard documentation, ~16.5 MB/s on rich multi-extension fixtures).
+  - Optimized extension pre-checks with hardware-accelerated `FastScan.count(..., atLeast:)` using SIMD `memchr`, skipping heavy sub/superscript and math passes when fewer than 2 delimiter tokens exist.
+  - Admonition line parser handles CRLF (`\r\n`) line breaks cleanly without premature block termination.
+- **Documentation & Benchmark Comparison**:
+  - Replaced compiler flags and N/A entries in `README.md` with a realistic 3-column benchmark comparing `mdvu` against real-world native viewers ([MacDown](https://macdown.uranusjr.com/), [mdv](https://www.mowglii.com/mdv/)) and Electron applications ([Typora](https://typora.io/), Obsidian).
+
+### Fixed
+- **CriticMarkup Tooltip Attribute Escaping**:
+  - Escaped user comment text in `CriticMarkupExtension` tooltip attribute (`HTML.escapeAttribute`) to prevent HTML attribute breakouts.
+- **Obsidian 4-Backtick Fence Handling**:
+  - Added fence length and character tracking to prevent 4-backtick code blocks (` ```` `) from being prematurely terminated by inner 3-backtick sequences (` ``` `).
+- **Window Title Markup Leaks**:
+  - Document title extraction from `<h1>` elements now strips nested HTML tags and decodes entities, preventing raw markup from leaking into the macOS window title.
+- **Entity Unescaping with Standalone Ampersands**:
+  - Fixed pointer-advancing logic in `HTML.unescape` when standalone ampersands are present without valid entity codes.
+
 ## [0.3.1] - 2026-09-11
 
 ### Added
