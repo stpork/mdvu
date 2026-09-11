@@ -55,13 +55,13 @@ struct MarkdownParser {
 
     private func postprocess(_ input: String) -> String {
         var html = input
-        if !diagrams.renderers.isEmpty, html.contains(#"<pre><code class="language-"#) {
+        if !diagrams.renderers.isEmpty, FastScan.contains(html, token: #"<pre><code class="language-"#) {
             html = replaceDiagramBlocks(html)
         }
-        if html.contains("MDVU-CALLOUT-") {
+        if FastScan.contains(html, token: "MDVU-CALLOUT-") {
             html = replaceCalloutBlocks(html)
         }
-        if html.contains("&lt;style") || html.contains("&lt;STYLE") || html.contains("&lt;/style") || html.contains("&lt;/STYLE") {
+        if FastScan.contains(html, ascii: UInt8(ascii: "&")) && (FastScan.contains(html, token: "&lt;style") || FastScan.contains(html, token: "&lt;STYLE") || FastScan.contains(html, token: "&lt;/style") || FastScan.contains(html, token: "&lt;/STYLE")) {
             html = RegexHelper.replace(html, regex: Self.styleTagPattern) { match in
                 "<\(match[1])>"
             }
@@ -76,25 +76,61 @@ struct MarkdownParser {
         var cursor = input.startIndex
         var searchStart = cursor
 
-        while let markerRange = input.range(of: marker, range: searchStart..<input.endIndex) {
-            guard let bqStart = input[cursor..<markerRange.lowerBound].range(of: "<blockquote>", options: .backwards) else {
-                searchStart = markerRange.upperBound
-                continue
-            }
-            guard let bqEnd = input.range(of: "</blockquote>", range: markerRange.upperBound..<input.endIndex) else {
+        while let markerRange = input.range(of: marker, options: .literal, range: searchStart..<input.endIndex) {
+            let searchBackStart = input.index(markerRange.lowerBound, offsetBy: -200, limitedBy: cursor) ?? cursor
+            guard let bqStart = input[searchBackStart..<markerRange.lowerBound].range(of: "<blockquote>", options: [.backwards, .literal]) else {
                 searchStart = markerRange.upperBound
                 continue
             }
 
-            let block = String(input[bqStart.lowerBound..<bqEnd.upperBound])
-            let replaced = RegexHelper.replace(block, regex: Self.calloutPattern) { match in
-                let type = match[1].lowercased()
-                let calloutTitle = match[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                return "<aside class=\"callout callout-\(type)\"><div class=\"callout-title\">\(calloutTitle.isEmpty ? type.capitalized : calloutTitle)</div><div>\(match[3])</div></aside>"
+            var scan = markerRange.upperBound
+            var depth = 0
+            var matchingBqEnd: Range<String.Index>?
+            while scan < input.endIndex {
+                guard let nextTag = input[scan...].range(of: "<", options: .literal) else { break }
+                let rem = input[nextTag.lowerBound...]
+                if rem.starts(with: "<blockquote>") {
+                    depth += 1
+                    scan = input.index(nextTag.lowerBound, offsetBy: 12)
+                } else if rem.starts(with: "</blockquote>") {
+                    if depth == 0 {
+                        matchingBqEnd = nextTag.lowerBound..<input.index(nextTag.lowerBound, offsetBy: 13)
+                        break
+                    }
+                    depth -= 1
+                    scan = input.index(nextTag.lowerBound, offsetBy: 13)
+                } else {
+                    scan = input.index(after: nextTag.lowerBound)
+                }
             }
+
+            guard let bqEnd = matchingBqEnd else {
+                searchStart = markerRange.upperBound
+                continue
+            }
+
+            guard let strongEnd = input[markerRange.upperBound..<bqEnd.lowerBound].range(of: "</strong>", options: .literal) else {
+                searchStart = markerRange.upperBound
+                continue
+            }
+            let type = String(input[markerRange.upperBound..<strongEnd.lowerBound]).lowercased()
+
+            guard let pEnd = input[strongEnd.upperBound..<bqEnd.lowerBound].range(of: "</p>", options: .literal) else {
+                searchStart = markerRange.upperBound
+                continue
+            }
+            let rawTitle = input[strongEnd.upperBound..<pEnd.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = rawTitle.isEmpty ? type.capitalized : rawTitle
+
+            var body = input[pEnd.upperBound..<bqEnd.lowerBound]
+            while let first = body.first, first == "\n" || first == "\r" {
+                body = body.dropFirst()
+            }
+
+            let processedBody = FastScan.contains(String(body), token: "MDVU-CALLOUT-") ? replaceCalloutBlocks(String(body)) : String(body)
 
             result.append(contentsOf: input[cursor..<bqStart.lowerBound])
-            result.append(replaced)
+            result.append("<aside class=\"callout callout-\(type)\"><div class=\"callout-title\">\(title)</div><div>\(processedBody)</div></aside>")
             cursor = bqEnd.upperBound
             searchStart = cursor
         }
@@ -144,7 +180,7 @@ struct MarkdownParser {
             if cmark_node_get_type(node) == CMARK_NODE_HEADING && cmark_node_get_heading_level(node) == 1 {
                 var title = ""
                 inlineText(cmark_node_first_child(node), into: &title)
-                let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let value = cleanTitle(title)
                 if !value.isEmpty { return value }
             } else if cmark_node_get_type(node) == CMARK_NODE_HTML_BLOCK {
                 if let literal = cmark_node_get_literal(node) {
@@ -152,8 +188,9 @@ struct MarkdownParser {
                     if let r = html.range(of: #"(?i)<h1\b[^>]*>(.*?)</h1>"#, options: .regularExpression) {
                         let match = html[r]
                         if let start = match.firstIndex(of: ">"), let end = match.range(of: "</h1>", options: .caseInsensitive)?.lowerBound {
-                            let title = String(match[match.index(after: start)..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !title.isEmpty { return title }
+                            let raw = String(match[match.index(after: start)..<end])
+                            let value = cleanTitle(raw)
+                            if !value.isEmpty { return value }
                         }
                     }
                 }
@@ -161,6 +198,11 @@ struct MarkdownParser {
             child = cmark_node_next(node)
         }
         return nil
+    }
+
+    private func cleanTitle(_ raw: String) -> String {
+        let stripped = raw.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        return HTML.unescape(stripped).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func inlineText(_ first: UnsafeMutablePointer<cmark_node>?, into result: inout String) {
@@ -237,33 +279,32 @@ enum HTML {
         var search = cursor
         while search < value.endIndex {
             if value[search] == "&" {
-                result.append(contentsOf: value[cursor..<search])
                 let rest = value[search...]
                 if rest.starts(with: "&quot;") {
+                    result.append(contentsOf: value[cursor..<search])
                     result.append("\"")
                     search = value.index(search, offsetBy: 6)
                     cursor = search
-                    continue
                 } else if rest.starts(with: "&#39;") {
+                    result.append(contentsOf: value[cursor..<search])
                     result.append("'")
                     search = value.index(search, offsetBy: 5)
                     cursor = search
-                    continue
                 } else if rest.starts(with: "&gt;") {
+                    result.append(contentsOf: value[cursor..<search])
                     result.append(">")
                     search = value.index(search, offsetBy: 4)
                     cursor = search
-                    continue
                 } else if rest.starts(with: "&lt;") {
+                    result.append(contentsOf: value[cursor..<search])
                     result.append("<")
                     search = value.index(search, offsetBy: 4)
                     cursor = search
-                    continue
                 } else if rest.starts(with: "&amp;") {
+                    result.append(contentsOf: value[cursor..<search])
                     result.append("&")
                     search = value.index(search, offsetBy: 5)
                     cursor = search
-                    continue
                 } else {
                     search = value.index(after: search)
                 }

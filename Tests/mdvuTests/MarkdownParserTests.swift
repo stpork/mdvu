@@ -342,12 +342,12 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func aboutPanelContentAndLinks() {
-        let attrString = AboutPanelController.makeAttributedString(version: "0.3.0")
+        let attrString = AboutPanelController.makeAttributedString(version: "0.3.2")
         let plain = attrString.string
 
         #expect(plain.contains("mdvu\n"))
         #expect(plain.contains("Markdown and Mermaid Viewer\n"))
-        #expect(plain.contains("Version: 0.3.0\n"))
+        #expect(plain.contains("Version: 0.3.2\n"))
         #expect(plain.contains("Copyright © 2026 Finn de Bear"))
         #expect(!plain.contains("(1)"))
         #expect(!plain.contains("("))
@@ -363,7 +363,7 @@ struct MarkdownParserTests {
             if url.absoluteString == "https://github.com/stpork/mdvu" && substring == "mdvu\n" {
                 foundRepoLink = true
             }
-            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.3.0" && substring.contains("0.3.0") {
+            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.3.2" && substring.contains("0.3.2") {
                 foundReleaseLink = true
             }
             if url.absoluteString == "mailto:finndebear@gmail.com" && substring == "Finn de Bear" {
@@ -879,10 +879,13 @@ struct MarkdownParserTests {
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: StartupProfiler())
         #expect(controller.currentDialect == .generic)
 
+        let autoItem = NSMenuItem(title: "Automatic", action: #selector(DocumentWindowController.selectDialectAuto(_:)), keyEquivalent: "")
         let genericItem = NSMenuItem(title: "Generic", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
         let githubItem = NSMenuItem(title: "GitHub", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
         let obsidianItem = NSMenuItem(title: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")
 
+        #expect(controller.validateMenuItem(autoItem) == true)
+        #expect(autoItem.state == .on)
         #expect(controller.validateMenuItem(genericItem) == true)
         #expect(genericItem.state == .on)
         #expect(controller.validateMenuItem(githubItem) == true)
@@ -892,17 +895,70 @@ struct MarkdownParserTests {
 
         controller.selectDialectObsidian(nil)
         #expect(controller.currentDialect == .obsidian)
+        _ = controller.validateMenuItem(autoItem)
         _ = controller.validateMenuItem(genericItem)
         _ = controller.validateMenuItem(obsidianItem)
+        #expect(autoItem.state == .off)
         #expect(genericItem.state == .off)
         #expect(obsidianItem.state == .on)
 
         controller.selectDialectGitHub(nil)
         #expect(controller.currentDialect == .github)
+        _ = controller.validateMenuItem(autoItem)
         _ = controller.validateMenuItem(githubItem)
+        #expect(autoItem.state == .off)
         #expect(githubItem.state == .on)
 
+        controller.selectDialectAuto(nil)
+        _ = controller.validateMenuItem(autoItem)
+        #expect(autoItem.state == .on)
+
         controller.window?.close()
+    }
+
+    @Test func testTitleStripsHTMLTagsAndDecodesEntities() {
+        let pipeline = MarkdownPipeline(dialect: .generic, mermaid: false)
+        let doc1 = pipeline.render("# Hello <span class=\"badge\">World</span> &amp; Friends")
+        #expect(doc1.title == "Hello World & Friends")
+
+        let doc2 = pipeline.render("<h1><img src=\"icon.png\" alt=\"icon\"/> Document &lt;Special&gt;</h1>")
+        #expect(doc2.title == "Document <Special>")
+    }
+
+    @Test func testNestedBlockquoteInCallout() {
+        let pipeline = MarkdownPipeline(dialect: .obsidian, mermaid: false)
+        let md = """
+        > [!NOTE] Nested Title
+        > Paragraph 1
+        > > Inner quote
+        > Paragraph 2
+        """
+        let rendered = pipeline.render(md)
+        #expect(rendered.body.contains("<aside class=\"callout callout-note\">"))
+        #expect(rendered.body.contains("<blockquote>"))
+        #expect(rendered.body.contains("Inner quote"))
+        #expect(rendered.body.contains("Paragraph 2"))
+    }
+
+    @Test func testCriticMarkupAttributeEscaping() {
+        let pipeline = MarkdownPipeline(dialect: .generic, mermaid: false)
+        let md = "{>>check \"this\" out & note<<}"
+        let rendered = pipeline.render(md)
+        #expect(rendered.body.contains("title=\"check &quot;this&quot; out &amp; note\""))
+    }
+
+    @Test func testObsidianFourBacktickFenceNotClosedByThree() {
+        let pipeline = MarkdownPipeline(dialect: .obsidian, mermaid: false)
+        let md = """
+        ````markdown
+        ```
+        > [!NOTE] This should NOT be a callout
+        ```
+        ````
+        """
+        let rendered = pipeline.render(md)
+        #expect(!rendered.body.contains("<aside class=\"callout"))
+        #expect(rendered.body.contains("&gt; [!NOTE] This should NOT be a callout"))
     }
 
     @Test func testOneScreenFixtureDialectAndCard11() throws {

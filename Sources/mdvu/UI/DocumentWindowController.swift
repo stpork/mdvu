@@ -647,6 +647,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             tocRoots = []; tocOutline.reloadData()
             onDocumentChange?(documentURL)
             (window as? DocumentWindow)?.updateTitleToolTip()
+            if !options.isDialectExplicit {
+                userSelectedDialect = nil
+            }
         }
 
         if !preserveScroll && !isHistoryNavigation && !isNavigatingHistory {
@@ -1149,6 +1152,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             menuItem.state = isSidebarVisible ? .on : .off
             menuItem.title = isSidebarVisible ? "Hide Table of Contents" : "Show Table of Contents"
         }
+        if menuItem.action == #selector(selectDialectAuto(_:)) {
+            menuItem.state = userSelectedDialect == nil ? .on : .off
+            return true
+        }
         if menuItem.action == #selector(selectDialectGeneric(_:)) {
             menuItem.state = currentDialect == .generic ? .on : .off
             return true
@@ -1169,6 +1176,14 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         return true
     }
 
+    @objc func selectDialectAuto(_ sender: Any?) {
+        guard userSelectedDialect != nil else { return }
+        userSelectedDialect = nil
+        if let currentURL {
+            openDocument(currentURL, preserveScroll: true)
+        }
+    }
+
     @objc func selectDialectGeneric(_ sender: Any?) {
         setDialect(.generic)
     }
@@ -1182,7 +1197,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func setDialect(_ newDialect: MarkdownDialect) {
-        guard currentDialect != newDialect || userSelectedDialect != newDialect else { return }
+        guard userSelectedDialect != newDialect else { return }
         userSelectedDialect = newDialect
         currentDialect = newDialect
         if let currentURL {

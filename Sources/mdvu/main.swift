@@ -6,7 +6,7 @@ if arguments.contains("--help") || arguments.contains("-h") {
     exit(EXIT_SUCCESS)
 }
 if arguments.contains("--version") || arguments.contains("-v") {
-    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.1"
+    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.2"
     print("mdvu \(version)")
     exit(EXIT_SUCCESS)
 }
