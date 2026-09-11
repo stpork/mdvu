@@ -11,8 +11,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         profiler.mark("application.initialized")
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("mdvu-renders-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        try? FileManager.default.removeItem(at: tempDir)
         NSApp.mainMenu = AppMenu.make(target: self)
         WebKitPrewarmer.prewarm()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("mdvu-renders-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        try? FileManager.default.removeItem(at: tempDir)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -118,6 +125,14 @@ enum AppMenu {
         contents.keyEquivalentModifierMask = [.command, .control]
         let fullWidth = viewMenu.addItem(withTitle: "Full Width", action: #selector(DocumentWindowController.toggleFullWidth(_:)), keyEquivalent: "w")
         fullWidth.keyEquivalentModifierMask = [.command, .shift]
+        viewMenu.addItem(.separator())
+        let dialectItem = NSMenuItem(title: "Dialect", action: nil, keyEquivalent: "")
+        let dialectMenu = NSMenu(title: "Dialect")
+        dialectItem.submenu = dialectMenu
+        dialectMenu.addItem(withTitle: "Generic (CommonMark)", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
+        dialectMenu.addItem(withTitle: "GitHub (GFM)", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
+        dialectMenu.addItem(withTitle: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")
+        viewMenu.addItem(dialectItem)
         viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(DocumentWindowController.zoomIn(_:)), keyEquivalent: "+")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(DocumentWindowController.zoomOut(_:)), keyEquivalent: "-")

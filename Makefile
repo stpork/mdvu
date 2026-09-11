@@ -25,6 +25,10 @@ all:
 	cd "$(PROJECT_ROOT)" && swift build
 release:
 	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
+	@mkdir -p "$(PROJECT_ROOT)/Tests"
+	@for f in "$(PROJECT_ROOT)"/*.bc; do \
+		if [ -f "$$f" ]; then mv "$$f" "$(PROJECT_ROOT)/Tests/"; fi; \
+	done
 test:
 	cd "$(PROJECT_ROOT)" && swift test $(TEST_FLAGS)
 benchmark: release
@@ -51,9 +55,8 @@ archive: universal
 publish:
 	"$(PROJECT_ROOT)/scripts/publish-release.sh" $(if $(filter 1,$(YES)),-y,)
 install: app
-	@if [ -w /Applications ]; then \
-		echo "Installing mdvu.app to /Applications..."; \
-		ditto "$(APP)" "/Applications/mdvu.app"; \
+	@if [ -w /Applications ] && [ ! -e /Applications/mdvu.app -o -w /Applications/mdvu.app ] && ditto "$(APP)" "/Applications/mdvu.app" 2>/dev/null; then \
+		echo "Installed mdvu.app to /Applications."; \
 		target_app="/Applications/mdvu.app"; \
 	else \
 		echo "Installing mdvu.app to $(HOME)/Applications..."; \
@@ -69,3 +72,4 @@ install: app
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"
+	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/Tests"/*.bc

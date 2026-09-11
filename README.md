@@ -1,20 +1,29 @@
-# mdvu
+<table border="0">
+  <tr>
+    <td width="140" align="center" valign="middle">
+      <img src="packaging/AppIcon-256.png" alt="mdvu App Icon" width="128" height="128">
+    </td>
+    <td valign="middle">
+      <h1>mdvu</h1>
+      <p>
+        <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
+        Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+      </p>
+      <p>
+        <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.1-emerald" alt="Version 0.3.1"></a>
+        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
+        <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
+      </p>
+    </td>
+  </tr>
+</table>
 
 <p align="center">
-  <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
-  Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
-</p>
-
-<p align="center">
-  <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
-  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
-</p>
-
-<p align="center">
-  <img src="Tests/Snapshots/kitchen-sink.png" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  <a href="Tests/Snapshots/MDVu.jpg">
+    <img src="Tests/Snapshots/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  </a>
 </p>
 
 ---
@@ -23,7 +32,7 @@
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
 * **Ultra-Fast**: Window visible in ~70–150 ms, first WebKit content painted almost instantaneously via pipelined `EagerDocumentLoader` and continuous `WebKitPrewarmer`. Hardware-vectorized `FastScan` byte matching achieves throughput of **14.3+ MB/s** (~5 ms for 44 KB scientific papers; ~70 ms for 1 MB; ~1.77 s for 25 MB documents).
-* **Ultra-Compact**: **3.3 MB** app bundle, under **2.3 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Stripped Mach-O binary is just **638 KB** with cross-module optimization and dead-stripping.
+* **Ultra-Compact**: **3.3 MB** app bundle, **~2.9 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Stripped Mach-O binary is just **638 KB** with cross-module optimization and dead-stripping.
 * **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native WebKit MathML Core rendering, featuring dark/light mode integration, zero font download overhead, and textbook-quality typography.
@@ -164,7 +173,7 @@ mdvu --snapshot output.png README.md
 | Flag | Description | Default |
 | :--- | :--- | :--- |
 | `--theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
-| `--dialect <generic\|github\|obsidian>` | Parser dialect profile | `github` |
+| `--dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
 | `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit | None |
@@ -203,8 +212,11 @@ mdvu --snapshot output.png README.md
   * Table of Contents tokens: automatic anchor-aware placeholders for `[[_TOC_]]` and `[TOC]`.
 * **YAML FrontMatter**:
   * Frontmatter headers (`---`) are extracted and cleanly formatted as a readable document metadata table.
-* **Safe HTML & XSS Disarmament**:
-  * Powered by `tagfilter`: blocks executable and dangerous elements (`<script>`, `<style>`, `<iframe>`, `<textarea>`) while safely passing presentation markup (`<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
+* **Dynamic Dialect Switching & Auto-Detection**:
+  * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
+  * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
+* **Safe HTML & Styling**:
+  * Powered by `cmark-gfm` with targeted sanitization: blocks executable scripts and dangerous elements (`<script>`, `<iframe>`, `<textarea>`, `onclick=`) while safely passing styling and presentation markup (`<style>`, `<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
 * **Code Fence Protection**:
   * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
@@ -270,11 +282,11 @@ mdvu --snapshot output.png README.md
 
 | Metric | mdvu (Native) | Typical Electron Viewers |
 | :--- | :--- | :--- |
-| **App Bundle Size** | **3.3 MB** (Single Arch) / **4.3 MB** (Universal) | 150 – 250 MB |
+| **App Bundle Size** | **3.3 MB** (Single Arch) / **4.0 MB** (Universal) | 150 – 250 MB |
 | **Mach-O Executable** | **638 KB** (Stripped, `-O -cross-module-optimization`) | N/A (Embedded Chromium) |
-| **Release Archive** | **~2.3 MB** (`.zip` / `.dmg`) | 80 – 120 MB |
+| **Release Archive** | **~2.9 – 3.2 MB** (`.zip`) / **3.5 MB** (`.dmg`) | 80 – 120 MB |
 | **Cold Startup Time** | **~70–150 ms** window / **~180–250 ms** first paint | 1,200 – 3,500 ms |
-| **RAM Footprint (Idle)**| **~35 – 45 MB** (Host UI Process) | 250 – 500 MB |
+| **RAM Footprint (Idle)**| **~45 – 50 MB** (Physical Footprint, Host UI) | 250 – 500 MB |
 | **Markdown Throughput** | **14.3+ MB/s** (~4.9 ms for 44 KB, ~70 ms for 1 MB) | 0.8 – 1.5 MB/s |
 | **Zoom Rendering** | **120 FPS** (CoreAnimation GPU native) | 30 – 60 FPS (DOM reflow) |
 | **External Dependencies**| **0** (No Node, no Java/JVM, no Python) | Node.js, V8, Chromium |
@@ -293,6 +305,7 @@ mdvu --snapshot output.png README.md
 | `⌘-` | Zoom Out (-10%) |
 | `⌘0` | Actual Size (100%) |
 | `⇧⌘W` | Toggle Full Width / Readable Width |
+| `^⌘S` | Toggle Table of Contents Sidebar |
 | `⌘[` / `⌘←` | Navigate Back in History |
 | `⌘]` / `⌘→` | Navigate Forward in History |
 | `⌘R` | Reload Document |

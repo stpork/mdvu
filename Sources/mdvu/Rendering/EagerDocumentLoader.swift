@@ -21,7 +21,7 @@ final class EagerDocumentLoader: @unchecked Sendable {
         pendingTask = Task.detached(priority: .userInitiated) {
             let data = try Data(contentsOf: url, options: .mappedIfSafe)
             let source = String(decoding: data, as: UTF8.self)
-            let pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid)
+            let pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, isDialectExplicit: options.isDialectExplicit)
             let diagramTheme: String = {
                 if options.theme != .system { return options.theme.rawValue }
                 return "light"

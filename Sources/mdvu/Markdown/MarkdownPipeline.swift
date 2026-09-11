@@ -32,12 +32,14 @@ protocol MarkdownExtension {
 
 struct MarkdownPipeline {
     let dialect: MarkdownDialect
+    let isDialectExplicit: Bool
     let extensions: [any MarkdownExtension]
     let diagrams: DiagramRegistry
     let cache: DiagramCache
 
-    init(dialect: MarkdownDialect, mermaid: Bool, cache: DiagramCache = DiagramCache()) {
+    init(dialect: MarkdownDialect, mermaid: Bool, cache: DiagramCache = DiagramCache(), isDialectExplicit: Bool = false) {
         self.dialect = dialect
+        self.isDialectExplicit = isDialectExplicit
         self.extensions = [
             FrontMatterExtension(),
             GitLabTOCExtension(),
@@ -52,12 +54,79 @@ struct MarkdownPipeline {
     }
 
     func render(_ source: String, diagramTheme: String = "light") -> RenderedDocument {
-        let prepared = extensions.reduce(source) { $1.preprocess($0, dialect: dialect) }
-        return MarkdownParser(diagrams: diagrams, cache: cache, diagramTheme: diagramTheme).render(prepared)
+        let effectiveDialect = isDialectExplicit ? dialect : (MarkdownDocumentDirective.extractDialect(from: source) ?? dialect)
+        let prepared = extensions.reduce(source) { $1.preprocess($0, dialect: effectiveDialect) }
+        let rendered = MarkdownParser(diagrams: diagrams, cache: cache, diagramTheme: diagramTheme).render(prepared)
+        return RenderedDocument(body: rendered.body, title: rendered.title, dialect: effectiveDialect)
     }
 }
 
-struct RenderedDocument { let body: String; let title: String? }
+struct RenderedDocument {
+    let body: String
+    let title: String?
+    let dialect: MarkdownDialect
+
+    init(body: String, title: String?, dialect: MarkdownDialect = .generic) {
+        self.body = body
+        self.title = title
+        self.dialect = dialect
+    }
+}
+
+enum MarkdownDocumentDirective {
+    private static let commentRegex = try! NSRegularExpression(pattern: #"<!--([\s\S]*?)-->"#)
+    private static let directiveInCommentRegex = try! NSRegularExpression(
+        pattern: #"(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+|(?i)\bin\s+)(["'`]?)([a-zA-Z_-]+)\1(?:\s+dialect)?"#,
+        options: .caseInsensitive
+    )
+
+    static func extractDialect(from source: String) -> MarkdownDialect? {
+        if let frontMatterDialect = extractFromFrontMatter(source) {
+            return frontMatterDialect
+        }
+
+        let prefix = source.prefix(4096)
+        let trimmedLeading = prefix.drop(while: { $0.isWhitespace || $0.isNewline })
+        if trimmedLeading.hasPrefix("<!--") {
+            let searchString = String(trimmedLeading)
+            let nsString = searchString as NSString
+            let fullRange = NSRange(location: 0, length: nsString.length)
+            if let commentMatch = commentRegex.firstMatch(in: searchString, range: fullRange) {
+                let commentContent = nsString.substring(with: commentMatch.range(at: 1))
+                let commentNS = commentContent as NSString
+                let commentRange = NSRange(location: 0, length: commentNS.length)
+                if let directiveMatch = directiveInCommentRegex.firstMatch(in: commentContent, range: commentRange) {
+                    let rawVal = commentNS.substring(with: directiveMatch.range(at: 2))
+                    if let dialect = MarkdownDialect.from(string: rawVal) {
+                        return dialect
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func extractFromFrontMatter(_ source: String) -> MarkdownDialect? {
+        let isLF = source.hasPrefix("---\n")
+        let isCRLF = source.hasPrefix("---\r\n")
+        guard isLF || isCRLF else { return nil }
+        let headerLen = isCRLF ? 5 : 4
+        let separator = isCRLF ? "\r\n---\r\n" : "\n---\n"
+        guard let end = source.range(of: separator, range: source.index(source.startIndex, offsetBy: headerLen)..<source.endIndex) else { return nil }
+        let yaml = source[source.index(source.startIndex, offsetBy: headerLen)..<end.lowerBound]
+        for line in yaml.split(whereSeparator: { $0 == "\n" || $0 == "\r" }) {
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let key = line[..<colon].trimmingCharacters(in: .whitespaces).lowercased()
+            if key == "dialect" || key == "markdown-dialect" || key == "markdown_dialect" || key == "mode" {
+                let val = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+                if let dialect = MarkdownDialect.from(string: String(val)) {
+                    return dialect
+                }
+            }
+        }
+        return nil
+    }
+}
 
 private struct FrontMatterExtension: MarkdownExtension {
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
@@ -276,9 +345,8 @@ private struct AdmonitionExtension: MarkdownExtension {
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
         guard FastScan.contains(source, token: "!!!") || FastScan.contains(source, token: "???") || FastScan.contains(source, token: ":::") else { return source }
-        let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
         var output: [String] = []
-        output.reserveCapacity(lines.count)
+        output.reserveCapacity(source.utf8.count / 40)
         var inMkDocs = false
         var mkdocsPendingBlankLines = 0
         var inColonAdmonition = false
@@ -294,7 +362,10 @@ private struct AdmonitionExtension: MarkdownExtension {
             }
         }
 
-        for line in lines {
+        var cursor = source.startIndex
+        while true {
+            let nextNewline = source[cursor...].firstIndex(of: "\n") ?? source.endIndex
+            let line = source[cursor..<nextNewline]
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             if let currentFence = activeFence {
@@ -302,76 +373,64 @@ private struct AdmonitionExtension: MarkdownExtension {
                     activeFence = nil
                 }
                 output.append(String(line))
-                continue
-            }
-
-            if let fenceChar = trimmed.first, fenceChar == "`" || fenceChar == "~" {
+            } else if let fenceChar = trimmed.first, fenceChar == "`" || fenceChar == "~", trimmed.prefix(while: { $0 == fenceChar }).count >= 3 {
                 let count = trimmed.prefix(while: { $0 == fenceChar }).count
-                if count >= 3 {
-                    endMkDocs()
-                    activeFence = String(repeating: fenceChar, count: count)
-                    output.append(String(line))
-                    continue
-                }
-            }
-
-            if inColonAdmonition {
+                endMkDocs()
+                activeFence = String(repeating: fenceChar, count: count)
+                output.append(String(line))
+            } else if inColonAdmonition {
                 let lineStr = String(line)
                 if Self.colonEnd.firstMatch(in: lineStr, range: NSRange(lineStr.startIndex..., in: lineStr)) != nil {
                     inColonAdmonition = false
                     output.append("")
                     output.append("<!-- -->")
                     output.append("")
-                    continue
-                }
-                output.append("> " + lineStr)
-                continue
-            }
-
-            if inMkDocs {
-                if line.hasPrefix("    ") || line.hasPrefix("\t") {
-                    while mkdocsPendingBlankLines > 0 {
-                        output.append(">")
-                        mkdocsPendingBlankLines -= 1
-                    }
-                    let stripped = line.hasPrefix("    ") ? String(line.dropFirst(4)) : String(line.dropFirst(1))
-                    output.append("> " + stripped)
-                    continue
-                } else if trimmed.isEmpty {
-                    mkdocsPendingBlankLines += 1
-                    continue
                 } else {
-                    endMkDocs()
+                    output.append("> " + lineStr)
+                }
+            } else if inMkDocs && (line.hasPrefix("    ") || line.hasPrefix("\t")) {
+                while mkdocsPendingBlankLines > 0 {
+                    output.append(">")
+                    mkdocsPendingBlankLines -= 1
+                }
+                let stripped = line.hasPrefix("    ") ? String(line.dropFirst(4)) : String(line.dropFirst(1))
+                output.append("> " + stripped)
+            } else if inMkDocs && trimmed.isEmpty {
+                mkdocsPendingBlankLines += 1
+            } else {
+                if inMkDocs { endMkDocs() }
+                if let first = trimmed.first, first == "!" || first == "?" || first == ":" {
+                    let lineStr = String(line)
+                    let nsLine = lineStr as NSString
+                    let fullRange = NSRange(location: 0, length: nsLine.length)
+
+                    if let m = Self.mkdocsStart.firstMatch(in: lineStr, range: fullRange) {
+                        endMkDocs()
+                        inMkDocs = true
+                        let marker = nsLine.substring(with: m.range(at: 2))
+                        let type = nsLine.substring(with: m.range(at: 3)).uppercased()
+                        let title = m.range(at: 4).location != NSNotFound ? nsLine.substring(with: m.range(at: 4)) : ""
+                        let fold = marker.hasPrefix("???+") ? "+" : (marker.hasPrefix("???") ? "-" : "")
+                        output.append("> [!\(type)]\(fold)\(title.isEmpty ? "" : " " + title)")
+                    } else if let m = Self.colonStart.firstMatch(in: lineStr, range: fullRange) {
+                        endMkDocs()
+                        inColonAdmonition = true
+                        let type = nsLine.substring(with: m.range(at: 2)).uppercased()
+                        let title = m.range(at: 3).location != NSNotFound ? nsLine.substring(with: m.range(at: 3)) : ""
+                        output.append("> [!\(type)]\(title.isEmpty ? "" : " " + title)")
+                    } else {
+                        output.append(String(line))
+                    }
+                } else {
+                    output.append(String(line))
                 }
             }
 
-            if let first = trimmed.first, first == "!" || first == "?" || first == ":" {
-                let lineStr = String(line)
-                let nsLine = lineStr as NSString
-                let fullRange = NSRange(location: 0, length: nsLine.length)
-
-                if let m = Self.mkdocsStart.firstMatch(in: lineStr, range: fullRange) {
-                    endMkDocs()
-                    inMkDocs = true
-                    let marker = nsLine.substring(with: m.range(at: 2))
-                    let type = nsLine.substring(with: m.range(at: 3)).uppercased()
-                    let title = m.range(at: 4).location != NSNotFound ? nsLine.substring(with: m.range(at: 4)) : ""
-                    let fold = marker.hasPrefix("???+") ? "+" : (marker.hasPrefix("???") ? "-" : "")
-                    output.append("> [!\(type)]\(fold)\(title.isEmpty ? "" : " " + title)")
-                    continue
-                }
-
-                if let m = Self.colonStart.firstMatch(in: lineStr, range: fullRange) {
-                    endMkDocs()
-                    inColonAdmonition = true
-                    let type = nsLine.substring(with: m.range(at: 2)).uppercased()
-                    let title = m.range(at: 3).location != NSNotFound ? nsLine.substring(with: m.range(at: 3)) : ""
-                    output.append("> [!\(type)]\(title.isEmpty ? "" : " " + title)")
-                    continue
-                }
+            if nextNewline < source.endIndex {
+                cursor = source.index(after: nextNewline)
+            } else {
+                break
             }
-
-            output.append(String(line))
         }
         return output.joined(separator: "\n")
     }
@@ -393,19 +452,19 @@ private struct CriticMarkupExtension: MarkdownExtension {
                 return chunk
             }
             var text = chunk
-            if text.contains("{~") {
+            if FastScan.contains(text, token: "{~") {
                 text = Self.subRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<del class=\"critic-del\">$1</del><ins class=\"critic-add\">$2</ins>")
             }
-            if text.contains("{+") {
+            if FastScan.contains(text, token: "{+") {
                 text = Self.addRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<ins class=\"critic-add\">$1</ins>")
             }
-            if text.contains("{-") {
+            if FastScan.contains(text, token: "{-") {
                 text = Self.delRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<del class=\"critic-del\">$1</del>")
             }
-            if text.contains("{=") {
+            if FastScan.contains(text, token: "{=") {
                 text = Self.markRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<mark class=\"critic-mark\">$1</mark>")
             }
-            if text.contains("{>") {
+            if FastScan.contains(text, token: "{>") {
                 text = Self.commentRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<span class=\"critic-comment\" title=\"$1\">💬 $1</span>")
             }
             return text
@@ -426,7 +485,9 @@ private struct SubSuperscriptExtension: MarkdownExtension {
             guard FastScan.contains(chunk, ascii: UInt8(ascii: "~")) || FastScan.contains(chunk, ascii: UInt8(ascii: "^")) else { return chunk }
             var text = chunk
             if FastScan.contains(text, ascii: UInt8(ascii: "^")) {
-                text = Self.underRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<u>$1</u>")
+                if FastScan.contains(text, token: "^^") {
+                    text = Self.underRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<u>$1</u>")
+                }
                 text = Self.supRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sup>$1</sup>")
             }
             if FastScan.contains(text, ascii: UInt8(ascii: "~")) {

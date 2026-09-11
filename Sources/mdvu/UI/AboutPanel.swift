@@ -84,7 +84,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
             .paragraphStyle: subtitleStyle
         ]))
 
-        // 3. Version: 0.3.0 (clickable -> releases)
+        // 3. Version: 0.3.1 (clickable -> releases)
         let releaseURL = URL(string: "https://github.com/stpork/mdvu/releases/tag/v\(version)")!
         let versionStyle = NSMutableParagraphStyle()
         versionStyle.alignment = .center
@@ -209,7 +209,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
                let str = plist["CFBundleShortVersionString"] as? String {
                 return str
             }
-            return "0.3.0"
+            return "0.3.1"
         }()
 
         let mas = Self.makeAttributedString(version: version)

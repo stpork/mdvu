@@ -1,9 +1,11 @@
 import Foundation
 
 enum HTMLDocument {
-    static func make(body: String, title: String, theme: ThemeChoice, fullWidth: Bool = false) -> String {
+    static func make(body: String, title: String, theme: ThemeChoice, fullWidth: Bool = false, baseURL: URL? = nil) -> String {
+        let baseTag = baseURL.map { "<base href=\"\($0.absoluteString)\">" } ?? ""
         return """
         <!doctype html><html class="\(fullWidth ? "full-width" : "")" data-theme="\(theme.rawValue)"><head><meta charset="utf-8">
+        \(baseTag)
         <meta name="viewport" content="width=device-width,initial-scale=1"><title>\(HTML.escape(title))</title>
         <style>\(ResourceLoader.markdownCSS)</style>
         <style>@media(max-width:900px){article{padding-left:30px;padding-right:30px}}@media(max-width:700px){article{padding-left:22px;padding-right:22px}}</style></head><body><article>\(body)</article>

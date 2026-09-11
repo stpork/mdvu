@@ -213,6 +213,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private let profiler: StartupProfiler
     private let cache: DiagramCache
     private let pipeline: MarkdownPipeline
+    private var userSelectedDialect: MarkdownDialect?
+    private(set) var currentDialect: MarkdownDialect
     private var hasShown = false
     private var snapshotWritten = false
     private(set) var isFullWidth: Bool
@@ -263,6 +265,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var renderOperation: Operation?
     private var directoryOperation: Operation?
     private var renderGeneration = 0
+    private var currentRenderFileURL: URL?
     private var pendingScrollRatio: Double?
     private var systemAppearanceIsDark: Bool?
     private var magnificationObservation: NSKeyValueObservation?
@@ -289,7 +292,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         self.rootURL = url; self.options = options; self.profiler = profiler
         let cache = DiagramCache()
         self.cache = cache
-        self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, cache: cache)
+        self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: options.isDialectExplicit)
+        self.currentDialect = options.dialect
         self.isFullWidth = options.fullWidth ?? UserDefaults.standard.bool(forKey: "layout.fullWidth")
         self.isSidebarVisible = options.snapshotPath != nil ? true : (UserDefaults.standard.object(forKey: "layout.sidebarVisible") as? Bool ?? false)
         if let prewarmed = WebKitPrewarmer.takePrewarmedWebView() {
@@ -335,6 +339,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         renderQueue.cancelAllOperations()
         watcher?.invalidate()
         watcher = nil
+        if let currentRenderFileURL {
+            try? FileManager.default.removeItem(at: currentRenderFileURL)
+            self.currentRenderFileURL = nil
+        }
         unregisterScriptMessageHandlers()
     }
 
@@ -676,11 +684,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 do {
                     let rendered = try await eagerTask.value
                     guard let self, self.renderGeneration == generation else { return }
-                    let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth)
+                    self.currentDialect = rendered.dialect
+                    let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth, baseURL: url.deletingLastPathComponent())
                     self.isRestoringDocumentZoom = true
                     self.pendingScrollRatio = scrollRatio
                     self.profiler.mark("markdown.ready")
-                    self.webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+                    self.loadRenderedHTML(html, baseURL: url.deletingLastPathComponent())
                     self.profiler.mark("html.loaded")
                 } catch {
                     guard let self, self.renderGeneration == generation else { return }
@@ -692,22 +701,32 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
 
         let operation = BlockOperation()
-        let pipeline = self.pipeline
+        let userDialect = self.userSelectedDialect
+        let basePipeline = self.pipeline
+        let cache = self.cache
+        let options = self.options
         operation.addExecutionBlock { [weak self, weak operation] in
             guard let operation, !operation.isCancelled else { return }
             do {
                 let data = try Data(contentsOf: url, options: .mappedIfSafe)
                 guard !operation.isCancelled else { return }
                 let source = String(decoding: data, as: UTF8.self)
+                let pipeline: MarkdownPipeline = {
+                    if let userDialect {
+                        return MarkdownPipeline(dialect: userDialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: true)
+                    }
+                    return basePipeline
+                }()
                 let rendered = pipeline.render(source, diagramTheme: diagramTheme)
                 guard !operation.isCancelled else { return }
-                let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth)
+                let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth, baseURL: url.deletingLastPathComponent())
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.renderGeneration == generation else { return }
+                    self.currentDialect = rendered.dialect
                     self.isRestoringDocumentZoom = true
                     self.pendingScrollRatio = scrollRatio
                     self.profiler.mark("markdown.ready")
-                    self.webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+                    self.loadRenderedHTML(html, baseURL: url.deletingLastPathComponent())
                     self.profiler.mark("html.loaded")
                 }
             } catch {
@@ -720,6 +739,22 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         renderOperation = operation
         renderQueue.addOperation(operation)
+    }
+
+    private func loadRenderedHTML(_ html: String, baseURL: URL) {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("mdvu-renders-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempFile = tempDir.appendingPathComponent("render-\(UUID().uuidString).html")
+        do {
+            try html.write(to: tempFile, atomically: true, encoding: .utf8)
+            if let old = currentRenderFileURL {
+                try? FileManager.default.removeItem(at: old)
+            }
+            currentRenderFileURL = tempFile
+            webView.loadFileURL(tempFile, allowingReadAccessTo: URL(fileURLWithPath: "/"))
+        } catch {
+            webView.loadHTMLString(html, baseURL: baseURL)
+        }
     }
 
     private func showMessage(_ title: String, detail: String) {
@@ -1114,12 +1149,45 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             menuItem.state = isSidebarVisible ? .on : .off
             menuItem.title = isSidebarVisible ? "Hide Table of Contents" : "Show Table of Contents"
         }
+        if menuItem.action == #selector(selectDialectGeneric(_:)) {
+            menuItem.state = currentDialect == .generic ? .on : .off
+            return true
+        }
+        if menuItem.action == #selector(selectDialectGitHub(_:)) {
+            menuItem.state = currentDialect == .github ? .on : .off
+            return true
+        }
+        if menuItem.action == #selector(selectDialectObsidian(_:)) {
+            menuItem.state = currentDialect == .obsidian ? .on : .off
+            return true
+        }
         if menuItem.action == #selector(zoomIn(_:)) { return effectiveZoom < (ZoomPolicy.maximum - 0.005) }
         if menuItem.action == #selector(zoomOut(_:)) { return effectiveZoom > (ZoomPolicy.minimum + 0.005) }
         if menuItem.action == #selector(resetZoom(_:)) {
             return abs(effectiveZoom - 1.0) > 0.005
         }
         return true
+    }
+
+    @objc func selectDialectGeneric(_ sender: Any?) {
+        setDialect(.generic)
+    }
+
+    @objc func selectDialectGitHub(_ sender: Any?) {
+        setDialect(.github)
+    }
+
+    @objc func selectDialectObsidian(_ sender: Any?) {
+        setDialect(.obsidian)
+    }
+
+    func setDialect(_ newDialect: MarkdownDialect) {
+        guard currentDialect != newDialect || userSelectedDialect != newDialect else { return }
+        userSelectedDialect = newDialect
+        currentDialect = newDialect
+        if let currentURL {
+            openDocument(currentURL, preserveScroll: true)
+        }
     }
 
     @objc func zoomIn(_ sender: Any?) {
@@ -1705,6 +1773,7 @@ enum WebKitPrewarmer {
         config.userContentController = WKUserContentController()
         let prewarmed = WKWebView(frame: .zero, configuration: config)
         prewarmed.allowsMagnification = true
+        prewarmed.loadHTMLString("", baseURL: nil)
         prewarmedView = prewarmed
     }
 

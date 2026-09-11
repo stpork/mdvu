@@ -4,6 +4,34 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-11
+
+### Added
+- **Application Menu Dialect Switcher (`View → Dialect`)**:
+  - Integrated `Dialect` submenu in macOS View menu offering:
+    - `Generic (CommonMark)`
+    - `GitHub (GFM)`
+    - `Obsidian`
+  - Active dialect displays checkmark state (`NSControl.StateValue.on`).
+  - Selecting a dialect immediately re-renders the document and preserves scroll ratio.
+- **Automated Dialect Detection (YAML Frontmatter & Directives)**:
+  - Added `MarkdownDocumentDirective` parser that scans:
+    - YAML frontmatter keys: `dialect`, `markdown-dialect`, `markdown_dialect`, `mode` (supporting `obsidian`, `github`, `gfm`, `generic`, `commonmark`).
+    - Top-of-file HTML comment directives (e.g. `<!-- dialect: obsidian -->`, `Run: mdvu --dialect obsidian`, `Open in Obsidian dialect`).
+  - Dynamic hierarchy: explicit CLI `--dialect` and explicit user menu selection override document directives; default `.generic` allows document directives to activate automatically.
+- **Preservation of Raw `<style>` Elements**:
+  - `<style>...</style>` blocks in Markdown are preserved during sanitization instead of being escaped as literal text, allowing custom single-page layouts, showcase templates, and responsive stylesheets to render as intended.
+  - `<script>` elements and event handler attributes remain strictly disarmed.
+- **Showcase Fixture & High-Resolution Snapshot**:
+  - Added `test-onescreen.md` fixture validating multi-column card presentations, native MathML, embedded base64 wiki-embeds, and diagram pipelines.
+  - Added `Tests/Snapshots/MDVu.jpg` high-resolution showcase screenshot linked in `README.md`.
+
+### Changed
+- **Compiler Intermediate Hygiene**:
+  - Thin LTO `.bc` bitcode files generated during release and benchmark compilation are isolated inside `Tests/` and ignored by git, eliminating root-level workspace clutter.
+- **Temporary Render Lifecycle**:
+  - Unique PID-scoped temporary directory for rendered HTML documents with automatic cleanup on document close and application shutdown.
+
 ## [0.3.0] - 2026-09-10
 
 ### Added
