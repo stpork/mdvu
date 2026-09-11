@@ -55,9 +55,8 @@ archive: universal
 publish:
 	"$(PROJECT_ROOT)/scripts/publish-release.sh" $(if $(filter 1,$(YES)),-y,)
 install: app
-	@if [ -w /Applications ]; then \
-		echo "Installing mdvu.app to /Applications..."; \
-		ditto "$(APP)" "/Applications/mdvu.app"; \
+	@if [ -w /Applications ] && [ ! -e /Applications/mdvu.app -o -w /Applications/mdvu.app ] && ditto "$(APP)" "/Applications/mdvu.app" 2>/dev/null; then \
+		echo "Installed mdvu.app to /Applications."; \
 		target_app="/Applications/mdvu.app"; \
 	else \
 		echo "Installing mdvu.app to $(HOME)/Applications..."; \

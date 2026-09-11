@@ -12,7 +12,7 @@
       <p>
         <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
         <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.1-emerald" alt="Version 0.3.1"></a>
         <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
         <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
       </p>
@@ -173,7 +173,7 @@ mdvu --snapshot output.png README.md
 | Flag | Description | Default |
 | :--- | :--- | :--- |
 | `--theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
-| `--dialect <generic\|github\|obsidian>` | Parser dialect profile | `github` |
+| `--dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
 | `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit | None |
@@ -212,8 +212,11 @@ mdvu --snapshot output.png README.md
   * Table of Contents tokens: automatic anchor-aware placeholders for `[[_TOC_]]` and `[TOC]`.
 * **YAML FrontMatter**:
   * Frontmatter headers (`---`) are extracted and cleanly formatted as a readable document metadata table.
-* **Safe HTML & XSS Disarmament**:
-  * Powered by `tagfilter`: blocks executable and dangerous elements (`<script>`, `<style>`, `<iframe>`, `<textarea>`) while safely passing presentation markup (`<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
+* **Dynamic Dialect Switching & Auto-Detection**:
+  * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
+  * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
+* **Safe HTML & Styling**:
+  * Powered by `cmark-gfm` with targeted sanitization: blocks executable scripts and dangerous elements (`<script>`, `<iframe>`, `<textarea>`, `onclick=`) while safely passing styling and presentation markup (`<style>`, `<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
 * **Code Fence Protection**:
   * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
@@ -302,6 +305,7 @@ mdvu --snapshot output.png README.md
 | `⌘-` | Zoom Out (-10%) |
 | `⌘0` | Actual Size (100%) |
 | `⇧⌘W` | Toggle Full Width / Readable Width |
+| `^⌘S` | Toggle Table of Contents Sidebar |
 | `⌘[` / `⌘←` | Navigate Back in History |
 | `⌘]` / `⌘→` | Navigate Forward in History |
 | `⌘R` | Reload Document |
