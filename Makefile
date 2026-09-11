@@ -25,6 +25,10 @@ all:
 	cd "$(PROJECT_ROOT)" && swift build
 release:
 	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
+	@mkdir -p "$(PROJECT_ROOT)/Tests"
+	@for f in "$(PROJECT_ROOT)"/*.bc; do \
+		if [ -f "$$f" ]; then mv "$$f" "$(PROJECT_ROOT)/Tests/"; fi; \
+	done
 test:
 	cd "$(PROJECT_ROOT)" && swift test $(TEST_FLAGS)
 benchmark: release
@@ -69,3 +73,4 @@ install: app
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"
+	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/Tests"/*.bc

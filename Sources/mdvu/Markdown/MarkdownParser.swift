@@ -9,6 +9,7 @@ struct MarkdownParser {
     let diagramTheme: String
 
     private static let calloutPattern = try! NSRegularExpression(pattern: #"<blockquote>\s*<p><strong>MDVU-CALLOUT-([A-Z]+)</strong>\s*(.*?)</p>\s*(.*?)</blockquote>"#, options: [.dotMatchesLineSeparators])
+    private static let styleTagPattern = try! NSRegularExpression(pattern: #"&lt;(?i)(/?style(\s[^>]*)?)>"#)
 
     private static let syntaxExtensions: [UnsafeMutablePointer<cmark_syntax_extension>] = {
         cmark_gfm_core_extensions_ensure_registered()
@@ -59,6 +60,11 @@ struct MarkdownParser {
         }
         if html.contains("MDVU-CALLOUT-") {
             html = replaceCalloutBlocks(html)
+        }
+        if html.contains("&lt;style") || html.contains("&lt;STYLE") || html.contains("&lt;/style") || html.contains("&lt;/STYLE") {
+            html = RegexHelper.replace(html, regex: Self.styleTagPattern) { match in
+                "<\(match[1])>"
+            }
         }
         return html
     }
@@ -136,23 +142,34 @@ struct MarkdownParser {
         var child = cmark_node_first_child(document)
         while let node = child {
             if cmark_node_get_type(node) == CMARK_NODE_HEADING && cmark_node_get_heading_level(node) == 1 {
-                let value = inlineText(cmark_node_first_child(node)).trimmingCharacters(in: .whitespacesAndNewlines)
+                var title = ""
+                inlineText(cmark_node_first_child(node), into: &title)
+                let value = title.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !value.isEmpty { return value }
+            } else if cmark_node_get_type(node) == CMARK_NODE_HTML_BLOCK {
+                if let literal = cmark_node_get_literal(node) {
+                    let html = String(cString: literal)
+                    if let r = html.range(of: #"(?i)<h1\b[^>]*>(.*?)</h1>"#, options: .regularExpression) {
+                        let match = html[r]
+                        if let start = match.firstIndex(of: ">"), let end = match.range(of: "</h1>", options: .caseInsensitive)?.lowerBound {
+                            let title = String(match[match.index(after: start)..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !title.isEmpty { return title }
+                        }
+                    }
+                }
             }
             child = cmark_node_next(node)
         }
         return nil
     }
 
-    private func inlineText(_ first: UnsafeMutablePointer<cmark_node>?) -> String {
-        var result = ""
+    private func inlineText(_ first: UnsafeMutablePointer<cmark_node>?, into result: inout String) {
         var node = first
         while let current = node {
-            if let literal = cmark_node_get_literal(current) { result += String(cString: literal) }
-            if let child = cmark_node_first_child(current) { result += inlineText(child) }
+            if let literal = cmark_node_get_literal(current) { result.append(contentsOf: String(cString: literal)) }
+            if let child = cmark_node_first_child(current) { inlineText(child, into: &result) }
             node = cmark_node_next(current)
         }
-        return result
     }
 }
 

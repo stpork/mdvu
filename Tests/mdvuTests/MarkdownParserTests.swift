@@ -33,6 +33,22 @@ struct MarkdownParserTests {
         #expect(ResourceLoader.appJavaScript.contains("themeVariables:{background:'transparent'}"))
     }
 
+    @Test func testStyleTagPreservedWhileScriptDisarmed() throws {
+        let md = """
+        <style>
+        body:has(#mdvu-showcase) { margin: 0; }
+        </style>
+
+        <script>alert('xss')</script>
+
+        Inline `<style>code</style>` preserved as literal.
+        """
+        let result = MarkdownPipeline(dialect: .github, mermaid: false).render(md)
+        #expect(result.body.contains("<style>\nbody:has(#mdvu-showcase) { margin: 0; }\n</style>"))
+        #expect(!result.body.contains("<script>"))
+        #expect(result.body.contains("<code>&lt;style&gt;code&lt;/style&gt;</code>"))
+    }
+
     @Test func obsidianCalloutAndWikiLink() {
         let result = MarkdownPipeline(dialect: .obsidian, mermaid: false).render("> [!NOTE] Useful\n> See [[Other|the page]]")
         #expect(result.body.contains("callout-note"))
@@ -500,6 +516,13 @@ struct MarkdownParserTests {
         #expect(viewMenu?.items.contains(where: { $0.title == "Actual Size" }) == true)
         #expect(viewMenu?.items.contains(where: { $0.title == "Zoom In" }) == true)
         #expect(viewMenu?.items.contains(where: { $0.title == "Zoom Out" }) == true)
+
+        let dialectItem = viewMenu?.items.first { $0.title == "Dialect" }
+        #expect(dialectItem != nil)
+        let dialectMenu = dialectItem?.submenu
+        #expect(dialectMenu?.items.contains(where: { $0.title == "Generic (CommonMark)" }) == true)
+        #expect(dialectMenu?.items.contains(where: { $0.title == "GitHub (GFM)" }) == true)
+        #expect(dialectMenu?.items.contains(where: { $0.title == "Obsidian" }) == true)
     }
 
     @MainActor
@@ -808,6 +831,90 @@ struct MarkdownParserTests {
             controller.window?.close()
         }
         #expect(weakController == nil)
+    }
+
+    @Test func testFrontMatterDialectDetection() {
+        let obsSource = """
+        ---
+        title: Note with Obsidian
+        dialect: obsidian
+        ---
+        # Notes
+        See [[Target|My Target]]
+        ![[photo.png]]
+        """
+        let defaultPipeline = MarkdownPipeline(dialect: .generic, mermaid: false)
+        let renderedObs = defaultPipeline.render(obsSource)
+        #expect(renderedObs.dialect == .obsidian)
+        #expect(renderedObs.body.contains("<a href=\"Target.md\">My Target</a>"))
+        #expect(renderedObs.body.contains("<img src=\"photo.png\" alt=\"photo.png\""))
+
+        let ghSource = """
+        ---
+        dialect: github
+        ---
+        [[NotAWikiLink]]
+        """
+        let renderedGh = defaultPipeline.render(ghSource)
+        #expect(renderedGh.dialect == .github)
+        #expect(!renderedGh.body.contains("<a href=\"NotAWikiLink\">"))
+
+        let commentObs = """
+        <!-- dialect: obsidian -->
+        [[Target|Link]]
+        """
+        let renderedComment = defaultPipeline.render(commentObs)
+        #expect(renderedComment.dialect == .obsidian)
+        #expect(renderedComment.body.contains("<a href=\"Target.md\">Link</a>"))
+
+        // Explicit CLI override overrides frontmatter
+        let explicitGenericPipeline = MarkdownPipeline(dialect: .generic, mermaid: false, isDialectExplicit: true)
+        let renderedExplicit = explicitGenericPipeline.render(obsSource)
+        #expect(renderedExplicit.dialect == .generic)
+        #expect(!renderedExplicit.body.contains("<a href=\"Target.md\">My Target</a>"))
+    }
+
+    @Test @MainActor func testDialectMenuActionsAndValidation() {
+        let fixture = Self.fixtureURL("test-light.md")
+        let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: StartupProfiler())
+        #expect(controller.currentDialect == .generic)
+
+        let genericItem = NSMenuItem(title: "Generic", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
+        let githubItem = NSMenuItem(title: "GitHub", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
+        let obsidianItem = NSMenuItem(title: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")
+
+        #expect(controller.validateMenuItem(genericItem) == true)
+        #expect(genericItem.state == .on)
+        #expect(controller.validateMenuItem(githubItem) == true)
+        #expect(githubItem.state == .off)
+        #expect(controller.validateMenuItem(obsidianItem) == true)
+        #expect(obsidianItem.state == .off)
+
+        controller.selectDialectObsidian(nil)
+        #expect(controller.currentDialect == .obsidian)
+        _ = controller.validateMenuItem(genericItem)
+        _ = controller.validateMenuItem(obsidianItem)
+        #expect(genericItem.state == .off)
+        #expect(obsidianItem.state == .on)
+
+        controller.selectDialectGitHub(nil)
+        #expect(controller.currentDialect == .github)
+        _ = controller.validateMenuItem(githubItem)
+        #expect(githubItem.state == .on)
+
+        controller.window?.close()
+    }
+
+    @Test func testOneScreenFixtureDialectAndCard11() throws {
+        let oneScreenPath = "/Users/C5370280/SAPDevelop/Sources/mdvu/Tests/Fixtures/test-onescreen.md"
+        guard FileManager.default.fileExists(atPath: oneScreenPath) else { return }
+        let source = try String(contentsOfFile: oneScreenPath, encoding: .utf8)
+        let pipeline = MarkdownPipeline(dialect: .generic, mermaid: false)
+        let rendered = pipeline.render(source)
+
+        #expect(rendered.dialect == .obsidian)
+        #expect(rendered.body.contains("<img src=\"data:image/png;base64,iVBORw0KGgo"))
+        #expect(rendered.body.contains("<a href=\"MDVu-One-Screen.md#mathematics\">Wiki alias → Mathematics</a>"))
     }
 }
 

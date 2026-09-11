@@ -1,20 +1,29 @@
-# mdvu
+<table border="0">
+  <tr>
+    <td width="140" align="center" valign="middle">
+      <img src="packaging/AppIcon-256.png" alt="mdvu App Icon" width="128" height="128">
+    </td>
+    <td valign="middle">
+      <h1>mdvu</h1>
+      <p>
+        <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
+        Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+      </p>
+      <p>
+        <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
+        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
+        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
+        <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
+      </p>
+    </td>
+  </tr>
+</table>
 
 <p align="center">
-  <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
-  Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
-</p>
-
-<p align="center">
-  <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-  <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.0-emerald" alt="Version 0.3.0"></a>
-  <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.3_MB-brightgreen" alt="Bundle Size 3.3 MB"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
-</p>
-
-<p align="center">
-  <img src="Tests/Snapshots/kitchen-sink.png" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  <a href="Tests/Snapshots/MDVu.jpg">
+    <img src="Tests/Snapshots/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  </a>
 </p>
 
 ---
