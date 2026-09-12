@@ -4,7 +4,11 @@
       <img src="packaging/AppIcon-256.png" alt="mdvu App Icon" width="128" height="128">
     </td>
     <td valign="middle">
-      <h1>mdvu</h1>
+      <h1>MDVu</h1>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
       <p>
         <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
         Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
