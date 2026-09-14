@@ -8,8 +8,9 @@ final class VaultItem: NSObject {
     private(set) var children: [VaultItem]?
 
     init(url: URL, isDirectory: Bool, parent: VaultItem? = nil) {
-        self.url = url
-        self.name = url.lastPathComponent
+        let std = url.standardizedFileURL
+        self.url = std
+        self.name = std.lastPathComponent
         self.isDirectory = isDirectory
         self.parent = parent
         super.init()
@@ -26,11 +27,11 @@ final class VaultItem: NSObject {
 
     override func isEqual(_ object: Any?) -> Bool {
         guard let other = object as? VaultItem else { return false }
-        return url.standardizedFileURL == other.url.standardizedFileURL
+        return url == other.url
     }
 
     override var hash: Int {
-        url.standardizedFileURL.hashValue
+        url.hashValue
     }
 }
 
@@ -89,10 +90,16 @@ enum VaultScanner {
             let name = url.lastPathComponent
             if ignoredDirectoryNames.contains(name) { continue }
 
-            var isDir: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            let isDir: Bool
+            if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey]), let isDirectory = resourceValues.isDirectory {
+                isDir = isDirectory
+            } else {
+                var isDirObjC: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirObjC) else { continue }
+                isDir = isDirObjC.boolValue
+            }
 
-            if isDir.boolValue {
+            if isDir {
                 dirs.append(VaultItem(url: url, isDirectory: true, parent: parent))
             } else if isSupported(url: url) {
                 files.append(VaultItem(url: url, isDirectory: false, parent: parent))
@@ -205,7 +212,6 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
         outline.autoresizesOutlineColumn = true
         outline.autoresizingMask = [.width, .height]
         outline.target = self
-        outline.action = #selector(outlineClicked(_:))
         outline.doubleAction = #selector(outlineDoubleClicked(_:))
 
         outline.onReturnOrEnter = { [weak self] in
@@ -280,10 +286,10 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
     }
 
     private func findOrCreateItem(for targetURL: URL, in current: VaultItem) -> VaultItem? {
-        let targetStandardized = targetURL.standardizedFileURL.path
-        let currentStandardized = current.url.standardizedFileURL.path
+        let targetPath = targetURL.standardizedFileURL.path
+        let currentPath = current.url.path
 
-        if currentStandardized == targetStandardized {
+        if currentPath == targetPath {
             return current
         }
 
@@ -292,14 +298,14 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
             guard let children = current.children else { return nil }
 
             for child in children {
-                let childPath = child.url.standardizedFileURL.path
+                let childPath = child.url.path
                 if child.isDirectory {
-                    if targetStandardized.hasPrefix(childPath + "/") || targetStandardized == childPath {
+                    if targetPath.hasPrefix(childPath + "/") || targetPath == childPath {
                         if let found = findOrCreateItem(for: targetURL, in: child) {
                             return found
                         }
                     }
-                } else if childPath == targetStandardized {
+                } else if childPath == targetPath {
                     return child
                 }
             }
@@ -402,14 +408,6 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
         }
 
         return cell
-    }
-
-    @objc private func outlineClicked(_ sender: Any?) {
-        let row = outline.clickedRow
-        guard row >= 0, let item = outline.item(atRow: row) as? VaultItem else { return }
-        if !item.isDirectory {
-            onFileSelected?(item.url)
-        }
     }
 
     @objc private func outlineDoubleClicked(_ sender: Any?) {

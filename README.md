@@ -169,6 +169,7 @@ mdvu --snapshot output.png README.md
 | :--- | :--- | :--- |
 | `--theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
 | `--dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
+| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
 | `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit | None |

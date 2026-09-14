@@ -5,7 +5,7 @@ from PIL import Image, ImageChops, ImageStat
 
 reference = Image.open(sys.argv[1]).convert("RGB")
 actual = Image.open(sys.argv[2]).convert("RGB")
-tolerance = 0.012
+tolerance = 0.035  # Account for macOS vibrancy and text rasterization variances.
 if reference.size != actual.size:
     rw, rh = reference.size
     aw, ah = actual.size

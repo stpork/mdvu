@@ -132,6 +132,23 @@
   * All diagram SVGs are persisted to `~/Library/Caches/com.mdvu.viewer/diagrams/` keyed by `SHA256(renderer + version + source + theme)`.
   * Renders once asynchronously; subsequent views or window reloads display the cached SVG instantaneously without JavaScript engine evaluation.
 
+### F. File & Vault Navigator Subsystem (`VaultScanner`, `VaultItem`, `VaultOutlineView`)
+* **Heuristic Vault Root Discovery (`VaultScanner.findVaultRoot`)**:
+  * Traverses directory ancestors up to 20 levels deep searching for knowledge vault or project root markers (`.obsidian` or `.git`).
+  * Seamlessly anchors root to the workspace or knowledge repository while falling back to the document's immediate directory if no marker exists.
+* **On-Demand Lazy Tree Enumeration (`VaultItem`)**:
+  * `loadChildrenIfNeeded()` avoids upfront recursive directory walks. Files and subfolders are scanned only when the user expands a folder row.
+  * Uses bulk directory resource enumeration (`includingPropertiesForKeys: [.isDirectoryKey]`) eliminating redundant `stat()` system calls.
+  * Automatically filters hidden/system directories (`.git`, `.obsidian`, `node_modules`, `.build`, `Pods`, `vendor`, `target`, `dist`, `.cache`, `.DS_Store`).
+  * Sorts folders first alphabetically followed by Markdown files using `localizedStandardCompare`.
+* **Adaptive 3-Pane `NSSplitView` Coordinator**:
+  * Coordinates three subviews: TOC Sidebar (leading), Document `WKWebView` (center), and Vault Navigator (trailing).
+  * Employs frame-based layout with `.autoresizingMask = [.width, .height]` inside `dropView`, eliminating Auto Layout fitting-size calculation traps that cause window enlargement.
+  * Dynamically enforces minimum and maximum divider positions with `splitView(_:constrainMinCoordinate:ofSubviewAt:)` and `splitView(_:constrainMaxCoordinate:ofSubviewAt:)`, ensuring the web reading area never dips below 200px.
+  * On pane toggle or removal, calls `split.adjustSubviews()` ensuring zero dead space and immediate full-width recovery.
+* **Active Note Selection & Auto-Reveal**:
+  * `selectDocument(url:)` automatically expands all ancestor folders and selects/scrolls the active note into view when opening files or navigating history.
+
 ---
 
 ## 3. Memory & Performance Optimizations
@@ -143,8 +160,9 @@
 5. **Zero Reflection & Metadata**: Compiled with `-O -cross-module-optimization -Xfrontend -disable-reflection-metadata -Xfrontend -disable-reflection-names -dead_strip -dead_strip_dylibs`, enabling whole-module dead-code stripping.
 6. **Stripped Binary**: Single-architecture Mach-O executable is **~670 KB** (`strip -u -r`). The complete `.app` bundle is only **3.4 MB** (Universal bundle **4.2 MB**, compressed release archive **~2.9 MB**) including all offline diagram engines, fonts, and assets.
 7. **High-Throughput Markdown Pipeline**: Reference C parsing via `cmark-gfm` coupled with vectorized linear extension scanning processes content at **16.5 – 52 MB/s** (~52 MB/s on standard documentation, ~16.5 MB/s on complex multi-extension documents with callouts, math, and diagrams).
-8. **Lifecycle & Memory Hygiene**: `WeakScriptMessageHandler` trampoline permanently breaks WebKit script handler retain cycles; `FileWatcher.invalidate()` immediately closes file descriptors and cancels dispatch sources on window close; and `DiagramCache` memory cache is strictly capped at 16 MB.
-9. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
+8. **Bulk Directory Attribute Enumeration**: `VaultScanner` consumes cached kernel directory attributes directly from `contentsOfDirectory(includingPropertiesForKeys:)`, bypassing individual `stat` / `lstat` syscalls during vault tree expansion.
+9. **Lifecycle & Memory Hygiene**: `WeakScriptMessageHandler` trampoline permanently breaks WebKit script handler retain cycles; `FileWatcher.invalidate()` immediately closes file descriptors and cancels dispatch sources on window close; and `DiagramCache` memory cache is strictly capped at 16 MB.
+10. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
 
 ---
 

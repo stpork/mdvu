@@ -149,6 +149,12 @@ final class NavigationHistory {
         currentIndex >= 0 && currentIndex < entries.count - 1
     }
 
+    func recordScrollRatio(_ ratio: Double?, at index: Int) {
+        if let ratio, entries.indices.contains(index) {
+            entries[index].scrollRatio = ratio
+        }
+    }
+
     private func updateScrollRatio(_ ratio: Double?) {
         if let ratio, entries.indices.contains(currentIndex) {
             entries[currentIndex].scrollRatio = ratio
@@ -350,6 +356,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func tearDown() {
+        renderGeneration += 1
+        findWorkItem?.cancel()
+        findWorkItem = nil
+        webView.stopLoading()
+        webView.navigationDelegate = nil
         magnificationObservation?.invalidate()
         magnificationObservation = nil
         directoryOperation?.cancel()
@@ -694,7 +705,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 $0.path.hasPrefix(prefix) ? String($0.path.dropFirst(prefix.count)) : $0.lastPathComponent
             }
             DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
+                guard let self, !operation.isCancelled else { return }
                 self.files = discovered
                 self.fileRelativePaths = relativePaths
                 self.fileTable.reloadData()
@@ -732,11 +743,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
 
         if !preserveScroll && !isHistoryNavigation && !isNavigatingHistory {
+            let previousIndex = navigationHistory.currentIndex
             self.navigationHistory.push(url: documentURL, fragment: fragment, currentScrollRatio: nil)
             self.updateBackForwardControls()
             captureCurrentScrollRatio { [weak self] ratio in
                 guard let self, let ratio else { return }
-                self.navigationHistory.push(url: documentURL, fragment: fragment, currentScrollRatio: ratio)
+                self.navigationHistory.recordScrollRatio(ratio, at: previousIndex)
             }
         }
 
@@ -1228,6 +1240,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private func captureSnapshotIfRequested() {
         guard !snapshotWritten, let path = options.snapshotPath else { return }
         snapshotWritten = true
+        window?.orderFrontRegardless()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in self?.writeSnapshot(to: path) }
     }
 
@@ -2039,7 +2054,6 @@ enum WebKitPrewarmer {
     static func takePrewarmedWebView() -> WKWebView? {
         defer {
             prewarmedView = nil
-            DispatchQueue.main.async { prewarm() }
         }
         return prewarmedView
     }

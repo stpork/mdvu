@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Flag Filtering in Application Delegate**:
   - `AppDelegate.application(_:openFiles:)` filters out CLI flags (e.g. `--navigator`, `--snapshot`) so external launch events or drag-and-drop operations do not treat command options as document paths.
   - Suppressed modal `NSAlert` dialogs during `--snapshot` runs, piping error messages to `stderr` to prevent headless execution hangs.
+- **Vault Tree Enumeration Performance**:
+  - Optimized `VaultScanner.scanChildren` to consume cached kernel metadata (`[.isDirectoryKey]`) from `contentsOfDirectory`, eliminating redundant `stat` system calls for every child entry.
+  - Standardized canonical URLs upon initialization in `VaultItem`, eliminating repetitive path canonicalization during tree lookups and equality checks.
 
 ### Fixed
 - **Window Expansion on Navigator Toggle**:
