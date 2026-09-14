@@ -90,9 +90,9 @@ extension AuditRegressionTests {
         #expect(unique as? Int == 3)
         for query in ["target", "a.b", "a+b", "[x]"] {
             let literal = String(data: try JSONSerialization.data(withJSONObject: query, options: .fragmentsAllowed), encoding: .utf8)!
-            let matched = try await view.evaluateJavaScript("window.__mdvuFind.search(\(literal)); document.querySelector('#text mark')?.textContent")
+            let matched = try await view.evaluateJavaScript("window.__mdvuFind.search(\(literal)); (document.querySelector('#text mark')?.textContent ?? '')")
             #expect(matched as? String == query)
-            _ = try await view.evaluateJavaScript("window.__mdvuFind.clear()")
+            _ = try await view.evaluateJavaScript("window.__mdvuFind.clear(); true")
             let text = try await view.evaluateJavaScript("document.getElementById('text').textContent")
             #expect(text as? String == "İstanbul target a.b a+b [x]")
         }
@@ -104,7 +104,7 @@ extension AuditRegressionTests {
             source: "window.requestAnimationFrame = callback => setTimeout(callback, 0)",
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let html = HTMLDocument.make(
-            body: "<h1>Top</h1>" + String(repeating: "<p>filler</p>", count: 80) + "<h2>Target</h2><p>end</p>",
+            body: "<h1>Top</h1>" + String(repeating: "<p>filler</p>", count: 80) + "<h2>Target</h2>" + String(repeating: "<p>tail</p>", count: 30),
             title: "Scroll", theme: .light)
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent("scroll-\(UUID().uuidString).html")
         try html.write(to: temp, atomically: true, encoding: .utf8)
@@ -114,14 +114,23 @@ extension AuditRegressionTests {
         defer { view.stopLoading() }
         var ready = false
         for _ in 0..<100 {
-            if let ok = try? await view.evaluateJavaScript("typeof window.__mdvuScrollToFragment === 'function'"), ok as? Bool == true {
+            if let ok = try? await view.evaluateJavaScript("typeof window.__mdvuScrollToFragment === 'function' && document.getElementById('target') !== null"), ok as? Bool == true {
                 ready = true; break
             }
             try await Task.sleep(nanoseconds: 50_000_000)
         }
         #expect(ready)
         guard ready else { return }
-        let result = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('target')")
-        #expect(result as? Bool == true)
+        // A boolean alone does not prove the requested heading was reached.
+        _ = try await view.evaluateJavaScript("document.documentElement.style.scrollBehavior='auto'; true")
+        for push in [true, false] {
+            _ = try await view.evaluateJavaScript("scrollTo(0,0); true")
+            let result = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('target', \(push))")
+            #expect(result as? Bool == true)
+            let reached = try await view.evaluateJavaScript("scrollY > 0 && Math.abs(document.getElementById('target').getBoundingClientRect().top) < 2")
+            #expect(reached as? Bool == true)
+        }
+        let missing = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('missing')")
+        #expect(missing as? Bool == false)
     }
 }

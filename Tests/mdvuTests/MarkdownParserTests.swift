@@ -988,8 +988,9 @@ struct MarkdownParserTests {
     }
 
     @Test func testOneScreenFixtureDialectAndCard11() throws {
-        let oneScreenPath = "/Users/C5370280/SAPDevelop/Sources/mdvu/Tests/Fixtures/test-onescreen.md"
-        guard FileManager.default.fileExists(atPath: oneScreenPath) else { return }
+        let oneScreenPath = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/test-onescreen.md").path
         let source = try String(contentsOfFile: oneScreenPath, encoding: .utf8)
         let pipeline = MarkdownPipeline(dialect: .generic, mermaid: false)
         let rendered = pipeline.render(source)

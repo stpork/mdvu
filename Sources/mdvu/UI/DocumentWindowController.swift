@@ -197,13 +197,26 @@ private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
+private final class TOCOutlineView: NSOutlineView {
+    var onRepeatedSelection: (() -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        let previousRow = selectedRow
+        let clicked = row(at: convert(event.locationInWindow, from: nil))
+        super.mouseDown(with: event)
+        if clicked >= 0, clicked == previousRow, selectedRow == clicked {
+            onRepeatedSelection?()
+        }
+    }
+}
+
 final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSTableViewDataSource, NSTableViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSToolbarItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
     var onOpenURL: ((URL) -> Void)?
     var onDocumentChange: ((URL) -> Void)?
     var onClose: (() -> Void)?
     private let webView: WKWebView
     private let fileTable = NSTableView()
-    private let tocOutline = NSOutlineView()
+    private let tocOutline = TOCOutlineView()
     private let sidebarContainer = NSView()
     private let split = NSSplitView()
     private let rootURL: URL
@@ -405,6 +418,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         split.isVertical = true; split.dividerStyle = .thin; split.delegate = self
         let tocColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("toc")); tocColumn.title = "Table of Contents"
         tocOutline.addTableColumn(tocColumn); tocOutline.outlineTableColumn = tocColumn; tocOutline.headerView = nil
+        tocOutline.onRepeatedSelection = { [weak self] in self?.activateSelectedTOCHeading() }
         tocOutline.delegate = self; tocOutline.dataSource = self; tocOutline.rowHeight = 25; tocOutline.indentationPerLevel = 16
         let tocScroll = NSScrollView(); tocScroll.documentView = tocOutline; tocScroll.hasVerticalScroller = true; tocScroll.drawsBackground = false
         tocScrollView = tocScroll
@@ -912,6 +926,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func outlineViewSelectionDidChange(_ notification: Notification) {
+        activateSelectedTOCHeading()
+    }
+
+    private func activateSelectedTOCHeading() {
         let row = tocOutline.selectedRow
         guard row >= 0, let node = tocOutline.item(atRow: row) as? TOCNode else { return }
         scrollToFragment(node.heading.id, updateHistory: true)
