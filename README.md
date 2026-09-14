@@ -1,29 +1,23 @@
-<table border="0">
-  <tr>
-    <td width="140" align="center" valign="middle">
-      <img src="packaging/AppIcon-256.png" alt="mdvu App Icon" width="128" height="128">
-    </td>
-    <td valign="middle">
-      <h1>mdvu</h1>
-      <p>
-        <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
-        Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
-      </p>
-      <p>
-        <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.2-emerald" alt="Version 0.3.2"></a>
-        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
-        <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
-      </p>
-    </td>
-  </tr>
-</table>
+<div align="center">
+  <img src="packaging/AppIcon-256.png" alt="MDVu App Icon" width="128" height="128">
+  <h1>MDVu - Superfast Markdown Viewer</h1>
+
+  <p>
+    The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for macOS.<br>
+    Built with pure AppKit &amp; WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+  </p>
+
+  <p>
+    <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.2-emerald" alt="Version 0.3.2"></a>
+    <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
+  </p>
+</div>
 
 <p align="center">
-  <a href="Tests/Snapshots/MDVu.jpg">
-    <img src="Tests/Snapshots/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
-  </a>
+  <img src="packaging/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
 </p>
 
 ---
