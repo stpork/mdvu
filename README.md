@@ -10,7 +10,7 @@
   <p>
     <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-    <a href="#installation"><img src="https://img.shields.io/badge/version-0.4.0-emerald" alt="Version 0.4.0"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/version-0.4.1-emerald" alt="Version 0.4.1"></a>
     <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
   </p>
@@ -25,16 +25,16 @@
 ## Why mdvu?
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
-* **Ultra-Fast**: Window visible in ~70–150 ms, first WebKit content painted almost instantaneously via pipelined `EagerDocumentLoader` and continuous `WebKitPrewarmer`. Hardware-vectorized `FastScan` byte matching achieves throughput of **16.5 – 52 MB/s** (~52 MB/s on standard documentation, ~16.5 MB/s on rich multi-extension fixtures; ~19 ms for 1 MB plain, ~59 ms for 1 MB extended).
-* **Ultra-Compact**: **3.4 MB** app bundle, **~2.9 MB** compressed release archive (zero Electron, zero Node, zero JVM, zero external binaries). Mach-O binary is just **~670 KB**.
+* **Fast startup and parsing**: Markdown preparation overlaps AppKit startup, and a prewarmed WebView is kept for subsequent windows. Byte-level extension checks avoid unnecessary preprocessing. See the reproducible measurements below.
+* **Compact distribution**: About **3.4 MiB** for a native app or **4.2 MiB** for Universal, including compressed offline diagram engines. No bundled Electron, Node, or JVM.
 * **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native WebKit MathML Core rendering, featuring dark/light mode integration, zero font download overhead, and textbook-quality typography.
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
-* **Standardized 120 FPS Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
+* **Native Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
 * **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
-* **File & Vault Navigator (`⌥⌘D`)**: Instant collapsible directory tree pane inspired by Obsidian vaults. Recursively discovers all Markdown notes across your vault or workspace, auto-detects `.obsidian` and `.git` project roots, and navigates seamlessly.
-* **Zero Leaks & Resource Hygiene**: Memory is rigorously audited with weak message-handler trampolines, non-retaining background queues, bounded 16 MB diagram caches, and deterministic file watcher teardown.
+* **File & Vault Navigator (`⌥⌘D`)**: One right-hand pane with **Tree / List** views. The left pane is dedicated to the table of contents. Automatically detects `.obsidian` and `.git` roots when opening individual files.
+* **Resource hygiene**: Weak message handlers and explicit teardown release window resources. A shared SVG cache has an advisory 16 MiB cost limit. WebKit uses separate processes, so host-process memory alone is not total app memory.
 
 ---
 
@@ -147,7 +147,7 @@ mdvu README.md
 # Open multiple files in separate tabs/windows
 mdvu ARCHITECTURE.md CHANGELOG.md
 
-# Open a directory (browsing mode with file list sidebar)
+# Open a directory (right-hand file navigator in List mode)
 mdvu ~/Documents/Notes
 
 # Force light, dark, or system theme
@@ -212,7 +212,7 @@ mdvu --snapshot output.png README.md
   * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
   * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
 * **Safe HTML & Styling**:
-  * Powered by `cmark-gfm` with targeted sanitization: blocks executable scripts and dangerous elements (`<script>`, `<iframe>`, `<textarea>`, `onclick=`) while safely passing styling and presentation markup (`<style>`, `<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
+  * Uses `cmark-gfm` tag filtering while preserving presentation markup and raw `<style>` blocks. This is not a complete HTML sanitizer: use trusted documents, particularly when they contain raw HTML or remote resources.
 * **Code Fence Protection**:
   * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
@@ -241,12 +241,12 @@ mdvu --snapshot output.png README.md
   * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.20 MB).
 * **SHA-256 SVG Disk Cache**:
   * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by `SHA256(renderer + version + source + theme)`.
-  * Renders once; subsequent loads of identical diagrams are instant and bypass the rendering engine entirely.
+  * Renders once; subsequent loads reuse cached SVG and bypass diagram generation.
 
 ---
 
-### 🔍 Standardized 120 FPS Zoom Control `[-][ 100% ][+]`
-* **Hardware-Accelerated Scaling**: Direct CoreAnimation layer scaling in WebKit delivers 60–120 FPS continuous trackpad pinch gestures with zero IPC latency.
+### 🔍 Native Zoom Control `[-][ 100% ][+]`
+* **Hardware-Accelerated Scaling**: WebKit handles continuous trackpad magnification. Frame rate depends on display refresh rate, document complexity, and system load; no fixed FPS guarantee is implied.
 * **Magnetic Snapping ($\pm 2.5\%$)**: Micro-gestures within $\pm 2.5\%$ of clean 10% multiples (100%, 150%, 200%, 300%) snap cleanly to integers, eliminating jitter and phantom numbers (e.g. `201%` $\to$ `200%`).
 * **Bounce-Back Settling Engine**: Rapid zoom-out bounce-back gestures settle at exact `1.0` (`100%`) via trailing spring timers.
 * **Discrete 10% Stepping**: UI buttons and `⌘+` / `⌘-` step cleanly by 10% and snap to clean multiples.
@@ -276,10 +276,12 @@ mdvu --snapshot output.png README.md
 ---
 
 ### 🗂️ File & Vault Navigator (`⌥⌘D`)
-* **Obsidian-Style Vault Tree**: Dedicated collapsible right pane displaying all supported Markdown files and directories in your vault or workspace.
+* **Matching Pane Headers**: Both panels have a leading icon, title and × button to hide the panel.
+* **One File Navigator**: The right pane switches between **Tree** (folders and files) and **List** (recursive relative file paths). The left pane shows only the current document’s table of contents.
 * **Smart Root Detection**: Automatically walks up directory ancestors looking for `.obsidian` or `.git` boundaries, anchoring the root at your true vault or repository level.
-* **Instant Lazy Scanning**: Traverses nested subdirectories only upon expansion, keeping memory and CPU footprint near zero even in vaults with thousands of notes.
-* **Auto-Reveal & Active Selection**: Opening or switching documents automatically expands ancestor folders and highlights the current file in the outline.
+* **Folder Opening**: Opening a folder shows List mode and opens its first sorted Markdown file. That folder stays the root while you browse its documents.
+* **Bounded Scanning**: Tree mode loads folders on demand. List mode scans in the background, preserving the existing 5,000-file limit; ignored directories, packages and directory symlinks are skipped. Switching modes releases the previous model.
+* **Active Selection**: Switching views preserves the current document without reloading it. Opening files and navigating Back/Forward highlights the active file in either view.
 * **Native Keyboard & Click Flow**: Single-click opens files; double-click expands or collapses directories; Return/Enter opens the highlighted note.
 * **Push-on/Push-off State**: Toolbar buttons for Table of Contents and File Navigator stay visually depressed when their respective panes are active.
 * **CLI Flag**: Launch directly with navigator open using `mdvu --navigator <path>`.
@@ -288,16 +290,21 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-| Metric | mdvu (Native) | Native Viewers ([MacDown](https://macdown.uranusjr.com/), [mdv](https://www.mowglii.com/mdv/)) | Electron / Chromium ([Typora](https://typora.io/), Obsidian) |
-| :--- | :--- | :--- | :--- |
-| **App Bundle Size** | **3.4 MB** (Universal: **4.2 MB**) | 8 – 25 MB | 180 – 250 MB |
-| **Mach-O Executable** | **~670 KB** | 2 – 5 MB | 120 – 160 MB |
-| **Release Archive** | **~2.9 – 3.2 MB** (`.zip`) / **3.5 MB** (`.dmg`) | 6 – 12 MB | 80 – 120 MB |
-| **Cold Startup Time** | **~70–150 ms** window / **~180–250 ms** first paint | 200 – 400 ms | 1,200 – 3,500 ms |
-| **RAM Footprint (Idle)**| **~45 – 50 MB** (Host UI Process) | 40 – 70 MB | 250 – 500 MB |
-| **Markdown Throughput** | **16.5 – 52 MB/s** (~16.5 MB/s extended, ~52 MB/s plain) | 10 – 25 MB/s | 0.8 – 2.0 MB/s |
-| **Zoom Rendering** | **120 FPS** (CoreAnimation GPU native) | 60 FPS | 30 – 60 FPS (DOM reflow) |
-| **External Dependencies**| **0** (No Node, no Java/JVM, no Python) | 0 | Node.js, V8, Chromium |
+Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+| Property | Configuration / measurement |
+| :--- | :--- |
+| Native / Universal app | Approximately 3.4 / 4.2 MiB, with shared compressed resources |
+| Compiler | `-O`, cross-module optimization, linker dead stripping, stripped Mach-O |
+| Resources | Lazy LZMA decompression off the UI queue; reused for later documents |
+| Cache | Shared SVG `NSCache`, advisory 16 MiB cost limit; persistent disk cache |
+| Zoom | Native WebKit magnification and page zoom; display/document dependent |
+
+For the previous measured build, `-Osize` saved less than 1% of the entire app while reducing parser throughput in that run, so the speed-oriented flags are retained. No formatting or parser capabilities have been removed to reduce size.
+
+### TOC navigation and installed copies
+
+Click a heading in the Contents pane to scroll to it, including clicking the same selected row again after scrolling away. Local `file://` navigation tolerates WebKit history API restrictions and uses native Back/Forward history. If a fix appears absent, verify the version in **About mdvu**: `/Applications/mdvu.app` and `~/Applications/mdvu.app` can contain different builds. Launch the newly installed 0.4.1 copy explicitly.
 
 ---
 
@@ -324,7 +331,7 @@ mdvu --snapshot output.png README.md
 
 ## Architecture
 
-`mdvu` is designed as an ultra-efficient single-process pipeline:
+`mdvu` is designed as an native AppKit host with WebKit auxiliary processes:
 ```
 File on Disk / Watcher
         │
@@ -332,7 +339,7 @@ File on Disk / Watcher
 MarkdownPipeline (Dialect Preprocessing: Callouts, Wikilinks)
         │
         ▼
-cmark-gfm (C AST Parser, GFM Extensions, Safe Mode)
+cmark-gfm (C AST Parser, GFM Extensions, Tag Filter)
         │
         ▼
 HTMLDocument Assembly (Theme, Highlighting, CSS, Placeholders)
