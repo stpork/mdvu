@@ -84,7 +84,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
             .paragraphStyle: subtitleStyle
         ]))
 
-        // 3. Version: 0.4.0 (clickable -> releases)
+        // 3. Version: 0.4.1 (clickable -> releases)
         let releaseURL = URL(string: "https://github.com/stpork/mdvu/releases/tag/v\(version)")!
         let versionStyle = NSMutableParagraphStyle()
         versionStyle.alignment = .center
@@ -203,13 +203,14 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
                 .deletingLastPathComponent()
                 .deletingLastPathComponent()
                 .deletingLastPathComponent()
+                .deletingLastPathComponent()
                 .appendingPathComponent("packaging/Info.plist").path
             if let data = try? Data(contentsOf: URL(fileURLWithPath: plistPath)),
                let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let str = plist["CFBundleShortVersionString"] as? String {
                 return str
             }
-            return "0.4.0"
+            return "0.4.1"
         }()
 
         let mas = Self.makeAttributedString(version: version)

@@ -33,37 +33,23 @@ enum ResourceLoader {
 
     static let markdownCSS = text("markdown", "css")
     static let appJavaScript = text("app", "js")
-    static let mermaidJavaScript: String = {
-        if let url = bundle.url(forResource: "mermaid", withExtension: "lzma"),
-           let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
-           let data = try? (compressed as NSData).decompressed(using: .lzma) as Data {
-            return String(decoding: data, as: UTF8.self)
-        }
-        if let url = bundle.url(forResource: "mermaid", withExtension: "lzfse"),
-           let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
-           let data = try? (compressed as NSData).decompressed(using: .lzfse) as Data {
-            return String(decoding: data, as: UTF8.self)
-        }
-        return ""
-    }()
+    static let mermaidJavaScript = compressedText("mermaid")
+    static let plantumlJavaScript = compressedText("plantuml")
+    static let katexJavaScript = compressedText("katex")
 
-    static let plantumlJavaScript: String = {
-        if let url = bundle.url(forResource: "plantuml", withExtension: "lzma"),
-           let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
-           let data = try? (compressed as NSData).decompressed(using: .lzma) as Data {
-            return String(decoding: data, as: UTF8.self)
+    private static func compressedText(_ name: String) -> String {
+        // Keep only the reusable String; promptly drain temporary NSData buffers.
+        autoreleasepool {
+            for format in ["lzma", "lzfse"] {
+                if let url = bundle.url(forResource: name, withExtension: format),
+                   let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
+                   let data = try? (compressed as NSData).decompressed(using: format == "lzma" ? .lzma : .lzfse) as Data {
+                    return String(decoding: data, as: UTF8.self)
+                }
+            }
+            return ""
         }
-        return ""
-    }()
-
-    static let katexJavaScript: String = {
-        if let url = bundle.url(forResource: "katex", withExtension: "lzma"),
-           let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
-           let data = try? (compressed as NSData).decompressed(using: .lzma) as Data {
-            return String(decoding: data, as: UTF8.self)
-        }
-        return ""
-    }()
+    }
 
     private static func text(_ name: String, _ ext: String) -> String {
         guard let url = bundle.url(forResource: name, withExtension: ext), let value = try? String(contentsOf: url, encoding: .utf8) else { return "" }

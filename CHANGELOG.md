@@ -4,6 +4,35 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-09-15
+
+### Fixed
+- Snapshot mode uses the primary display so changing the active monitor does not change screenshot rasterization.
+- TOC and in-document anchor navigation on local files: a `history.pushState` / `replaceState` SecurityError no longer prevents scrolling. Native navigation history continues to track the jump.
+- Clicking an already selected TOC item returns to its heading after manually scrolling away; keyboard selection remains supported.
+- WebKit regression tests return explicit JavaScript values, avoiding the nil-result async bridge crash observed on the macOS 14 GitHub runner.
+- The one-screen fixture test resolves its path relative to the checkout instead of silently skipping outside a developer's machine.
+- CLI and About fallback versions match 0.4.1; the About source-tree plist lookup uses the repository root.
+
+### Changed
+- Both pane headers share an icon/title/close layout; the TOC × button hides its pane through the existing toolbar/menu toggle.
+- Left pane now contains only the table of contents; the right file navigator offers Tree / List modes with a shared view and synchronized document selection.
+- Opening a folder shows its recursive list on the right and keeps that folder as the navigation root. Removed the duplicate left file table, directory scan and relative-path storage.
+- List scanning runs on a shared bounded background queue. Mode changes release inactive models; obsolete scans cancel, and window teardown releases the navigator. Tree and list skip packages and directory symlinks.
+- TOC regression coverage verifies actual scroll position for both push and replace navigation and handles missing targets.
+- CI preserves test output as an artifact even on failure and limits the job duration.
+- README and architecture documentation distinguish measured parser throughput, WebKit's separate processes, advisory cache limits, and hardware-dependent UI performance.
+- Drained temporary Foundation buffers after parsing/decompression, captured only dialect metadata in queued UI completion, and consolidated compressed resource loading without removing its LZFSE fallback.
+- Retained optimized release flags, WebView prewarming, shared SVG cache, lazy LZMA resources, and all parser/diagram features.
+
+### Validation
+- 64 tests passed, including navigator selection, scan cancellation, inactive model release and navigator lifetime. Real TOC clicks, including re-clicking after manual scrolling, verified in the installed 0.4.1 build.
+- Universal visual regression passed for `test-complete.md` and `test-onescreen.md` (normalized RMS 0.00000 / 0.00148); references updated only for the requested TOC icon/title/close header; comparison tolerances unchanged.
+- arm64, x86_64 and Universal ZIPs plus Universal DMG built; ad-hoc signature and all SHA-256 sidecars verified.
+- Native arm64 parser benchmark: five iterations after warmup using repetitions of `test-light.md`; medians for 1/5/10/25 MiB were 61.57/309.04/617.67/1556.82 ms. These measure parsing, not DOM rendering, scrolling or diagram execution.
+- Native executable: 720,240 bytes; native/Universal app disk allocation: 3,488/4,272 KiB. ZIP sizes: arm64 3,114,687 bytes, x86_64 3,145,820 bytes, Universal 3,431,673 bytes; DMG 3,800,779 bytes. Signing and packaging metadata can change subsequent archive sizes.
+- Measurements do not establish fixed FPS, zero leaks or the minimum possible size. WebKit uses auxiliary processes and cache limits are advisory.
+
 ## [0.4.0] - 2026-09-15
 
 ### Added
