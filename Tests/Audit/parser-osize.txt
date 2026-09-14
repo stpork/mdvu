@@ -1,4 +1,0 @@
-   1.00 MB  median    65.11 ms      15.4 MB/s
-   5.00 MB  median   327.84 ms      15.3 MB/s
-  10.00 MB  median   664.88 ms      15.0 MB/s
-  25.00 MB  median  1659.70 ms      15.1 MB/s
