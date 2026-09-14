@@ -52,7 +52,13 @@ struct PlantUMLRenderer: DiagramRenderer {
 final class DiagramCache: @unchecked Sendable {
     private let directory: URL
     private let directoryPath: String
-    private let memoryCache = NSCache<NSString, NSString>()
+    private static let sharedMemoryCache: NSCache<NSString, NSString> = {
+        let cache = NSCache<NSString, NSString>()
+        cache.countLimit = 128
+        cache.totalCostLimit = 16 * 1024 * 1024
+        return cache
+    }()
+    private var memoryCache: NSCache<NSString, NSString> { Self.sharedMemoryCache }
     private static let hexDigits: [UInt8] = Array("0123456789abcdef".utf8)
 
     init() {
@@ -61,8 +67,6 @@ final class DiagramCache: @unchecked Sendable {
         directory = dir
         directoryPath = dir.path
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        memoryCache.countLimit = 128
-        memoryCache.totalCostLimit = 16 * 1024 * 1024 // 16 MB max
     }
 
     func key(renderer: String, version: String, source: String, theme: String, options: String) -> String {

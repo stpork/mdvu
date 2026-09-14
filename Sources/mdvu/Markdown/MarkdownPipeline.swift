@@ -374,8 +374,10 @@ private struct GitLabTOCExtension: MarkdownExtension {
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
         guard FastScan.contains(source, token: "[[_TOC_]]") || FastScan.contains(source, token: "[TOC]") else { return source }
-        return RegexHelper.replace(source, regex: Self.tocPattern) { _ in
-            "<p class=\"toc-placeholder\"><a href=\"#table-of-contents\">Table of Contents</a></p>"
+        return CodeFenceScanner.process(source) { chunk in
+            RegexHelper.replace(chunk, regex: Self.tocPattern) { _ in
+                "<p class=\"toc-placeholder\"><a href=\"#table-of-contents\">Table of Contents</a></p>"
+            }
         }
     }
 }
