@@ -15,14 +15,14 @@ Prepared 2026-09-15. Publication, release tags, merging into `main`, and Homebre
 - `make test`: 61 tests passed.
 - Real UI: opened CHANGELOG.md in the installed 0.4.1 user copy, selected release 0.3.1 and observed that heading at the top of the document. Scroll-bar position moved from 0 to 0.5155602. After manual scrolling to 0.6456892, clicking the same selected row restored 0.5155602.
 - `make archive`: arm64, x86_64, Universal ZIPs and Universal DMG built.
-- Universal visual regression: both `test-complete.md` and `test-onescreen.md` (diagrams included) matched their existing references, normalized RMS 0.00000 each. No reference or tolerance changes.
+- Universal visual regression: both `test-complete.md` and `test-onescreen.md` (diagrams included) matched their existing references, normalized RMS 0.00000 and 0.00148 respectively. No reference or tolerance changes.
 - `codesign -v --deep --strict dist/mdvu.app`: passed (ad-hoc signature).
 - All four SHA-256 sidecars verified; packaged executable reports `mdvu 0.4.1`.
 - GitHub CI is tracked on [draft PR #1](https://github.com/stpork/mdvu/pull/1); use its latest check result for hosted-runner validation.
 
 ## Performance and size
 
-Native arm64 parser benchmark on this Mac: five iterations after warmup, generated repetitions of `test-light.md`. Median times: 1 MiB **61.21 ms**, 5 MiB **304.81 ms**, 10 MiB **612.22 ms**, 25 MiB **1541.56 ms**. This measures parsing, not loading/rendering the DOM or diagram execution. No cross-machine or fixed-FPS guarantee is implied.
+Native arm64 parser benchmark on this Mac: five iterations after warmup, generated repetitions of `test-light.md`. Median times: 1 MiB **59.77 ms**, 5 MiB **305.31 ms**, 10 MiB **605.34 ms**, 25 MiB **1546.56 ms**. This measures parsing, not loading/rendering the DOM or diagram execution. No cross-machine or fixed-FPS guarantee is implied.
 
 Retained `-O`, cross-module optimization, dead stripping, stripped executables, LZMA engines, WebView prewarming and shared SVG cache. No dependencies, parser features or diagram formats were removed. UI navigation does not reparse the document. Explicit autorelease pools drain parser/decompression temporaries; UI completion captures only dialect metadata. Three duplicate compressed-resource loaders were consolidated while preserving LZFSE fallback.
 
@@ -30,12 +30,12 @@ Local release artifacts:
 
 | Artifact | Bytes |
 |---|---:|
-| arm64 ZIP | 3,115,062 |
-| x86_64 ZIP | 3,146,620 |
-| Universal ZIP | 3,432,993 |
-| Universal DMG | 3,801,150 |
+| arm64 ZIP | 3,114,368 |
+| x86_64 ZIP | 3,144,955 |
+| Universal ZIP | 3,430,433 |
+| Universal DMG | 3,798,994 |
 
-Universal app disk allocation: 4,272 KiB. Compressed resources are stored once in the Universal bundle. Signing and packaging metadata can change archive sizes in subsequent builds.
+Native installed executable: **719,728 bytes**; native app disk allocation: **3,488 KiB**. Universal app disk allocation: **4,272 KiB**. Compressed resources are stored once in the Universal bundle. Signing and packaging metadata can change archive sizes in subsequent builds.
 
 ## Installed-copy caveat
 
