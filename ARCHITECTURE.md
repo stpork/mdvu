@@ -40,6 +40,7 @@
         ▼
  ┌─────────────────────────────────────────────────────────────┐
  │ AppKit & WebKit Integration (Main Thread)                   │
+ │  • 3-Pane Split View: TOC (left), WKWebView, Vault (right)  │
  │  • WKWebView renders HTML via loadHTMLString                │
  │  • 120 FPS CoreAnimation GPU-layer zoom scaling             │
  │  • Preserves user-defined targetMagnification across loads  │

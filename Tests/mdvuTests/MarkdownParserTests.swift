@@ -342,12 +342,12 @@ struct MarkdownParserTests {
 
     @MainActor
     @Test func aboutPanelContentAndLinks() {
-        let attrString = AboutPanelController.makeAttributedString(version: "0.3.2")
+        let attrString = AboutPanelController.makeAttributedString(version: "0.4.0")
         let plain = attrString.string
 
         #expect(plain.contains("mdvu\n"))
         #expect(plain.contains("Markdown and Mermaid Viewer\n"))
-        #expect(plain.contains("Version: 0.3.2\n"))
+        #expect(plain.contains("Version: 0.4.0\n"))
         #expect(plain.contains("Copyright © 2026 Finn de Bear"))
         #expect(!plain.contains("(1)"))
         #expect(!plain.contains("("))
@@ -363,7 +363,7 @@ struct MarkdownParserTests {
             if url.absoluteString == "https://github.com/stpork/mdvu" && substring == "mdvu\n" {
                 foundRepoLink = true
             }
-            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.3.2" && substring.contains("0.3.2") {
+            if url.absoluteString == "https://github.com/stpork/mdvu/releases/tag/v0.4.0" && substring.contains("0.4.0") {
                 foundReleaseLink = true
             }
             if url.absoluteString == "mailto:finndebear@gmail.com" && substring == "Finn de Bear" {

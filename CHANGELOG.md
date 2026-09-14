@@ -4,6 +4,37 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-14
+
+### Added
+- **Obsidian-Style File & Vault Navigator Pane (`⌥⌘D`)**:
+  - Integrated collapsible right-hand file navigation pane with hierarchical tree view (`VaultNavigatorView`, `VaultOutlineView`).
+  - Automatic vault root detection (`VaultScanner.findVaultRoot`): intelligently scans up the folder hierarchy for `.obsidian` or `.git` boundaries (up to 20 levels), anchoring the vault tree at the true repository or knowledge base root.
+  - On-demand lazy scanning (`loadChildrenIfNeeded`): child directories are scanned only when expanded, keeping memory and CPU footprint near zero even in vaults with thousands of Markdown notes.
+  - Auto-reveal and selection: opening or switching documents automatically expands parent folders and highlights the active file.
+  - Native keyboard navigation: Return/Enter key opens files or expands/collapses folders; double-click toggles directories; single-click opens notes.
+  - CLI flag `--navigator`: launch directly with the navigator pane open (`mdvu --navigator <path>`).
+- **Push-On / Push-Off Toolbar Button States**:
+  - Table of Contents (`Contents`) and File Navigator (`Navigator`) toolbar buttons use textured `.pushOnPushOff` styles that stay visually depressed when their corresponding panes are active.
+  - Synchronized across keyboard shortcuts (`^⌘S`, `⌥⌘D`), menu items (`View → Show/Hide Table of Contents`, `View → Show/Hide File Navigator`), and toolbar clicks.
+- **Dynamic Back / Forward Toolbar Button Validation**:
+  - Segmented history navigation control in the toolbar dynamically enables or disables individual segments based on `navigationHistory.canGoBack` and `navigationHistory.canGoForward`, providing clear visual state and eliminating dead clicks.
+
+### Changed
+- **Adaptive 3-Pane Split View Coordinator**:
+  - Unified `rebuildSplitSubviews()` managing 1, 2, or 3 panes (`[sidebarContainer, webView, vaultNavigatorView]`) inside an autoresizing `NSSplitView`.
+  - Configured split view holding priorities (`.defaultLow` for document web view, `.defaultHigh` for sidebars) so window resizing gracefully stretches the document reading area.
+  - Available width clamping: prevents navigator or sidebar from squeezing the Markdown document web view below 200px.
+- **CLI Flag Filtering in Application Delegate**:
+  - `AppDelegate.application(_:openFiles:)` filters out CLI flags (e.g. `--navigator`, `--snapshot`) so external launch events or drag-and-drop operations do not treat command options as document paths.
+  - Suppressed modal `NSAlert` dialogs during `--snapshot` runs, piping error messages to `stderr` to prevent headless execution hangs.
+
+### Fixed
+- **Window Expansion on Navigator Toggle**:
+  - Replaced Auto Layout constraints on `split` with frame-based bounds and autoresizing masks (`split.frame = dropView.bounds`, `autoresizingMask = [.width, .height]`), eliminating AppKit fitting-size accumulation that previously caused the window to expand horizontally beyond the screen boundaries.
+- **Clean Pane Removal & Subview Stretching**:
+  - Added `split.adjustSubviews()` upon closing the navigator or sidebar pane, ensuring the remaining views immediately and smoothly reclaim 100% of the window width without leaving empty residual view space.
+
 ## [0.3.2] - 2026-09-11
 
 ### Added
