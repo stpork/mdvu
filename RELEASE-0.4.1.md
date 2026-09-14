@@ -24,7 +24,7 @@ Prepared 2026-09-15. Publication, release tags, merging into `main`, and Homebre
 
 Native arm64 parser benchmark on this Mac: five iterations after warmup, generated repetitions of `test-light.md`. Median times: 1 MiB **61.21 ms**, 5 MiB **304.81 ms**, 10 MiB **612.22 ms**, 25 MiB **1541.56 ms**. This measures parsing, not loading/rendering the DOM or diagram execution. No cross-machine or fixed-FPS guarantee is implied.
 
-Retained `-O`, cross-module optimization, dead stripping, stripped executables, LZMA engines, WebView prewarming and shared SVG cache. No dependencies, parser features or diagram formats were removed. UI navigation does not reparse the document.
+Retained `-O`, cross-module optimization, dead stripping, stripped executables, LZMA engines, WebView prewarming and shared SVG cache. No dependencies, parser features or diagram formats were removed. UI navigation does not reparse the document. Explicit autorelease pools drain parser/decompression temporaries; UI completion captures only dialect metadata. Three duplicate compressed-resource loaders were consolidated while preserving LZFSE fallback.
 
 Local release artifacts:
 

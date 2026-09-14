@@ -831,12 +831,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                     }
                     return basePipeline
                 }()
-                let rendered = pipeline.render(source, diagramTheme: diagramTheme)
+                let rendered = autoreleasepool { pipeline.render(source, diagramTheme: diagramTheme) }
                 guard !operation.isCancelled else { return }
                 let html = HTMLDocument.make(body: rendered.body, title: rendered.title ?? url.lastPathComponent, theme: theme, fullWidth: fullWidth, baseURL: url.deletingLastPathComponent())
+                let renderedDialect = rendered.dialect
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.renderGeneration == generation else { return }
-                    self.currentDialect = rendered.dialect
+                    self.currentDialect = renderedDialect
                     self.isRestoringDocumentZoom = true
                     self.pendingScrollRatio = scrollRatio
                     self.profiler.mark("markdown.ready")

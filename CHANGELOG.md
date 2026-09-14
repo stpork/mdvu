@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TOC regression coverage verifies actual scroll position for both push and replace navigation and handles missing targets.
 - CI preserves test output as an artifact even on failure and limits the job duration.
 - README and architecture documentation distinguish measured parser throughput, WebKit's separate processes, advisory cache limits, and hardware-dependent UI performance.
+- Drained temporary Foundation buffers after parsing/decompression, captured only dialect metadata in queued UI completion, and consolidated compressed resource loading without removing its LZFSE fallback.
 - Retained optimized release flags, WebView prewarming, shared SVG cache, lazy LZMA resources, and all parser/diagram features.
 
 ## [0.4.0] - 2026-09-15

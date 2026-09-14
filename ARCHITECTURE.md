@@ -212,3 +212,5 @@ Commit & Push to develop
 ## Release 0.4.1 validation
 
 `version.txt`, packaged Info.plist and source fallback versions identify 0.4.1. `make test` includes file-URL TOC scroll assertions; JavaScript test expressions return concrete values to avoid older WebKit async bridges force-unwrapping `undefined`. The fixture paths are checkout-relative. CI keeps test diagnostics on failure. Native and Universal builds use the same optimization flags; release artifacts are built locally before publication. See `RELEASE-0.4.1.md` for measured results and limitations.
+
+Temporary Foundation objects from parser passes and resource decompression are scoped to explicit autorelease pools. Only decoded runtime strings remain cached for reuse. The queued render completion captures the dialect value instead of retaining the entire rendered body alongside assembled HTML. This shortens temporary object lifetimes without evicting performance caches.

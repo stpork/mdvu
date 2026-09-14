@@ -26,7 +26,7 @@ final class EagerDocumentLoader: @unchecked Sendable {
                 if options.theme != .system { return options.theme.rawValue }
                 return "light"
             }()
-            return pipeline.render(source, diagramTheme: diagramTheme)
+            return autoreleasepool { pipeline.render(source, diagramTheme: diagramTheme) }
         }
     }
 
