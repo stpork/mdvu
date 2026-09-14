@@ -1109,17 +1109,78 @@ struct MarkdownParserTests {
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
 
-        // Open both Left TOC and Right File Navigator
-        if !controller.isSidebarVisible { controller.toggleContents(nil) }
-        controller.toggleFileNavigator(nil)
+        controller.window?.setFrame(NSRect(x: 100, y: 100, width: 1080, height: 760), display: true)
+        controller.window?.layoutIfNeeded()
+        let drop = controller.window?.contentView as? DropView
+        let split = drop?.subviews.first as? NSSplitView
+        #expect(split != nil)
 
+        defer {
+            UserDefaults.standard.removeObject(forKey: "layout.sidebarVisible")
+            UserDefaults.standard.removeObject(forKey: "layout.fileNavigatorVisible")
+            UserDefaults.standard.removeObject(forKey: "layout.fullWidth")
+        }
+
+        // Ensure clean starting state regardless of UserDefaults
+        if controller.isSidebarVisible { controller.toggleContents(nil) }
+        if controller.isFileNavigatorVisible { controller.toggleFileNavigator(nil) }
+
+        // Initial: only webView
+        #expect(split?.subviews.count == 1)
+
+        // Turn on TOC
+        controller.toggleContents(nil)
+        #expect(controller.isSidebarVisible)
+        #expect(split?.subviews.count == 2)
+        #expect(controller.window?.frame.width == 1080)
+
+        // Turn on File Navigator
+        controller.toggleFileNavigator(nil)
         #expect(controller.isSidebarVisible)
         #expect(controller.isFileNavigatorVisible)
+        #expect(split?.subviews.count == 3)
+        #expect(controller.window?.frame.width == 1080)
 
-        // Toggle navigator off
+        // Verify subview widths cover split bounds completely
+        let splitWidth3 = split?.bounds.width ?? 0
+        let totalSubviewsWidth3 = split?.subviews.reduce(0) { $0 + $1.frame.width } ?? 0
+        let dividerWidth3 = CGFloat((split?.subviews.count ?? 1) - 1) * (split?.dividerThickness ?? 1)
+        #expect(abs((totalSubviewsWidth3 + dividerWidth3) - splitWidth3) <= 2.0)
+
+        // Toggle File Navigator off: pane must be completely removed
         controller.toggleFileNavigator(nil)
         #expect(!controller.isFileNavigatorVisible)
         #expect(controller.isSidebarVisible)
+        #expect(split?.subviews.count == 2)
+        #expect(controller.window?.frame.width == 1080)
+
+        // Verify remaining subviews fill the entire width
+        let splitWidth2 = split?.bounds.width ?? 0
+        let totalSubviewsWidth2 = split?.subviews.reduce(0) { $0 + $1.frame.width } ?? 0
+        let dividerWidth2 = CGFloat((split?.subviews.count ?? 1) - 1) * (split?.dividerThickness ?? 1)
+        #expect(abs((totalSubviewsWidth2 + dividerWidth2) - splitWidth2) <= 2.0)
+
+        // Also test TOC off: returns to 1 subview filling entire window
+        controller.toggleContents(nil)
+        #expect(!controller.isSidebarVisible)
+        #expect(split?.subviews.count == 1)
+        #expect(controller.window?.frame.width == 1080)
+        #expect(abs((split?.subviews[0].frame.width ?? 0) - (split?.bounds.width ?? 0)) <= 2.0)
+
+        // Test File Navigator ON with TOC OFF
+        controller.toggleFileNavigator(nil)
+        #expect(controller.isFileNavigatorVisible)
+        #expect(!controller.isSidebarVisible)
+        #expect(split?.subviews.count == 2)
+        #expect(controller.window?.frame.width == 1080)
+
+        // Toggle File Navigator OFF again: back to 1 subview
+        controller.toggleFileNavigator(nil)
+        #expect(!controller.isFileNavigatorVisible)
+        #expect(!controller.isSidebarVisible)
+        #expect(split?.subviews.count == 1)
+        #expect(controller.window?.frame.width == 1080)
+        #expect(abs((split?.subviews[0].frame.width ?? 0) - (split?.bounds.width ?? 0)) <= 2.0)
     }
 
     @MainActor
@@ -1128,6 +1189,11 @@ struct MarkdownParserTests {
         let fixture2 = Self.fixtureURL("test-dark.md")
         let profiler = StartupProfiler()
         let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
+        defer {
+            UserDefaults.standard.removeObject(forKey: "layout.sidebarVisible")
+            UserDefaults.standard.removeObject(forKey: "layout.fileNavigatorVisible")
+            UserDefaults.standard.removeObject(forKey: "layout.fullWidth")
+        }
 
         let toolbar = controller.window?.toolbar
         #expect(toolbar != nil)

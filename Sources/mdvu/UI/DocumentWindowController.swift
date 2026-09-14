@@ -303,7 +303,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         self.cache = cache
         self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: options.isDialectExplicit)
         self.currentDialect = options.dialect
-        self.isFullWidth = options.fullWidth ?? UserDefaults.standard.bool(forKey: "layout.fullWidth")
+        self.isFullWidth = options.fullWidth ?? (options.snapshotPath != nil ? false : UserDefaults.standard.bool(forKey: "layout.fullWidth"))
         self.isSidebarVisible = options.snapshotPath != nil ? true : (UserDefaults.standard.object(forKey: "layout.sidebarVisible") as? Bool ?? false)
         self.isFileNavigatorVisible = options.navigator ?? false
         if let prewarmed = WebKitPrewarmer.takePrewarmedWebView() {
@@ -426,12 +426,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         sidebarContainer.addSubview(header); sidebarContainer.addSubview(content)
         NSLayoutConstraint.activate([header.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), header.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), header.topAnchor.constraint(equalTo: sidebarContainer.topAnchor), content.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), content.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), content.topAnchor.constraint(equalTo: header.bottomAnchor), content.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor)])
         sidebarContainer.frame.size.width = lastSidebarWidth
-        let dropView = DropView(frame: .zero, handler: { [weak self] in self?.handleDrop($0) })
+        let dropView = DropView(frame: window?.contentLayoutRect ?? NSRect(x: 0, y: 0, width: 1080, height: 760), handler: { [weak self] in self?.handleDrop($0) })
+        dropView.autoresizingMask = [.width, .height]
         dropView.appearanceHandler = { [weak self] in self?.appearanceDidChange() }
         window?.contentView = dropView
-        window?.contentView?.addSubview(split)
-        split.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([split.leadingAnchor.constraint(equalTo: window!.contentView!.leadingAnchor), split.trailingAnchor.constraint(equalTo: window!.contentView!.trailingAnchor), split.topAnchor.constraint(equalTo: window!.contentView!.topAnchor), split.bottomAnchor.constraint(equalTo: window!.contentView!.bottomAnchor)])
+        split.frame = dropView.bounds
+        split.autoresizingMask = [.width, .height]
+        dropView.addSubview(split)
         rebuildSplitSubviews()
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -973,6 +974,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                     split.addArrangedSubview(desired)
                 }
             }
+            split.adjustSubviews()
         }
 
         updateSplitHoldingPriorities()
@@ -985,21 +987,29 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         defer { isApplyingSidebarPosition = false }
 
         let totalWidth = split.bounds.width
-        let maxNavWidth = min(450, max(240, floor(totalWidth * 0.45)))
-        let clampedNavWidth = max(180, min(lastNavigatorWidth, maxNavWidth))
+        var leftWidth: CGFloat = 0
+        if isSidebarVisible {
+            leftWidth = max(SidebarSizing.minimumWidth, min(lastSidebarWidth, maximumSidebarWidth(in: split)))
+        }
 
         if isSidebarVisible && isFileNavigatorVisible {
-            let leftWidth = max(SidebarSizing.minimumWidth, min(lastSidebarWidth, maximumSidebarWidth(in: split)))
+            let maxNavForAvailable = max(180, totalWidth - leftWidth - 200)
+            let maxNavWidth = min(450, min(maxNavForAvailable, max(240, floor(totalWidth * 0.45))))
+            let clampedNavWidth = max(180, min(lastNavigatorWidth, maxNavWidth))
+
             split.setPosition(leftWidth, ofDividerAt: 0)
             let rightCoord = totalWidth - clampedNavWidth
             split.setPosition(rightCoord, ofDividerAt: 1)
             lastSidebarWidth = leftWidth
             lastNavigatorWidth = clampedNavWidth
         } else if isSidebarVisible {
-            let leftWidth = max(SidebarSizing.minimumWidth, min(lastSidebarWidth, maximumSidebarWidth(in: split)))
             split.setPosition(leftWidth, ofDividerAt: 0)
             lastSidebarWidth = leftWidth
         } else if isFileNavigatorVisible {
+            let maxNavForAvailable = max(180, totalWidth - 200)
+            let maxNavWidth = min(450, min(maxNavForAvailable, max(240, floor(totalWidth * 0.45))))
+            let clampedNavWidth = max(180, min(lastNavigatorWidth, maxNavWidth))
+
             let rightCoord = totalWidth - clampedNavWidth
             split.setPosition(rightCoord, ofDividerAt: 0)
             lastNavigatorWidth = clampedNavWidth
