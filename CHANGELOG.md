@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Drained temporary Foundation buffers after parsing/decompression, captured only dialect metadata in queued UI completion, and consolidated compressed resource loading without removing its LZFSE fallback.
 - Retained optimized release flags, WebView prewarming, shared SVG cache, lazy LZMA resources, and all parser/diagram features.
 
+### Validation
+- 61 tests passed. Real TOC clicks, including re-clicking after manual scrolling, verified in the installed 0.4.1 build.
+- Universal visual regression passed for `test-complete.md` and `test-onescreen.md` (normalized RMS 0.00000 / 0.00148); references and tolerances unchanged.
+- arm64, x86_64 and Universal ZIPs plus Universal DMG built; ad-hoc signature and all SHA-256 sidecars verified.
+- Native arm64 parser benchmark: five iterations after warmup using repetitions of `test-light.md`; medians for 1/5/10/25 MiB were 59.77/305.31/605.34/1546.56 ms. These measure parsing, not DOM rendering, scrolling or diagram execution.
+- Native executable: 719,728 bytes; native/Universal app disk allocation: 3,488/4,272 KiB. ZIP sizes: arm64 3,114,368 bytes, x86_64 3,144,955 bytes, Universal 3,430,433 bytes; DMG 3,798,994 bytes. Signing and packaging metadata can change subsequent archive sizes.
+- Measurements do not establish fixed FPS, zero leaks or the minimum possible size. WebKit uses auxiliary processes and cache limits are advisory.
+
 ## [0.4.0] - 2026-09-15
 
 ### Added

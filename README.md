@@ -288,7 +288,7 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [RELEASE-0.4.1.md](RELEASE-0.4.1.md).
+Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 | Property | Configuration / measurement |
 | :--- | :--- |
