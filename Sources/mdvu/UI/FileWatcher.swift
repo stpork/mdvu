@@ -1,5 +1,6 @@
 import Foundation
 
+// Owned and used on the main queue, including source events and debounce state.
 final class FileWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var pending: DispatchWorkItem?
@@ -42,8 +43,9 @@ final class FileWatcher {
             if data.contains(.delete) || data.contains(.rename) {
                 source.cancel()
                 self.rearm()
+            } else {
+                self.changed()
             }
-            self.changed()
         }
         source.setCancelHandler { close(fd) }
         self.source = source
