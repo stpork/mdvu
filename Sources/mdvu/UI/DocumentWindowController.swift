@@ -2054,6 +2054,7 @@ enum WebKitPrewarmer {
     static func takePrewarmedWebView() -> WKWebView? {
         defer {
             prewarmedView = nil
+            DispatchQueue.main.async { prewarm() }
         }
         return prewarmedView
     }
