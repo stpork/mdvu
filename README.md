@@ -212,7 +212,7 @@ mdvu --snapshot output.png README.md
   * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
   * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
 * **Safe HTML & Styling**:
-  * Powered by `cmark-gfm` with targeted sanitization: blocks executable scripts and dangerous elements (`<script>`, `<iframe>`, `<textarea>`, `onclick=`) while safely passing styling and presentation markup (`<style>`, `<details>`, `<summary>`, `<b>`, `<u>`, `<sub>`, `<sup>`).
+  * Uses `cmark-gfm` tag filtering while preserving presentation markup and raw `<style>` blocks. This is not a complete HTML sanitizer: use trusted documents, particularly when they contain raw HTML or remote resources.
 * **Code Fence Protection**:
   * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
@@ -241,7 +241,7 @@ mdvu --snapshot output.png README.md
   * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.20 MB).
 * **SHA-256 SVG Disk Cache**:
   * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by `SHA256(renderer + version + source + theme)`.
-  * Renders once; subsequent loads of identical diagrams are instant and bypass the rendering engine entirely.
+  * Renders once; subsequent loads reuse cached SVG and bypass diagram generation.
 
 ---
 

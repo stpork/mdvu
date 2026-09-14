@@ -136,7 +136,7 @@ WebKit can reject `history.pushState` and `replaceState` for `file://` URLs. The
   * Formulas are translated via KaTeX to standard MathML Core, allowing macOS WebKit to render them natively with system math typography, crisp Retina scaling, dark/light theme adaptation, and screen-reader accessibility.
 * **SHA-256 SVG Disk Cache**:
   * All diagram SVGs are persisted to `~/Library/Caches/com.mdvu.viewer/diagrams/` keyed by `SHA256(renderer + version + source + theme)`.
-  * Renders once asynchronously; subsequent views or window reloads display the cached SVG instantaneously without JavaScript engine evaluation.
+  * Renders once asynchronously; subsequent views or window reloads reuse cached SVG without evaluating the diagram engine.
 
 ### F. File & Vault Navigator Subsystem (`VaultScanner`, `VaultItem`, `VaultOutlineView`)
 * **Heuristic Vault Root Discovery (`VaultScanner.findVaultRoot`)**:
