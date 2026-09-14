@@ -4,7 +4,7 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-09-14
+## [0.4.0] - 2026-09-15
 
 ### Added
 - **Obsidian-Style File & Vault Navigator Pane (`⌥⌘D`)**:
@@ -31,12 +31,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vault Tree Enumeration Performance**:
   - Optimized `VaultScanner.scanChildren` to consume cached kernel metadata (`[.isDirectoryKey]`) from `contentsOfDirectory`, eliminating redundant `stat` system calls for every child entry.
   - Standardized canonical URLs upon initialization in `VaultItem`, eliminating repetitive path canonicalization during tree lookups and equality checks.
+- **Asynchronous Runtime Decompression & Diagram Bridge**:
+  - Moved heavy LZMA decompression of KaTeX, Mermaid, and PlantUML JavaScript bundles off the main UI queue to `DispatchQueue.global(qos: .userInitiated)`, eliminating UI stutters when loading diagram-rich documents.
+  - Replaced synchronous JavaScript evaluation with `callAsyncJavaScript` with `await window.__mdvuRenderDiagrams?.()`, ensuring WebAssembly/Mermaid rendering completes before declaring render completion or capturing snapshots.
+- **Shared Memory Diagram Cache**:
+  - Unified in-memory diagram SVG cache across all open windows with a shared `NSCache` instance capped at 16 MB.
+- **Universal Binary Flag Synchronization**:
+  - `build-universal.sh` now consumes release compilation flags directly from `Makefile` (`print-release-flags`), guaranteeing matching optimization levels across native and universal builds.
 
 ### Fixed
 - **Window Expansion on Navigator Toggle**:
   - Replaced Auto Layout constraints on `split` with frame-based bounds and autoresizing masks (`split.frame = dropView.bounds`, `autoresizingMask = [.width, .height]`), eliminating AppKit fitting-size accumulation that previously caused the window to expand horizontally beyond the screen boundaries.
 - **Clean Pane Removal & Subview Stretching**:
   - Added `split.adjustSubviews()` upon closing the navigator or sidebar pane, ensuring the remaining views immediately and smoothly reclaim 100% of the window width without leaving empty residual view space.
+- **Search & Heading Anchors Unicode Hygiene**:
+  - Fixed Unicode string-length distortion in text search by replacing `toLocaleLowerCase()` with Unicode-aware regular expression (`RegExp(..., 'giu')`) coordinates, accurately highlighting matches in international text (e.g. Turkish `İstanbul`).
+  - Guaranteed unique heading anchor IDs via duplicate detection set in `app.js`, eliminating ambiguous anchor navigation for identically named headings.
+- **File Watcher Reconnection & Recovery**:
+  - `FileWatcher` indefinitely re-arms on `.main` queue every 250 ms until replaced or renamed files reappear, surviving delayed atomic saves and delivering modification events without dropping watch descriptors.
+- **Window Controller Lifecycle & Teardown Protection**:
+  - Added idempotent `isTornDown` guard and `renderGeneration == generation` validation in `DocumentWindowController`, stopping background work, cancelling pending find operations, and dropping WebKit navigation delegates upon window closure.
+- **Fenced Code TOC Literal Protection**:
+  - Enclosed GitLab TOC processing in `CodeFenceScanner.process` to ensure `[TOC]` or `[[_TOC_]]` inside code blocks remain literal examples and are not transformed into HTML placeholders.
+- **Navigation History Scroll Ratio Synchronization**:
+  - Added `recordScrollRatio(_:at:)` to record scroll positions into explicit history indices, preventing delayed scroll capture callbacks from pushing duplicate history entries.
 
 ## [0.3.2] - 2026-09-11
 

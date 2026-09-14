@@ -163,6 +163,8 @@
 8. **Bulk Directory Attribute Enumeration**: `VaultScanner` consumes cached kernel directory attributes directly from `contentsOfDirectory(includingPropertiesForKeys:)`, bypassing individual `stat` / `lstat` syscalls during vault tree expansion.
 9. **Lifecycle & Memory Hygiene**: `WeakScriptMessageHandler` trampoline permanently breaks WebKit script handler retain cycles; `FileWatcher.invalidate()` immediately closes file descriptors and cancels dispatch sources on window close; and `DiagramCache` memory cache is strictly capped at 16 MB.
 10. **Multi-Process Memory Isolation**: The host AppKit UI process maintains a lean ~35–45 MB footprint; the WebKit auxiliary web process (`com.apple.WebKit.WebContent`) isolates DOM state and garbage collection from the desktop application chrome.
+11. **Off-Main-Thread LZMA Decompression**: Decompression of offline KaTeX, Mermaid, and PlantUML JavaScript bundles executes asynchronously on `DispatchQueue.global(qos: .userInitiated)` before injecting into WebKit, completely eliminating main UI thread hitches when loading diagram-heavy documents.
+12. **Asynchronous WebKit Diagram Rendering Bridge**: The native bridge awaits WebAssembly/Mermaid rendering completion using `callAsyncJavaScript` with `await window.__mdvuRenderDiagrams?.()`, guaranteeing rendering completeness and eliminating snapshot timing race conditions.
 
 ---
 

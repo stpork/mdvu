@@ -1,14 +1,11 @@
 import CryptoKit
 import Foundation
 
-struct DiagramRenderOptions { let theme: String }
-struct DiagramResult { let svg: String }
 
 protocol DiagramRenderer {
     var identifier: String { get }
     var version: String { get }
     func canRender(language: some StringProtocol) -> Bool
-    func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String
 }
 
@@ -24,13 +21,11 @@ struct MermaidRenderer: DiagramRenderer {
     func canRender(language: some StringProtocol) -> Bool {
         language.compare("mermaid", options: .caseInsensitive) == .orderedSame
     }
-    func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw MermaidError.webRuntimeRequired }
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String {
         let key = cache.key(renderer: identifier, version: version, source: source, theme: theme, options: "strict-transparent-v1")
         if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\" data-renderer=\"mermaid\">\(svg)</figure>" }
         return "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"\(key)\"><pre>\(HTML.escape(source))</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>"
     }
-    enum MermaidError: Error { case webRuntimeRequired }
 }
 
 struct PlantUMLRenderer: DiagramRenderer {
@@ -39,13 +34,11 @@ struct PlantUMLRenderer: DiagramRenderer {
         language.compare("plantuml", options: .caseInsensitive) == .orderedSame ||
         language.compare("puml", options: .caseInsensitive) == .orderedSame
     }
-    func render(source: String, options: DiagramRenderOptions) async throws -> DiagramResult { throw PlantUMLError.webRuntimeRequired }
     func placeholder(source: String, theme: String, cache: DiagramCache) -> String {
         let key = cache.key(renderer: identifier, version: version, source: source, theme: theme, options: "plantuml-transparent-v1")
         if let svg = cache.read(key: key) { return "<figure class=\"diagram diagram-cached\" data-renderer=\"plantuml\">\(svg)</figure>" }
         return "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"\(key)\"><pre>\(HTML.escape(source))</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>"
     }
-    enum PlantUMLError: Error { case webRuntimeRequired }
 }
 
 

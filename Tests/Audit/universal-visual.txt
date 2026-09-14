@@ -1,0 +1,2 @@
+snapshot normalized RMS difference: 0.00000
+Visual regression passed

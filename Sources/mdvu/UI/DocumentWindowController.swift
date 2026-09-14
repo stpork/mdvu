@@ -278,6 +278,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }()
     private var renderOperation: Operation?
     private var directoryOperation: Operation?
+    private var isTornDown = false
     private var renderGeneration = 0
     private var currentRenderFileURL: URL?
     private var pendingScrollRatio: Double?
@@ -356,6 +357,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func tearDown() {
+        guard !isTornDown else { return }
+        isTornDown = true
         renderGeneration += 1
         findWorkItem?.cancel()
         findWorkItem = nil
@@ -722,6 +725,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func openDocument(_ url: URL, preserveScroll: Bool = false, isHistoryNavigation: Bool = false) {
+        guard !isTornDown else { return }
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let fragment = components?.fragment?.removingPercentEncoding
         components?.fragment = nil
@@ -760,6 +764,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     private func render(_ url: URL, position: Any?) {
+        guard !isTornDown, currentURL == url else { return }
         renderGeneration += 1
         let generation = renderGeneration
         let theme = options.theme, fullWidth = isFullWidth
@@ -1158,6 +1163,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard !isTornDown else { return }
+        let generation = renderGeneration
         profiler.mark("webview.firstContent")
         if abs(webView.pageZoom - targetPageZoom) > 0.001 {
             webView.pageZoom = targetPageZoom
@@ -1173,7 +1180,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.captureSnapshotIfRequested() }
         }
         webView.evaluateJavaScript("[(document.querySelector('.diagram-pending[data-renderer=\"mermaid\"]') !== null), (document.querySelector('.diagram-pending[data-renderer=\"plantuml\"]') !== null), (document.querySelector('.math-inline, .math-display') !== null)]") { [weak self] value, _ in
-            guard let self else { return }
+            guard let self, self.renderGeneration == generation else { return }
             guard let flags = value as? [Bool], flags.count == 3 else { self.captureSnapshotIfRequested(); return }
             let needsMermaid = options.mermaid && flags[0]
             let needsPlantUML = options.mermaid && flags[1]
@@ -1182,56 +1189,40 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
             let group = DispatchGroup()
 
-            if needsMermaid {
-                let mermaid = ResourceLoader.mermaidJavaScript
-                if !mermaid.isEmpty {
-                    group.enter()
-                    self.webView.evaluateJavaScript(mermaid) { _, error in
-                        #if DEBUG
-                        if let error {
-                            FileHandle.standardError.write(Data("mdvu: Mermaid load failed: \(error.localizedDescription)\n".utf8))
+            // Decompression can take tens of milliseconds. Keep it off the UI queue.
+            func injectRuntime(_ source: @escaping () -> String) {
+                group.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let script = source()
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self, self.renderGeneration == generation, !script.isEmpty else {
+                            group.leave()
+                            return
                         }
-                        #endif
-                        group.leave()
+                        self.webView.evaluateJavaScript(script) { _, error in
+                            #if DEBUG
+                            if let error {
+                                FileHandle.standardError.write(Data("mdvu: Runtime load failed: \(error.localizedDescription)\n".utf8))
+                            }
+                            #endif
+                            group.leave()
+                        }
                     }
                 }
             }
-
-            if needsPlantUML {
-                let plantuml = ResourceLoader.plantumlJavaScript
-                if !plantuml.isEmpty {
-                    group.enter()
-                    self.webView.evaluateJavaScript(plantuml) { _, error in
-                        #if DEBUG
-                        if let error {
-                            FileHandle.standardError.write(Data("mdvu: PlantUML load failed: \(error.localizedDescription)\n".utf8))
-                        }
-                        #endif
-                        group.leave()
-                    }
-                }
-            }
-
-            if needsMath {
-                let katex = ResourceLoader.katexJavaScript
-                if !katex.isEmpty {
-                    group.enter()
-                    self.webView.evaluateJavaScript(katex) { _, error in
-                        #if DEBUG
-                        if let error {
-                            FileHandle.standardError.write(Data("mdvu: KaTeX load failed: \(error.localizedDescription)\n".utf8))
-                        }
-                        #endif
-                        group.leave()
-                    }
-                }
-            }
+            if needsMermaid { injectRuntime { ResourceLoader.mermaidJavaScript } }
+            if needsPlantUML { injectRuntime { ResourceLoader.plantumlJavaScript } }
+            if needsMath { injectRuntime { ResourceLoader.katexJavaScript } }
 
             group.notify(queue: .main) { [weak self] in
-                guard let self else { return }
-                self.webView.evaluateJavaScript("(window.__mdvuRenderMath && window.__mdvuRenderMath()), (window.__mdvuRenderDiagrams && window.__mdvuRenderDiagrams())") { [weak self] _, _ in
-                    self?.profiler.mark("render.complete")
-                    self?.captureSnapshotIfRequested()
+                guard let self, self.renderGeneration == generation else { return }
+                self.webView.callAsyncJavaScript(
+                    "window.__mdvuRenderMath?.(); await window.__mdvuRenderDiagrams?.(); return true;",
+                    arguments: [:], in: nil, in: .page
+                ) { [weak self] _ in
+                    guard let self, self.renderGeneration == generation else { return }
+                    self.profiler.mark("render.complete")
+                    self.captureSnapshotIfRequested()
                 }
             }
         }

@@ -1,4 +1,5 @@
 SHELL := /bin/sh
+.DEFAULT_GOAL := all
 PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 APP := $(PROJECT_ROOT)/dist/mdvu.app
 BINARY ?= $(PROJECT_ROOT)/.build/release/mdvu
@@ -20,7 +21,9 @@ endif
 
 SWIFT_RELEASE_FLAGS := -Xswiftc -O -Xswiftc -cross-module-optimization -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
 
-.PHONY: all release test app package universal archive publish install benchmark update-snapshot visual-test clean
+.PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean
+print-release-flags:
+	@printf '%s\n' '$(SWIFT_RELEASE_FLAGS)'
 all:
 	cd "$(PROJECT_ROOT)" && swift build
 release:

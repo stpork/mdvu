@@ -1,0 +1,33 @@
+cd "/Users/C5370280/SAPDevelop/Sources/mdvu" && swift build
+[0/1] Planning build
+Building for debugging...
+[0/4] Write swift-version--1AB21518FC5DEDBE.txt
+[2/19] Compiling mdvu HTMLDocument.swift
+[3/19] Compiling mdvu AppDelegate.swift
+[4/19] Compiling mdvu BenchmarkRunner.swift
+[5/19] Compiling mdvu EagerDocumentLoader.swift
+[6/19] Compiling mdvu AboutPanel.swift
+[7/19] Compiling mdvu StartupProfiler.swift
+[8/19] Emitting module mdvu
+[9/19] Compiling mdvu DocumentWindowController.swift
+[10/19] Compiling mdvu CLIOptions.swift
+[11/19] Compiling mdvu DiagramRenderer.swift
+[12/19] Compiling mdvu MarkdownParser.swift
+[13/19] Compiling mdvu MarkdownPipeline.swift
+[14/19] Compiling mdvu main.swift
+[15/19] Compiling mdvu FileWatcher.swift
+[16/19] Compiling mdvu VaultNavigator.swift
+[17/20] Compiling mdvu resource_bundle_accessor.swift
+[17/19] Linking mdvu
+[18/19] Applying mdvu
+Build complete! (1.81s)
+"/Users/C5370280/SAPDevelop/Sources/mdvu/scripts/visual-regression.sh"
+mdvu.profile application.initialized        1.3 ms  total     1.3 ms
+mdvu.profile window.created               140.8 ms  total   142.1 ms
+mdvu.profile window.visible                11.2 ms  total   153.3 ms
+mdvu.profile markdown.ready               162.2 ms  total   315.5 ms
+mdvu.profile html.loaded                   30.5 ms  total   346.0 ms
+mdvu.profile webview.firstContent         389.9 ms  total   735.9 ms
+mdvu.profile render.complete              207.5 ms  total   943.5 ms
+snapshot normalized RMS difference: 0.00000
+Visual regression passed
