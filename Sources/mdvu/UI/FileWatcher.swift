@@ -1,10 +1,10 @@
 import Foundation
 
+// Owned and used on the main queue, including source events and debounce state.
 final class FileWatcher {
     private var source: DispatchSourceFileSystemObject?
     private var pending: DispatchWorkItem?
     private let callback: () -> Void
-    private let queue = DispatchQueue(label: "com.mdvu.file-watcher", qos: .utility)
     private let url: URL
     private var isInvalidated = false
 
@@ -35,7 +35,7 @@ final class FileWatcher {
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
             eventMask: [.write, .rename, .delete, .extend],
-            queue: queue
+            queue: .main
         )
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source, !self.isInvalidated else { return }
@@ -43,8 +43,9 @@ final class FileWatcher {
             if data.contains(.delete) || data.contains(.rename) {
                 source.cancel()
                 self.rearm()
+            } else {
+                self.changed()
             }
-            self.changed()
         }
         source.setCancelHandler { close(fd) }
         self.source = source
@@ -54,13 +55,12 @@ final class FileWatcher {
 
     private func rearm() {
         guard !isInvalidated else { return }
-        queue.asyncAfter(deadline: .now() + .milliseconds(100)) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
             guard let self, !self.isInvalidated else { return }
-            if !self.startWatching() {
-                self.queue.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
-                    guard let self, !self.isInvalidated else { return }
-                    _ = self.startWatching()
-                }
+            if self.startWatching() {
+                self.changed()
+            } else {
+                self.rearm()
             }
         }
     }
@@ -76,6 +76,6 @@ final class FileWatcher {
             }
         }
         pending = item
-        queue.asyncAfter(deadline: .now() + .milliseconds(180), execute: item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(180), execute: item)
     }
 }

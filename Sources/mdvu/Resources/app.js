@@ -29,13 +29,15 @@ el.innerHTML=out;
 };
 let lastTOCKey='';
 const decorateHeadings=()=>{
-const counts=new Map,entries=[];
+const counts=new Map,usedIDs=new Set,entries=[];
 document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(heading=>{
 heading.querySelector('.heading-anchor')?.remove();
 const title=heading.textContent.trim();
 let base=title.toLocaleLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'-')||'section',count=counts.get(base)||0;
-counts.set(base,count+1);
-heading.id=count?`${base}-${count}`:base;
+let id=count?`${base}-${count}`:base;
+while(usedIDs.has(id)){count++;id=`${base}-${count}`}
+counts.set(base,count+1);usedIDs.add(id);
+heading.id=id;
 entries.push({level:Number(heading.tagName.slice(1)),title,id:heading.id});
 const anchor=document.createElement('a');
 anchor.className='heading-anchor';
@@ -170,14 +172,16 @@ return NodeFilter.FILTER_ACCEPT;
 });
 const nodes=[];let n;
 while(n=walker.nextNode())nodes.push(n);
-const lower=q.toLocaleLowerCase(),len=q.length,created=[];
+const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu'),created=[];
 for(const node of nodes){
-const text=node.textContent,lText=text.toLocaleLowerCase();
-let idx=lText.indexOf(lower);
-if(idx===-1)continue;
+const text=node.textContent;
+pattern.lastIndex=0;
+let match=pattern.exec(text);
+if(!match)continue;
 const frag=document.createDocumentFragment();
 let last=0;
-while(idx!==-1){
+while(match){
+const idx=match.index,len=match[0].length;
 if(idx>last)frag.appendChild(document.createTextNode(text.slice(last,idx)));
 const mark=document.createElement('mark');
 mark.className='find-match';
@@ -185,7 +189,7 @@ mark.textContent=text.slice(idx,idx+len);
 frag.appendChild(mark);
 created.push(mark);
 last=idx+len;
-idx=lText.indexOf(lower,last);
+match=pattern.exec(text);
 }
 if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
 node.replaceWith(frag);

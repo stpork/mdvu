@@ -1,29 +1,23 @@
-<table border="0">
-  <tr>
-    <td width="140" align="center" valign="middle">
-      <img src="packaging/AppIcon-256.png" alt="mdvu App Icon" width="128" height="128">
-    </td>
-    <td valign="middle">
-      <h1>mdvu</h1>
-      <p>
-        <strong>The ultra-fast, lightweight native Markdown viewer for macOS.</strong><br>
-        Built with pure AppKit & WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
-      </p>
-      <p>
-        <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-        <a href="#installation"><img src="https://img.shields.io/badge/version-0.3.2-emerald" alt="Version 0.3.2"></a>
-        <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
-        <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
-      </p>
-    </td>
-  </tr>
-</table>
+<div align="center">
+  <img src="packaging/AppIcon-256.png" alt="MDVu App Icon" width="128" height="128">
+  <h1>MDVu - Superfast Markdown Viewer</h1>
+
+  <p>
+    The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for macOS.<br>
+    Built with pure AppKit &amp; WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+  </p>
+
+  <p>
+    <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/version-0.4.0-emerald" alt="Version 0.4.0"></a>
+    <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
+  </p>
+</div>
 
 <p align="center">
-  <a href="Tests/Snapshots/MDVu.jpg">
-    <img src="Tests/Snapshots/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
-  </a>
+  <img src="packaging/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
 </p>
 
 ---
@@ -39,6 +33,7 @@ Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
 * **Standardized 120 FPS Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
 * **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
+* **File & Vault Navigator (`⌥⌘D`)**: Instant collapsible directory tree pane inspired by Obsidian vaults. Recursively discovers all Markdown notes across your vault or workspace, auto-detects `.obsidian` and `.git` project roots, and navigates seamlessly.
 * **Zero Leaks & Resource Hygiene**: Memory is rigorously audited with weak message-handler trampolines, non-retaining background queues, bounded 16 MB diagram caches, and deterministic file watcher teardown.
 
 ---
@@ -174,6 +169,7 @@ mdvu --snapshot output.png README.md
 | :--- | :--- | :--- |
 | `--theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
 | `--dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
+| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
 | `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit | None |
@@ -275,6 +271,18 @@ mdvu --snapshot output.png README.md
 ### 🧭 Navigation & Two-Finger Swipe
 * **Two-Finger History Swipe**: Horizontal trackpad swipes navigate Back and Forward when history is available.
 * **Zoom Pan-Priority**: When zoomed in (`> 105%`), two-finger gestures seamlessly pan overflowing tables, code blocks, and diagrams without triggering history jumps.
+* **Dynamic Back/Forward Validation**: Segmented history buttons in the toolbar visually enable or disable based on actual navigation history availability.
+
+---
+
+### 🗂️ File & Vault Navigator (`⌥⌘D`)
+* **Obsidian-Style Vault Tree**: Dedicated collapsible right pane displaying all supported Markdown files and directories in your vault or workspace.
+* **Smart Root Detection**: Automatically walks up directory ancestors looking for `.obsidian` or `.git` boundaries, anchoring the root at your true vault or repository level.
+* **Instant Lazy Scanning**: Traverses nested subdirectories only upon expansion, keeping memory and CPU footprint near zero even in vaults with thousands of notes.
+* **Auto-Reveal & Active Selection**: Opening or switching documents automatically expands ancestor folders and highlights the current file in the outline.
+* **Native Keyboard & Click Flow**: Single-click opens files; double-click expands or collapses directories; Return/Enter opens the highlighted note.
+* **Push-on/Push-off State**: Toolbar buttons for Table of Contents and File Navigator stay visually depressed when their respective panes are active.
+* **CLI Flag**: Launch directly with navigator open using `mdvu --navigator <path>`.
 
 ---
 
@@ -306,6 +314,7 @@ mdvu --snapshot output.png README.md
 | `⌘0` | Actual Size (100%) |
 | `⇧⌘W` | Toggle Full Width / Readable Width |
 | `^⌘S` | Toggle Table of Contents Sidebar |
+| `⌥⌘D` | Toggle File / Vault Navigator Pane |
 | `⌘[` / `⌘←` | Navigate Back in History |
 | `⌘]` / `⌘→` | Navigate Forward in History |
 | `⌘R` | Reload Document |

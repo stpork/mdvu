@@ -2,9 +2,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
-swift package --scratch-path "$ROOT/.build/universal-arm" clean
-swift package --scratch-path "$ROOT/.build/universal-x86" clean
-SWIFT_RELEASE_FLAGS="-Xswiftc -Osize -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names"
+SWIFT_RELEASE_FLAGS=$(make -s print-release-flags)
 swift build -c release --arch arm64 --scratch-path "$ROOT/.build/universal-arm" $SWIFT_RELEASE_FLAGS
 swift build -c release --arch x86_64 --scratch-path "$ROOT/.build/universal-x86" $SWIFT_RELEASE_FLAGS
 lipo -create \

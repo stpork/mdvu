@@ -282,22 +282,6 @@ xychart-beta
 <a id="zenuml"></a>
 <span class="eyebrow">09 / ZenUML · source-driven interaction</span>
 
-## A second language for sequences
-
-```mermaid
-zenuml
-    Reader->MDVu: open(document)
-    MDVu->Reader: display(document)
-```
-
-<p class="diagram-caption">Participants · asynchronous messages · source-driven layout</p>
-
-</section>
-
-<section class="card compact-diagram">
-<a id="models"></a>
-<span class="eyebrow">10 / PlantUML · class model · cardinality</span>
-
 ## Model the relationships
 
 ```plantuml

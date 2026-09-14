@@ -6,3 +6,5 @@ mkdir -p "$ROOT/Tests/Snapshots"
 caffeinate -u -t 2 || true
 "$BIN" --theme light --snapshot "$ROOT/Tests/Snapshots/kitchen-sink.png" "$ROOT/Tests/Fixtures/test-complete.md"
 echo "Updated Tests/Snapshots/kitchen-sink.png"
+"$BIN" --theme light --snapshot "$ROOT/Tests/Snapshots/onescreen.png" "$ROOT/Tests/Fixtures/test-onescreen.md"
+echo "Updated Tests/Snapshots/onescreen.png"

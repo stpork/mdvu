@@ -8,7 +8,6 @@ struct MarkdownParser {
     let cache: DiagramCache
     let diagramTheme: String
 
-    private static let calloutPattern = try! NSRegularExpression(pattern: #"<blockquote>\s*<p><strong>MDVU-CALLOUT-([A-Z]+)</strong>\s*(.*?)</p>\s*(.*?)</blockquote>"#, options: [.dotMatchesLineSeparators])
     private static let styleTagPattern = try! NSRegularExpression(pattern: #"&lt;(?i)(/?style(\s[^>]*)?)>"#)
 
     private static let syntaxExtensions: [UnsafeMutablePointer<cmark_syntax_extension>] = {

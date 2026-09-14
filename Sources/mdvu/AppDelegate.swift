@@ -36,7 +36,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
         let options = CLIOptions.parse(arguments)
-        filenames.forEach { open(URL(fileURLWithPath: $0).standardizedFileURL, options: options) }
+        let filesToOpen: [String]
+        if !options.paths.isEmpty {
+            filesToOpen = filenames.filter { options.paths.contains($0) }
+        } else {
+            filesToOpen = filenames.filter { !$0.hasPrefix("-") }
+        }
+        filesToOpen.forEach { open(URL(fileURLWithPath: $0).standardizedFileURL, options: options) }
         sender.reply(toOpenOrPrint: .success)
     }
 
@@ -78,6 +84,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showError(_ message: String) {
+        let options = CLIOptions.parse(arguments)
+        if options.snapshotPath != nil {
+            FileHandle.standardError.write(Data("mdvu: \(message)\n".utf8))
+            return
+        }
         let alert = NSAlert(); alert.messageText = "mdvu"; alert.informativeText = message; alert.runModal()
     }
 
@@ -123,6 +134,8 @@ enum AppMenu {
         viewMenu.addItem(.separator())
         let contents = viewMenu.addItem(withTitle: "Hide Table of Contents", action: #selector(DocumentWindowController.toggleContents(_:)), keyEquivalent: "s")
         contents.keyEquivalentModifierMask = [.command, .control]
+        let navigator = viewMenu.addItem(withTitle: "Show File Navigator", action: #selector(DocumentWindowController.toggleFileNavigator(_:)), keyEquivalent: "d")
+        navigator.keyEquivalentModifierMask = [.command, .option]
         let fullWidth = viewMenu.addItem(withTitle: "Full Width", action: #selector(DocumentWindowController.toggleFullWidth(_:)), keyEquivalent: "w")
         fullWidth.keyEquivalentModifierMask = [.command, .shift]
         viewMenu.addItem(.separator())

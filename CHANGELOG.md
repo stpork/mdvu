@@ -4,6 +4,58 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-15
+
+### Added
+- **Obsidian-Style File & Vault Navigator Pane (`⌥⌘D`)**:
+  - Integrated collapsible right-hand file navigation pane with hierarchical tree view (`VaultNavigatorView`, `VaultOutlineView`).
+  - Automatic vault root detection (`VaultScanner.findVaultRoot`): intelligently scans up the folder hierarchy for `.obsidian` or `.git` boundaries (up to 20 levels), anchoring the vault tree at the true repository or knowledge base root.
+  - On-demand lazy scanning (`loadChildrenIfNeeded`): child directories are scanned only when expanded, keeping memory and CPU footprint near zero even in vaults with thousands of Markdown notes.
+  - Auto-reveal and selection: opening or switching documents automatically expands parent folders and highlights the active file.
+  - Native keyboard navigation: Return/Enter key opens files or expands/collapses folders; double-click toggles directories; single-click opens notes.
+  - CLI flag `--navigator`: launch directly with the navigator pane open (`mdvu --navigator <path>`).
+- **Push-On / Push-Off Toolbar Button States**:
+  - Table of Contents (`Contents`) and File Navigator (`Navigator`) toolbar buttons use textured `.pushOnPushOff` styles that stay visually depressed when their corresponding panes are active.
+  - Synchronized across keyboard shortcuts (`^⌘S`, `⌥⌘D`), menu items (`View → Show/Hide Table of Contents`, `View → Show/Hide File Navigator`), and toolbar clicks.
+- **Dynamic Back / Forward Toolbar Button Validation**:
+  - Segmented history navigation control in the toolbar dynamically enables or disables individual segments based on `navigationHistory.canGoBack` and `navigationHistory.canGoForward`, providing clear visual state and eliminating dead clicks.
+
+### Changed
+- **Adaptive 3-Pane Split View Coordinator**:
+  - Unified `rebuildSplitSubviews()` managing 1, 2, or 3 panes (`[sidebarContainer, webView, vaultNavigatorView]`) inside an autoresizing `NSSplitView`.
+  - Configured split view holding priorities (`.defaultLow` for document web view, `.defaultHigh` for sidebars) so window resizing gracefully stretches the document reading area.
+  - Available width clamping: prevents navigator or sidebar from squeezing the Markdown document web view below 200px.
+- **CLI Flag Filtering in Application Delegate**:
+  - `AppDelegate.application(_:openFiles:)` filters out CLI flags (e.g. `--navigator`, `--snapshot`) so external launch events or drag-and-drop operations do not treat command options as document paths.
+  - Suppressed modal `NSAlert` dialogs during `--snapshot` runs, piping error messages to `stderr` to prevent headless execution hangs.
+- **Vault Tree Enumeration Performance**:
+  - Optimized `VaultScanner.scanChildren` to consume cached kernel metadata (`[.isDirectoryKey]`) from `contentsOfDirectory`, eliminating redundant `stat` system calls for every child entry.
+  - Standardized canonical URLs upon initialization in `VaultItem`, eliminating repetitive path canonicalization during tree lookups and equality checks.
+- **Asynchronous Runtime Decompression & Diagram Bridge**:
+  - Moved heavy LZMA decompression of KaTeX, Mermaid, and PlantUML JavaScript bundles off the main UI queue to `DispatchQueue.global(qos: .userInitiated)`, eliminating UI stutters when loading diagram-rich documents.
+  - Replaced synchronous JavaScript evaluation with `callAsyncJavaScript` with `await window.__mdvuRenderDiagrams?.()`, ensuring WebAssembly/Mermaid rendering completes before declaring render completion or capturing snapshots.
+- **Shared Memory Diagram Cache**:
+  - Unified in-memory diagram SVG cache across all open windows with a shared `NSCache` instance capped at 16 MB.
+- **Universal Binary Flag Synchronization**:
+  - `build-universal.sh` now consumes release compilation flags directly from `Makefile` (`print-release-flags`), guaranteeing matching optimization levels across native and universal builds.
+
+### Fixed
+- **Window Expansion on Navigator Toggle**:
+  - Replaced Auto Layout constraints on `split` with frame-based bounds and autoresizing masks (`split.frame = dropView.bounds`, `autoresizingMask = [.width, .height]`), eliminating AppKit fitting-size accumulation that previously caused the window to expand horizontally beyond the screen boundaries.
+- **Clean Pane Removal & Subview Stretching**:
+  - Added `split.adjustSubviews()` upon closing the navigator or sidebar pane, ensuring the remaining views immediately and smoothly reclaim 100% of the window width without leaving empty residual view space.
+- **Search & Heading Anchors Unicode Hygiene**:
+  - Fixed Unicode string-length distortion in text search by replacing `toLocaleLowerCase()` with Unicode-aware regular expression (`RegExp(..., 'giu')`) coordinates, accurately highlighting matches in international text (e.g. Turkish `İstanbul`).
+  - Guaranteed unique heading anchor IDs via duplicate detection set in `app.js`, eliminating ambiguous anchor navigation for identically named headings.
+- **File Watcher Reconnection & Recovery**:
+  - `FileWatcher` indefinitely re-arms on `.main` queue every 250 ms until replaced or renamed files reappear, surviving delayed atomic saves and delivering modification events without dropping watch descriptors.
+- **Window Controller Lifecycle & Teardown Protection**:
+  - Added idempotent `isTornDown` guard and `renderGeneration == generation` validation in `DocumentWindowController`, stopping background work, cancelling pending find operations, and dropping WebKit navigation delegates upon window closure.
+- **Fenced Code TOC Literal Protection**:
+  - Enclosed GitLab TOC processing in `CodeFenceScanner.process` to ensure `[TOC]` or `[[_TOC_]]` inside code blocks remain literal examples and are not transformed into HTML placeholders.
+- **Navigation History Scroll Ratio Synchronization**:
+  - Added `recordScrollRatio(_:at:)` to record scroll positions into explicit history indices, preventing delayed scroll capture callbacks from pushing duplicate history entries.
+
 ## [0.3.2] - 2026-09-11
 
 ### Added
