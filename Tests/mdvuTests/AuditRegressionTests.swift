@@ -97,4 +97,31 @@ extension AuditRegressionTests {
             #expect(text as? String == "İstanbul target a.b a+b [x]")
         }
     }
+
+    @MainActor @Test func scrollToFragmentWorksOnFileURL() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: "window.requestAnimationFrame = callback => setTimeout(callback, 0)",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let html = HTMLDocument.make(
+            body: "<h1>Top</h1>" + String(repeating: "<p>filler</p>", count: 80) + "<h2>Target</h2><p>end</p>",
+            title: "Scroll", theme: .light)
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("scroll-\(UUID().uuidString).html")
+        try html.write(to: temp, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        view.loadFileURL(temp, allowingReadAccessTo: URL(fileURLWithPath: "/"))
+        defer { view.stopLoading() }
+        var ready = false
+        for _ in 0..<100 {
+            if let ok = try? await view.evaluateJavaScript("typeof window.__mdvuScrollToFragment === 'function'"), ok as? Bool == true {
+                ready = true; break
+            }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        #expect(ready)
+        guard ready else { return }
+        let result = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('target')")
+        #expect(result as? Bool == true)
+    }
 }
