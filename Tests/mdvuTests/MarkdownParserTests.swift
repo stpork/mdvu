@@ -544,6 +544,32 @@ struct MarkdownParserTests {
         #expect(controller.isSidebarVisible != initialSplitState)
         controller.toggleContents(nil)
         #expect(controller.isSidebarVisible == initialSplitState)
+
+        // File navigator toggle
+        let initialNavState = controller.isFileNavigatorVisible
+        #expect(initialNavState == false)
+        controller.toggleFileNavigator(nil)
+        #expect(controller.isFileNavigatorVisible == true)
+        controller.toggleFileNavigator(nil)
+        #expect(controller.isFileNavigatorVisible == false)
+
+        // Toolbar item presence
+        let toolbar = controller.window?.toolbar
+        #expect(toolbar != nil)
+        let allowed = controller.toolbarAllowedItemIdentifiers(toolbar!)
+        #expect(allowed.contains(NSToolbarItem.Identifier("mdvu.navigator")))
+
+        // Menu item validation
+        let navMenuItem = NSMenuItem(title: "Show File Navigator", action: #selector(DocumentWindowController.toggleFileNavigator(_:)), keyEquivalent: "d")
+        #expect(controller.validateMenuItem(navMenuItem) == true)
+        #expect(navMenuItem.title == "Show File Navigator")
+        #expect(navMenuItem.state == .off)
+
+        controller.toggleFileNavigator(nil)
+        _ = controller.validateMenuItem(navMenuItem)
+        #expect(navMenuItem.title == "Hide File Navigator")
+        #expect(navMenuItem.state == .on)
+        controller.toggleFileNavigator(nil)
     }
 
     @Test func testCompleteValidationEcosystem() throws {
@@ -971,6 +997,216 @@ struct MarkdownParserTests {
         #expect(rendered.dialect == .obsidian)
         #expect(rendered.body.contains("<img src=\"data:image/png;base64,iVBORw0KGgo"))
         #expect(rendered.body.contains("<a href=\"MDVu-One-Screen.md#mathematics\">Wiki alias → Mathematics</a>"))
+    }
+
+    @Test func testVaultScannerAndVaultRootDetection() throws {
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("mdvu_vault_test_\(UUID().uuidString)")
+        let vaultDir = tempDir.appendingPathComponent("MyVault")
+        let obsidianDir = vaultDir.appendingPathComponent(".obsidian")
+        let folder1 = vaultDir.appendingPathComponent("Notes")
+        let nodeModules = folder1.appendingPathComponent("node_modules")
+        let subFolder = folder1.appendingPathComponent("Sub")
+
+        try FileManager.default.createDirectory(at: obsidianDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: nodeModules, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: subFolder, withIntermediateDirectories: true)
+
+        let note1 = folder1.appendingPathComponent("test1.md")
+        let note2 = folder1.appendingPathComponent("test2.markdown")
+        let image = folder1.appendingPathComponent("photo.png")
+        let ignoredNote = nodeModules.appendingPathComponent("ignore.md")
+        let deepNote = subFolder.appendingPathComponent("deep.md")
+        let rootNote = vaultDir.appendingPathComponent("README.md")
+
+        try "content".write(to: note1, atomically: true, encoding: .utf8)
+        try "content".write(to: note2, atomically: true, encoding: .utf8)
+        try "png".write(to: image, atomically: true, encoding: .utf8)
+        try "ignored".write(to: ignoredNote, atomically: true, encoding: .utf8)
+        try "deep".write(to: deepNote, atomically: true, encoding: .utf8)
+        try "root".write(to: rootNote, atomically: true, encoding: .utf8)
+
+        defer {
+            try? FileManager.default.removeItem(at: tempDir)
+        }
+
+        // Test root detection (walks up to .obsidian)
+        let detectedVault = VaultScanner.findVaultRoot(for: note1)
+        #expect(detectedVault.standardizedFileURL.path == vaultDir.standardizedFileURL.path)
+
+        // Test fallback without .obsidian / .git
+        let nonVaultDir = tempDir.appendingPathComponent("OrdinaryFolder")
+        try FileManager.default.createDirectory(at: nonVaultDir, withIntermediateDirectories: true)
+        let plainNote = nonVaultDir.appendingPathComponent("plain.md")
+        try "plain".write(to: plainNote, atomically: true, encoding: .utf8)
+        let detectedPlain = VaultScanner.findVaultRoot(for: plainNote)
+        #expect(detectedPlain.standardizedFileURL.path == nonVaultDir.standardizedFileURL.path)
+
+        // Test supported file types
+        #expect(VaultScanner.isSupported(url: note1))
+        #expect(VaultScanner.isSupported(url: note2))
+        #expect(!VaultScanner.isSupported(url: image))
+
+        // Test root item scanning
+        let rootItem = VaultItem(url: vaultDir, isDirectory: true)
+        #expect(rootItem.children == nil) // Lazy check
+        rootItem.loadChildrenIfNeeded()
+        #expect(rootItem.children != nil)
+
+        let rootChildren = rootItem.children ?? []
+        // Should contain "Notes" directory and "README.md", but NOT ".obsidian"
+        #expect(rootChildren.contains(where: { $0.name == "Notes" && $0.isDirectory }))
+        #expect(rootChildren.contains(where: { $0.name == "README.md" && !$0.isDirectory }))
+        #expect(!rootChildren.contains(where: { $0.name == ".obsidian" }))
+
+        // Directories sorted before files
+        if let notesIdx = rootChildren.firstIndex(where: { $0.name == "Notes" }),
+           let readmeIdx = rootChildren.firstIndex(where: { $0.name == "README.md" }) {
+            #expect(notesIdx < readmeIdx)
+        }
+
+        // Test subfolder scanning and ignored directory exclusion
+        let notesItem = rootChildren.first(where: { $0.name == "Notes" })!
+        #expect(notesItem.children == nil)
+        notesItem.loadChildrenIfNeeded()
+        let notesChildren = notesItem.children ?? []
+        #expect(notesChildren.contains(where: { $0.name == "Sub" && $0.isDirectory }))
+        #expect(notesChildren.contains(where: { $0.name == "test1.md" && !$0.isDirectory }))
+        #expect(notesChildren.contains(where: { $0.name == "test2.markdown" && !$0.isDirectory }))
+        #expect(!notesChildren.contains(where: { $0.name == "photo.png" }))
+        #expect(!notesChildren.contains(where: { $0.name == "node_modules" }))
+    }
+
+    @MainActor
+    @Test func testVaultNavigatorViewHierarchyAndSelection() throws {
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("mdvu_nav_view_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let note = tempDir.appendingPathComponent("Document.md")
+        try "# Doc".write(to: note, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let navView = VaultNavigatorView(frame: NSRect(x: 0, y: 0, width: 240, height: 400))
+        navView.setRoot(documentURL: note)
+
+        #expect(navView.rootItem != nil)
+        #expect(navView.rootItem?.url.standardizedFileURL.path == tempDir.standardizedFileURL.path)
+
+        var openedURL: URL?
+        navView.onFileSelected = { openedURL = $0 }
+        navView.selectDocument(url: note)
+        navView.onFileSelected?(note)
+        #expect(openedURL == note)
+
+        var closed = false
+        navView.onCloseRequested = { closed = true }
+        // Verify close callback wiring
+        navView.onCloseRequested?()
+        #expect(closed)
+    }
+
+    @MainActor
+    @Test func testThreePaneSplitLayout() {
+        let fixture = Self.fixtureURL("test-light.md")
+        let profiler = StartupProfiler()
+        let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
+
+        // Open both Left TOC and Right File Navigator
+        if !controller.isSidebarVisible { controller.toggleContents(nil) }
+        controller.toggleFileNavigator(nil)
+
+        #expect(controller.isSidebarVisible)
+        #expect(controller.isFileNavigatorVisible)
+
+        // Toggle navigator off
+        controller.toggleFileNavigator(nil)
+        #expect(!controller.isFileNavigatorVisible)
+        #expect(controller.isSidebarVisible)
+    }
+
+    @MainActor
+    @Test func testToolbarDepressedStatesAndBackForwardControls() {
+        let fixture = Self.fixtureURL("test-light.md")
+        let fixture2 = Self.fixtureURL("test-dark.md")
+        let profiler = StartupProfiler()
+        let controller = DocumentWindowController(url: fixture, directoryMode: false, options: .default, profiler: profiler)
+
+        let toolbar = controller.window?.toolbar
+        #expect(toolbar != nil)
+
+        // Find toolbar items
+        let sidebarItem = toolbar?.items.first { $0.itemIdentifier == NSToolbarItem.Identifier("mdvu.contents") }
+        let navItem = toolbar?.items.first { $0.itemIdentifier == NSToolbarItem.Identifier("mdvu.navigator") }
+        let backForwardItem = toolbar?.items.first { $0.itemIdentifier == NSToolbarItem.Identifier("mdvu.backForward") }
+
+        #expect(sidebarItem != nil)
+        #expect(navItem != nil)
+        #expect(backForwardItem != nil)
+
+        let sidebarBtn = sidebarItem?.view as? NSButton
+        let navBtn = navItem?.view as? NSButton
+        let backForwardCtrl = backForwardItem?.view as? NSSegmentedControl
+
+        #expect(sidebarBtn != nil)
+        #expect(navBtn != nil)
+        #expect(backForwardCtrl != nil)
+
+        // Verify initial depressed states match visibility
+        #expect(sidebarBtn?.state == (controller.isSidebarVisible ? .on : .off))
+        #expect(navBtn?.state == (controller.isFileNavigatorVisible ? .on : .off))
+
+        // Toggle TOC and verify depressed state flips
+        let prevSidebarState = controller.isSidebarVisible
+        controller.toggleContents(nil)
+        #expect(controller.isSidebarVisible != prevSidebarState)
+        #expect(sidebarBtn?.state == (controller.isSidebarVisible ? .on : .off))
+
+        // Toggle Navigator and verify depressed state flips
+        let prevNavState = controller.isFileNavigatorVisible
+        controller.toggleFileNavigator(nil)
+        #expect(controller.isFileNavigatorVisible != prevNavState)
+        #expect(navBtn?.state == (controller.isFileNavigatorVisible ? .on : .off))
+
+        // Back/forward controls initially disabled
+        #expect(!controller.canGoBack)
+        #expect(!controller.canGoForward)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 0) == false)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 1) == false)
+
+        // Turn navigator on and navigate to second file
+        if !controller.isFileNavigatorVisible { controller.toggleFileNavigator(nil) }
+        #expect(controller.isFileNavigatorVisible)
+
+        // Navigate to fixture2
+        controller.openDocument(fixture2)
+        #expect(controller.canGoBack)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 0) == true)
+        #expect(!controller.canGoForward)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 1) == false)
+
+        // Go back
+        controller.goBack(nil)
+        #expect(!controller.canGoBack)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 0) == false)
+        #expect(controller.canGoForward)
+        #expect(backForwardCtrl?.isEnabled(forSegment: 1) == true)
+    }
+
+    @MainActor
+    @Test func testVaultNavigatorOutlineViewPopulated() throws {
+        let fixture = Self.fixtureURL("test-light.md")
+        let navView = VaultNavigatorView(frame: NSRect(x: 0, y: 0, width: 240, height: 400))
+        navView.setRoot(documentURL: fixture)
+
+        #expect(navView.rootItem != nil)
+        let childCount = navView.outlineView(NSOutlineView(), numberOfChildrenOfItem: nil)
+        #expect(childCount > 0)
+
+        let firstChild = navView.outlineView(NSOutlineView(), child: 0, ofItem: nil) as? VaultItem
+        #expect(firstChild != nil)
+
+        let cell = navView.outlineView(NSOutlineView(), viewFor: nil, item: firstChild!) as? NSTableCellView
+        #expect(cell != nil)
+        #expect(cell?.textField?.stringValue.isEmpty == false)
+        #expect(cell?.imageView?.image != nil)
     }
 }
 

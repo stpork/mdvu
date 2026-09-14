@@ -191,7 +191,7 @@ private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
-final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSTableViewDataSource, NSTableViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
+final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSTableViewDataSource, NSTableViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSToolbarItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
     var onOpenURL: ((URL) -> Void)?
     var onDocumentChange: ((URL) -> Void)?
     var onClose: (() -> Void)?
@@ -219,14 +219,22 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var snapshotWritten = false
     private(set) var isFullWidth: Bool
     private(set) var isSidebarVisible: Bool = false
+    private(set) var isFileNavigatorVisible: Bool = false
     private var lastSidebarWidth: CGFloat = 340
     private var suggestedSidebarWidth: CGFloat = 340
     private var longestSidebarWidth: CGFloat = 340
+    private var lastNavigatorWidth: CGFloat = 240
     private var hasUserResizedSidebar = false
+    private var hasUserResizedNavigator = false
     private var isApplyingSidebarPosition = false
+    private var vaultNavigatorView: VaultNavigatorView?
     private weak var fullWidthToolbarItem: NSToolbarItem?
     private weak var sidebarToolbarItem: NSToolbarItem?
-    private weak var backForwardToolbarItem: NSToolbarItemGroup?
+    private weak var sidebarButton: NSButton?
+    private weak var fileNavigatorToolbarItem: NSToolbarItem?
+    private weak var fileNavigatorButton: NSButton?
+    private weak var backForwardToolbarItem: NSToolbarItem?
+    private weak var backForwardControl: NSSegmentedControl?
     private weak var zoomToolbarItem: NSToolbarItem?
     private weak var zoomMinusButton: NSButton?
     private weak var zoomField: ZoomLevelTextField?
@@ -275,6 +283,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private static let searchItem = NSToolbarItem.Identifier("mdvu.search")
     private static let zoomItem = NSToolbarItem.Identifier("mdvu.zoom")
     private static let fullWidthItem = NSToolbarItem.Identifier("mdvu.fullWidth")
+    private static let navigatorItem = NSToolbarItem.Identifier("mdvu.navigator")
     private static let scriptHandlerNames = ["diagramCache", "tableOfContents", "navigationHistory"]
     private static let measureScrollJS = "({y:scrollY,h:Math.max(1,document.documentElement.scrollHeight-innerHeight)})"
 
@@ -296,6 +305,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         self.currentDialect = options.dialect
         self.isFullWidth = options.fullWidth ?? UserDefaults.standard.bool(forKey: "layout.fullWidth")
         self.isSidebarVisible = options.snapshotPath != nil ? true : (UserDefaults.standard.object(forKey: "layout.sidebarVisible") as? Bool ?? false)
+        self.isFileNavigatorVisible = options.navigator ?? false
         if let prewarmed = WebKitPrewarmer.takePrewarmedWebView() {
             webView = prewarmed
         } else {
@@ -310,6 +320,16 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         window.controller = self
         window.delegate = self; window.titlebarAppearsTransparent = false; window.titleVisibility = .visible; window.tabbingMode = .preferred
         systemAppearanceIsDark = effectiveAppearanceIsDark
+        if isFileNavigatorVisible {
+            let newNav = VaultNavigatorView()
+            newNav.onFileSelected = { [weak self] selectedURL in
+                self?.openDocument(selectedURL)
+            }
+            newNav.onCloseRequested = { [weak self] in
+                self?.toggleFileNavigator(nil)
+            }
+            vaultNavigatorView = newNav
+        }
         if options.snapshotPath == nil { window.setFrameAutosaveName("mdvu.mainWindow") }
         configureToolbar()
         magnificationObservation = webView.observe(\.magnification, options: [.new]) { [weak self] _, _ in
@@ -339,6 +359,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         renderQueue.cancelAllOperations()
         watcher?.invalidate()
         watcher = nil
+        vaultNavigatorView?.onFileSelected = nil
+        vaultNavigatorView?.onCloseRequested = nil
+        vaultNavigatorView = nil
         if let currentRenderFileURL {
             try? FileManager.default.removeItem(at: currentRenderFileURL)
             self.currentRenderFileURL = nil
@@ -403,18 +426,16 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         sidebarContainer.addSubview(header); sidebarContainer.addSubview(content)
         NSLayoutConstraint.activate([header.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), header.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), header.topAnchor.constraint(equalTo: sidebarContainer.topAnchor), content.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), content.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), content.topAnchor.constraint(equalTo: header.bottomAnchor), content.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor)])
         sidebarContainer.frame.size.width = lastSidebarWidth
-        if isSidebarVisible { split.addArrangedSubview(sidebarContainer) }
-        split.addArrangedSubview(webView)
-        if isSidebarVisible { split.setHoldingPriority(.defaultHigh, forSubviewAt: 0) }
         let dropView = DropView(frame: .zero, handler: { [weak self] in self?.handleDrop($0) })
         dropView.appearanceHandler = { [weak self] in self?.appearanceDidChange() }
         window?.contentView = dropView
         window?.contentView?.addSubview(split)
         split.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([split.leadingAnchor.constraint(equalTo: window!.contentView!.leadingAnchor), split.trailingAnchor.constraint(equalTo: window!.contentView!.trailingAnchor), split.topAnchor.constraint(equalTo: window!.contentView!.topAnchor), split.bottomAnchor.constraint(equalTo: window!.contentView!.bottomAnchor)])
+        rebuildSplitSubviews()
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.isSidebarVisible else { return }
-            self.applySidebarPosition(self.lastSidebarWidth)
+            guard let self else { return }
+            self.applyAllDividerPositions()
         }
     }
 
@@ -427,33 +448,54 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         window?.toolbar = toolbar
     }
 
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [Self.backForwardItem, Self.sidebarItem, .flexibleSpace, Self.searchItem, Self.zoomItem, Self.fullWidthItem] }
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [Self.backForwardItem, Self.sidebarItem, .flexibleSpace, Self.searchItem, Self.zoomItem, Self.fullWidthItem] }
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [Self.backForwardItem, Self.sidebarItem, .flexibleSpace, Self.searchItem, Self.zoomItem, Self.fullWidthItem, Self.navigatorItem] }
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [Self.backForwardItem, Self.sidebarItem, .flexibleSpace, Self.searchItem, Self.zoomItem, Self.fullWidthItem, Self.navigatorItem] }
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         switch identifier {
         case Self.backForwardItem:
-            let item = NSToolbarItemGroup(
-                itemIdentifier: identifier,
-                images: [
-                    NSImage(systemSymbolName: "chevron.backward", accessibilityDescription: "Back")!,
-                    NSImage(systemSymbolName: "chevron.forward", accessibilityDescription: "Forward")!
-                ],
-                selectionMode: .momentary,
-                labels: ["Back", "Forward"],
-                target: self,
-                action: #selector(backForwardAction(_:))
-            )
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = "Back/Forward"
+            item.paletteLabel = "Back/Forward"
             item.isNavigational = true
-            item.subitems[0].toolTip = "Go back (⌘[)"
-            item.subitems[1].toolTip = "Go forward (⌘])"
+            let control = NSSegmentedControl()
+            control.segmentCount = 2
+            control.trackingMode = .momentary
+            control.segmentStyle = .separated
+            control.setImage(NSImage(systemSymbolName: "chevron.backward", accessibilityDescription: "Back")!, forSegment: 0)
+            control.setImage(NSImage(systemSymbolName: "chevron.forward", accessibilityDescription: "Forward")!, forSegment: 1)
+            control.setToolTip("Go back (⌘[)", forSegment: 0)
+            control.setToolTip("Go forward (⌘])", forSegment: 1)
+            control.target = self
+            control.action = #selector(backForwardAction(_:))
+            control.setEnabled(navigationHistory.canGoBack, forSegment: 0)
+            control.setEnabled(navigationHistory.canGoForward, forSegment: 1)
+            item.view = control
             backForwardToolbarItem = item
+            backForwardControl = control
             updateBackForwardControls()
             return item
         case Self.sidebarItem:
             let item = NSToolbarItem(itemIdentifier: identifier)
-            item.target = self; item.action = #selector(toggleContents(_:)); item.isBordered = true
+            item.label = "Contents"
+            item.paletteLabel = "Contents"
             item.isNavigational = true
-            sidebarToolbarItem = item; updateSidebarControl()
+            let button = NSButton()
+            button.bezelStyle = .texturedRounded
+            button.setButtonType(.pushOnPushOff)
+            button.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Toggle table of contents")
+            button.target = self
+            button.action = #selector(toggleContents(_:))
+            button.state = isSidebarVisible ? .on : .off
+            button.toolTip = isSidebarVisible ? "Hide table of contents" : "Show table of contents"
+            button.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 38),
+                button.heightAnchor.constraint(equalToConstant: 26)
+            ])
+            item.view = button
+            sidebarToolbarItem = item
+            sidebarButton = button
+            updateSidebarControl()
             return item
         case Self.zoomItem:
             let item = NSToolbarItem(itemIdentifier: identifier)
@@ -558,6 +600,30 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             searchField = field
             updateToolbarVisibilityPriorities()
             return item
+        case Self.navigatorItem:
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = "Navigator"
+            item.paletteLabel = "Navigator"
+            let button = NSButton()
+            button.bezelStyle = .texturedRounded
+            button.setButtonType(.pushOnPushOff)
+            let image = NSImage(systemSymbolName: "sidebar.trailing", accessibilityDescription: "Toggle File Navigator")
+                ?? NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Toggle File Navigator")
+            button.image = image
+            button.target = self
+            button.action = #selector(toggleFileNavigator(_:))
+            button.state = isFileNavigatorVisible ? .on : .off
+            button.toolTip = isFileNavigatorVisible ? "Hide File Navigator (⌥⌘D)" : "Show File Navigator (⌥⌘D)"
+            button.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 38),
+                button.heightAnchor.constraint(equalToConstant: 26)
+            ])
+            item.view = button
+            fileNavigatorToolbarItem = item
+            fileNavigatorButton = button
+            updateFileNavigatorControl()
+            return item
         default:
             return nil
         }
@@ -566,7 +632,16 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private func updateSidebarControl() {
         sidebarToolbarItem?.label = isSidebarVisible ? "Hide Contents" : "Show Contents"
         sidebarToolbarItem?.toolTip = isSidebarVisible ? "Hide table of contents" : "Show table of contents"
-        sidebarToolbarItem?.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Toggle table of contents")
+        sidebarButton?.state = isSidebarVisible ? .on : .off
+        sidebarButton?.toolTip = isSidebarVisible ? "Hide table of contents" : "Show table of contents"
+        updateToolbarVisibilityPriorities()
+    }
+
+    private func updateFileNavigatorControl() {
+        fileNavigatorToolbarItem?.label = isFileNavigatorVisible ? "Hide Navigator" : "Show Navigator"
+        fileNavigatorToolbarItem?.toolTip = isFileNavigatorVisible ? "Hide File Navigator (⌥⌘D)" : "Show File Navigator (⌥⌘D)"
+        fileNavigatorButton?.state = isFileNavigatorVisible ? .on : .off
+        fileNavigatorButton?.toolTip = isFileNavigatorVisible ? "Hide File Navigator (⌥⌘D)" : "Show File Navigator (⌥⌘D)"
         updateToolbarVisibilityPriorities()
     }
 
@@ -634,7 +709,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         renderQueue.addOperation(operation)
     }
 
-    private func openDocument(_ url: URL, preserveScroll: Bool = false, isHistoryNavigation: Bool = false) {
+    func openDocument(_ url: URL, preserveScroll: Bool = false, isHistoryNavigation: Bool = false) {
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let fragment = components?.fragment?.removingPercentEncoding
         components?.fragment = nil
@@ -650,13 +725,17 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             if !options.isDialectExplicit {
                 userSelectedDialect = nil
             }
+            if isFileNavigatorVisible {
+                vaultNavigatorView?.setRoot(documentURL: documentURL)
+            }
         }
 
         if !preserveScroll && !isHistoryNavigation && !isNavigatingHistory {
+            self.navigationHistory.push(url: documentURL, fragment: fragment, currentScrollRatio: nil)
+            self.updateBackForwardControls()
             captureCurrentScrollRatio { [weak self] ratio in
-                guard let self else { return }
+                guard let self, let ratio else { return }
                 self.navigationHistory.push(url: documentURL, fragment: fragment, currentScrollRatio: ratio)
-                self.updateBackForwardControls()
             }
         }
 
@@ -850,21 +929,116 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         tocScrollView?.isHidden = !showingContents
     }
 
+    private func updateSplitHoldingPriorities() {
+        for (index, subview) in split.arrangedSubviews.enumerated() {
+            if subview === webView {
+                split.setHoldingPriority(.defaultLow, forSubviewAt: index)
+            } else {
+                split.setHoldingPriority(.defaultHigh, forSubviewAt: index)
+            }
+        }
+    }
+
+    private func rebuildSplitSubviews() {
+        isApplyingSidebarPosition = true
+        defer { isApplyingSidebarPosition = false }
+
+        if isSidebarVisible {
+            sidebarContainer.frame.size.width = lastSidebarWidth
+        }
+        if isFileNavigatorVisible, let nav = vaultNavigatorView {
+            nav.frame.size.width = lastNavigatorWidth
+        }
+
+        var desiredSubviews: [NSView] = []
+        if isSidebarVisible {
+            desiredSubviews.append(sidebarContainer)
+        }
+        desiredSubviews.append(webView)
+        if isFileNavigatorVisible, let nav = vaultNavigatorView {
+            desiredSubviews.append(nav)
+        }
+
+        if split.arrangedSubviews != desiredSubviews {
+            for subview in split.arrangedSubviews where !desiredSubviews.contains(subview) {
+                split.removeArrangedSubview(subview)
+                subview.removeFromSuperview()
+            }
+            for (i, desired) in desiredSubviews.enumerated() {
+                if i < split.arrangedSubviews.count {
+                    if split.arrangedSubviews[i] !== desired {
+                        split.insertArrangedSubview(desired, at: i)
+                    }
+                } else {
+                    split.addArrangedSubview(desired)
+                }
+            }
+        }
+
+        updateSplitHoldingPriorities()
+        applyAllDividerPositions()
+    }
+
+    private func applyAllDividerPositions() {
+        guard split.bounds.width > 0 else { return }
+        isApplyingSidebarPosition = true
+        defer { isApplyingSidebarPosition = false }
+
+        let totalWidth = split.bounds.width
+        let maxNavWidth = min(450, max(240, floor(totalWidth * 0.45)))
+        let clampedNavWidth = max(180, min(lastNavigatorWidth, maxNavWidth))
+
+        if isSidebarVisible && isFileNavigatorVisible {
+            let leftWidth = max(SidebarSizing.minimumWidth, min(lastSidebarWidth, maximumSidebarWidth(in: split)))
+            split.setPosition(leftWidth, ofDividerAt: 0)
+            let rightCoord = totalWidth - clampedNavWidth
+            split.setPosition(rightCoord, ofDividerAt: 1)
+            lastSidebarWidth = leftWidth
+            lastNavigatorWidth = clampedNavWidth
+        } else if isSidebarVisible {
+            let leftWidth = max(SidebarSizing.minimumWidth, min(lastSidebarWidth, maximumSidebarWidth(in: split)))
+            split.setPosition(leftWidth, ofDividerAt: 0)
+            lastSidebarWidth = leftWidth
+        } else if isFileNavigatorVisible {
+            let rightCoord = totalWidth - clampedNavWidth
+            split.setPosition(rightCoord, ofDividerAt: 0)
+            lastNavigatorWidth = clampedNavWidth
+        }
+    }
+
     @objc func toggleContents(_ sender: Any?) {
         if isSidebarVisible {
             lastSidebarWidth = max(SidebarSizing.minimumWidth, sidebarContainer.frame.width)
-            split.removeArrangedSubview(sidebarContainer)
-            sidebarContainer.removeFromSuperview()
-            isSidebarVisible = false
-        } else {
-            isSidebarVisible = true
-            split.insertArrangedSubview(sidebarContainer, at: 0)
-            split.setHoldingPriority(.defaultHigh, forSubviewAt: 0)
-            let target = hasUserResizedSidebar ? min(lastSidebarWidth, maximumSidebarWidth(in: split)) : suggestedSidebarWidth
-            applySidebarPosition(target)
         }
+        isSidebarVisible.toggle()
         UserDefaults.standard.set(isSidebarVisible, forKey: "layout.sidebarVisible")
+        rebuildSplitSubviews()
         updateSidebarControl()
+    }
+
+    @objc func toggleFileNavigator(_ sender: Any?) {
+        if isFileNavigatorVisible, let nav = vaultNavigatorView {
+            lastNavigatorWidth = max(180, nav.frame.width)
+        }
+        isFileNavigatorVisible.toggle()
+        UserDefaults.standard.set(isFileNavigatorVisible, forKey: "layout.fileNavigatorVisible")
+        if isFileNavigatorVisible {
+            if vaultNavigatorView == nil {
+                let newNav = VaultNavigatorView()
+                newNav.onFileSelected = { [weak self] selectedURL in
+                    self?.openDocument(selectedURL)
+                }
+                newNav.onCloseRequested = { [weak self] in
+                    self?.toggleFileNavigator(nil)
+                }
+                vaultNavigatorView = newNav
+            }
+            if let docURL = currentURL {
+                vaultNavigatorView?.setRoot(documentURL: docURL)
+            }
+        }
+        rebuildSplitSubviews()
+        updateFileNavigatorControl()
     }
 
     private func flattenedHeadings() -> [TOCHeading] {
@@ -897,30 +1071,67 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     private func applySidebarPosition(_ width: CGFloat) {
         let constrained = max(SidebarSizing.minimumWidth, min(width, maximumSidebarWidth(in: split)))
-        isApplyingSidebarPosition = true
-        split.setPosition(constrained, ofDividerAt: 0)
-        isApplyingSidebarPosition = false
         lastSidebarWidth = constrained
+        applyAllDividerPositions()
     }
 
     func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
-        dividerIndex == 0 ? max(SidebarSizing.minimumWidth, proposedMinimumPosition) : proposedMinimumPosition
+        let totalWidth = splitView.bounds.width
+        let maxNavWidth = min(450, max(240, floor(totalWidth * 0.45)))
+        if isSidebarVisible && isFileNavigatorVisible {
+            if dividerIndex == 0 {
+                return max(SidebarSizing.minimumWidth, proposedMinimumPosition)
+            } else {
+                let minXForWebView = sidebarContainer.frame.width + 200
+                let minXForNav = totalWidth - maxNavWidth
+                return max(max(minXForWebView, minXForNav), proposedMinimumPosition)
+            }
+        } else if isSidebarVisible {
+            return dividerIndex == 0 ? max(SidebarSizing.minimumWidth, proposedMinimumPosition) : proposedMinimumPosition
+        } else if isFileNavigatorVisible {
+            let minXForWebView: CGFloat = 200
+            let minXForNav = totalWidth - maxNavWidth
+            return max(max(minXForWebView, minXForNav), proposedMinimumPosition)
+        }
+        return proposedMinimumPosition
     }
 
     func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
-        dividerIndex == 0 ? min(maximumSidebarWidth(in: splitView), proposedMaximumPosition) : proposedMaximumPosition
+        let totalWidth = splitView.bounds.width
+        if isSidebarVisible && isFileNavigatorVisible {
+            if dividerIndex == 0 {
+                return min(maximumSidebarWidth(in: splitView), proposedMaximumPosition)
+            } else {
+                let rightLimit = totalWidth - 180
+                return min(rightLimit, proposedMaximumPosition)
+            }
+        } else if isSidebarVisible {
+            return dividerIndex == 0 ? min(maximumSidebarWidth(in: splitView), proposedMaximumPosition) : proposedMaximumPosition
+        } else if isFileNavigatorVisible {
+            let rightLimit = totalWidth - 180
+            return min(rightLimit, proposedMaximumPosition)
+        }
+        return proposedMaximumPosition
     }
 
     func splitViewDidResizeSubviews(_ notification: Notification) {
-        guard isSidebarVisible, sidebarContainer.superview === split, sidebarContainer.frame.width >= SidebarSizing.minimumWidth else { return }
-        let maximum = maximumSidebarWidth(in: split)
-        if !isApplyingSidebarPosition, sidebarContainer.frame.width > maximum + 0.5 {
-            applySidebarPosition(maximum)
-            return
+        guard !isApplyingSidebarPosition else { return }
+        if isSidebarVisible, sidebarContainer.superview === split, sidebarContainer.frame.width >= SidebarSizing.minimumWidth {
+            let maximum = maximumSidebarWidth(in: split)
+            if sidebarContainer.frame.width > maximum + 0.5 {
+                applySidebarPosition(maximum)
+                return
+            }
+            lastSidebarWidth = sidebarContainer.frame.width
+            if NSApp.currentEvent?.type == .leftMouseDragged {
+                hasUserResizedSidebar = true
+            }
         }
-        lastSidebarWidth = sidebarContainer.frame.width
-        if !isApplyingSidebarPosition, NSApp.currentEvent?.type == .leftMouseDragged {
-            hasUserResizedSidebar = true
+        if isFileNavigatorVisible, let nav = vaultNavigatorView, nav.superview === split, nav.frame.width >= 180 {
+            lastNavigatorWidth = nav.frame.width
+            if NSApp.currentEvent?.type == .leftMouseDragged {
+                hasUserResizedNavigator = true
+            }
         }
     }
 
@@ -1067,11 +1278,19 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         webView.evaluateJavaScript("document.documentElement.classList.toggle('full-width', \(isFullWidth ? "true" : "false"))")
     }
 
-    @objc private func backForwardAction(_ sender: NSToolbarItemGroup) {
-        if sender.selectedIndex == 0 {
-            goBack(sender)
-        } else if sender.selectedIndex == 1 {
-            goForward(sender)
+    @objc private func backForwardAction(_ sender: Any?) {
+        if let control = sender as? NSSegmentedControl {
+            if control.selectedSegment == 0 {
+                goBack(sender)
+            } else if control.selectedSegment == 1 {
+                goForward(sender)
+            }
+        } else if let group = sender as? NSToolbarItemGroup {
+            if group.selectedIndex == 0 {
+                goBack(sender)
+            } else if group.selectedIndex == 1 {
+                goForward(sender)
+            }
         }
     }
 
@@ -1079,11 +1298,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     var canGoForward: Bool { navigationHistory.canGoForward }
 
     private func navigateHistory(step: @escaping (Double?) -> NavigationEntry?) {
-        captureCurrentScrollRatio { [weak self] ratio in
-            guard let self, let target = step(ratio) else { return }
-            self.restoreNavigationEntry(target)
-            self.updateBackForwardControls()
-        }
+        guard let target = step(nil) else { return }
+        self.restoreNavigationEntry(target)
+        self.updateBackForwardControls()
     }
 
     @objc func goBack(_ sender: Any? = nil) {
@@ -1140,8 +1357,20 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     private func updateBackForwardControls() {
-        backForwardToolbarItem?.subitems[0].isEnabled = navigationHistory.canGoBack
-        backForwardToolbarItem?.subitems[1].isEnabled = navigationHistory.canGoForward
+        backForwardControl?.setEnabled(navigationHistory.canGoBack, forSegment: 0)
+        backForwardControl?.setEnabled(navigationHistory.canGoForward, forSegment: 1)
+        if let group = backForwardToolbarItem as? NSToolbarItemGroup, group.subitems.count >= 2 {
+            group.subitems[0].isEnabled = navigationHistory.canGoBack
+            group.subitems[1].isEnabled = navigationHistory.canGoForward
+        }
+    }
+
+    func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+        if item.itemIdentifier == Self.backForwardItem {
+            updateBackForwardControls()
+            return navigationHistory.canGoBack || navigationHistory.canGoForward
+        }
+        return true
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -1151,6 +1380,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if menuItem.action == #selector(toggleContents(_:)) {
             menuItem.state = isSidebarVisible ? .on : .off
             menuItem.title = isSidebarVisible ? "Hide Table of Contents" : "Show Table of Contents"
+        }
+        if menuItem.action == #selector(toggleFileNavigator(_:)) {
+            menuItem.state = isFileNavigatorVisible ? .on : .off
+            menuItem.title = isFileNavigatorVisible ? "Hide File Navigator" : "Show File Navigator"
+            return true
         }
         if menuItem.action == #selector(selectDialectAuto(_:)) {
             menuItem.state = userSelectedDialect == nil ? .on : .off

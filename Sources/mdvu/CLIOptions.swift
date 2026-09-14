@@ -25,13 +25,14 @@ enum MarkdownDocument {
 }
 
 struct CLIOptions {
-    static let usage = "usage: mdvu [--version] [--help] [--theme system|light|dark] [--dialect generic|github|obsidian] [--no-mermaid] [--full-width] [--snapshot PNG] FILE|DIR …"
+    static let usage = "usage: mdvu [--version] [--help] [--theme system|light|dark] [--dialect generic|github|obsidian] [--no-mermaid] [--full-width] [--navigator] [--snapshot PNG] FILE|DIR …"
     var paths: [String] = []
     var dialect: MarkdownDialect = .generic
     var isDialectExplicit = false
     var theme: ThemeChoice = .system
     var mermaid = true
     var fullWidth: Bool?
+    var navigator: Bool?
     var snapshotPath: String?
     static let `default` = CLIOptions()
 
@@ -47,6 +48,7 @@ struct CLIOptions {
             case "--theme": if let value = iterator.next(), let theme = ThemeChoice(rawValue: value) { result.theme = theme }
             case "--no-mermaid": result.mermaid = false
             case "--full-width": result.fullWidth = true
+            case "--navigator": result.navigator = true
             case "--snapshot": result.snapshotPath = iterator.next()
             case "--help", "-h", "--version", "-v": break
             default: if !argument.hasPrefix("-") { result.paths.append(argument) }

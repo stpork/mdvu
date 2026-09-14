@@ -123,6 +123,8 @@ enum AppMenu {
         viewMenu.addItem(.separator())
         let contents = viewMenu.addItem(withTitle: "Hide Table of Contents", action: #selector(DocumentWindowController.toggleContents(_:)), keyEquivalent: "s")
         contents.keyEquivalentModifierMask = [.command, .control]
+        let navigator = viewMenu.addItem(withTitle: "Show File Navigator", action: #selector(DocumentWindowController.toggleFileNavigator(_:)), keyEquivalent: "d")
+        navigator.keyEquivalentModifierMask = [.command, .option]
         let fullWidth = viewMenu.addItem(withTitle: "Full Width", action: #selector(DocumentWindowController.toggleFullWidth(_:)), keyEquivalent: "w")
         fullWidth.keyEquivalentModifierMask = [.command, .shift]
         viewMenu.addItem(.separator())
