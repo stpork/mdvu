@@ -210,23 +210,16 @@ private final class TOCOutlineView: NSOutlineView {
     }
 }
 
-final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSTableViewDataSource, NSTableViewDelegate, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSToolbarItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
+final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler, NSOutlineViewDataSource, NSOutlineViewDelegate, NSToolbarDelegate, NSMenuItemValidation, NSToolbarItemValidation, NSSearchFieldDelegate, NSSplitViewDelegate {
     var onOpenURL: ((URL) -> Void)?
     var onDocumentChange: ((URL) -> Void)?
     var onClose: (() -> Void)?
     private let webView: WKWebView
-    private let fileTable = NSTableView()
     private let tocOutline = TOCOutlineView()
     private let sidebarContainer = NSView()
     private let split = NSSplitView()
-    private let rootURL: URL
     private var currentURL: URL?
-    private var files: [URL] = []
-    private var fileRelativePaths: [String] = []
     private var tocRoots: [TOCNode] = []
-    private var fileScrollView: NSScrollView?
-    private var tocScrollView: NSScrollView?
-    private var sidebarModeControl: NSSegmentedControl?
     private var watcher: FileWatcher?
     private let options: CLIOptions
     private let profiler: StartupProfiler
@@ -290,7 +283,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         return queue
     }()
     private var renderOperation: Operation?
-    private var directoryOperation: Operation?
     private var isTornDown = false
     private var renderGeneration = 0
     private var currentRenderFileURL: URL?
@@ -318,14 +310,14 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     init(url: URL, directoryMode: Bool, options: CLIOptions, profiler: StartupProfiler) {
-        self.rootURL = url; self.options = options; self.profiler = profiler
+        self.options = options; self.profiler = profiler
         let cache = DiagramCache()
         self.cache = cache
         self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: options.isDialectExplicit)
         self.currentDialect = options.dialect
         self.isFullWidth = options.fullWidth ?? (options.snapshotPath != nil ? false : UserDefaults.standard.bool(forKey: "layout.fullWidth"))
         self.isSidebarVisible = options.snapshotPath != nil ? true : (UserDefaults.standard.object(forKey: "layout.sidebarVisible") as? Bool ?? false)
-        self.isFileNavigatorVisible = options.navigator ?? false
+        self.isFileNavigatorVisible = directoryMode || (options.navigator ?? false)
         if let prewarmed = WebKitPrewarmer.takePrewarmedWebView() {
             webView = prewarmed
         } else {
@@ -340,16 +332,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         window.controller = self
         window.delegate = self; window.titlebarAppearsTransparent = false; window.titleVisibility = .visible; window.tabbingMode = .preferred
         systemAppearanceIsDark = effectiveAppearanceIsDark
-        if isFileNavigatorVisible {
-            let newNav = VaultNavigatorView()
-            newNav.onFileSelected = { [weak self] selectedURL in
-                self?.openDocument(selectedURL)
-            }
-            newNav.onCloseRequested = { [weak self] in
-                self?.toggleFileNavigator(nil)
-            }
-            vaultNavigatorView = newNav
-        }
+        if isFileNavigatorVisible { createFileNavigator() }
         if options.snapshotPath == nil { window.setFrameAutosaveName("mdvu.mainWindow") }
         configureToolbar()
         magnificationObservation = webView.observe(\.magnification, options: [.new]) { [weak self] _, _ in
@@ -359,7 +342,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         webView.navigationDelegate = self
         Self.scriptHandlerNames.forEach { webView.configuration.userContentController.add(WeakScriptMessageHandler(self), name: $0) }
-        configureLayout(directoryMode: directoryMode)
+        configureLayout()
         if directoryMode { loadDirectory(url) } else { openDocument(url) }
         profiler.mark("window.created")
     }
@@ -379,8 +362,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         webView.navigationDelegate = nil
         magnificationObservation?.invalidate()
         magnificationObservation = nil
-        directoryOperation?.cancel()
-        directoryOperation = nil
         renderOperation?.cancel()
         renderOperation = nil
         renderQueue.cancelAllOperations()
@@ -388,6 +369,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         watcher = nil
         vaultNavigatorView?.onFileSelected = nil
         vaultNavigatorView?.onCloseRequested = nil
+        vaultNavigatorView?.removeFromSuperview()
         vaultNavigatorView = nil
         if let currentRenderFileURL {
             try? FileManager.default.removeItem(at: currentRenderFileURL)
@@ -406,7 +388,14 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     override func showWindow(_ sender: Any?) {
-        super.showWindow(sender); window?.center(); window?.makeKeyAndOrderFront(sender)
+        super.showWindow(sender)
+        if options.snapshotPath != nil, let window, let screen = NSScreen.screens.first {
+            // Keep screenshot rasterization stable when the active display changes.
+            let bounds = screen.visibleFrame
+            window.setFrameOrigin(NSPoint(x: bounds.midX - window.frame.width / 2,
+                                          y: bounds.midY - window.frame.height / 2))
+        } else { window?.center() }
+        window?.makeKeyAndOrderFront(sender)
         if !hasShown { hasShown = true; profiler.mark("window.visible") }
     }
     func windowWillClose(_ notification: Notification) {
@@ -414,42 +403,20 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         onClose?()
     }
 
-    private func configureLayout(directoryMode: Bool) {
+    private func configureLayout() {
         split.isVertical = true; split.dividerStyle = .thin; split.delegate = self
         let tocColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("toc")); tocColumn.title = "Table of Contents"
         tocOutline.addTableColumn(tocColumn); tocOutline.outlineTableColumn = tocColumn; tocOutline.headerView = nil
         tocOutline.onRepeatedSelection = { [weak self] in self?.activateSelectedTOCHeading() }
         tocOutline.delegate = self; tocOutline.dataSource = self; tocOutline.rowHeight = 25; tocOutline.indentationPerLevel = 16
         let tocScroll = NSScrollView(); tocScroll.documentView = tocOutline; tocScroll.hasVerticalScroller = true; tocScroll.drawsBackground = false
-        tocScrollView = tocScroll
 
-        let header = NSView()
-        header.translatesAutoresizingMaskIntoConstraints = false
-        header.heightAnchor.constraint(equalToConstant: 36).isActive = true
-        if directoryMode {
-            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("file")); column.title = "Markdown"
-            fileTable.addTableColumn(column); fileTable.headerView = nil; fileTable.delegate = self; fileTable.dataSource = self; fileTable.rowSizeStyle = .small
-            let scroll = NSScrollView(); scroll.documentView = fileTable; scroll.hasVerticalScroller = true; scroll.drawsBackground = false
-            fileScrollView = scroll
-            let control = NSSegmentedControl(labels: ["Files", "Contents"], trackingMode: .selectOne, target: self, action: #selector(changeSidebarMode(_:)))
-            control.selectedSegment = 0; control.controlSize = .small; sidebarModeControl = control
-            header.addSubview(control); control.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([control.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 10), control.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -10), control.centerYAnchor.constraint(equalTo: header.centerYAnchor)])
-        } else {
-            let label = NSTextField(labelWithString: "Table of Contents")
-            label.font = .systemFont(ofSize: 13, weight: .semibold); label.textColor = .secondaryLabelColor
-            header.addSubview(label); label.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([label.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 12), label.trailingAnchor.constraint(lessThanOrEqualTo: header.trailingAnchor, constant: -12), label.centerYAnchor.constraint(equalTo: header.centerYAnchor)])
-        }
-
+        let header = SidebarHeader.make(title: NSTextField(labelWithString: "Table of Contents"),
+                                        symbol: "list.bullet", target: self,
+                                        action: #selector(toggleContents(_:)), help: "Hide Table of Contents (⌃⌘S)")
         let content = NSView(); content.translatesAutoresizingMaskIntoConstraints = false
-        if let fileScrollView {
-            content.addSubview(fileScrollView); fileScrollView.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([fileScrollView.leadingAnchor.constraint(equalTo: content.leadingAnchor), fileScrollView.trailingAnchor.constraint(equalTo: content.trailingAnchor), fileScrollView.topAnchor.constraint(equalTo: content.topAnchor), fileScrollView.bottomAnchor.constraint(equalTo: content.bottomAnchor)])
-        }
         content.addSubview(tocScroll); tocScroll.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([tocScroll.leadingAnchor.constraint(equalTo: content.leadingAnchor), tocScroll.trailingAnchor.constraint(equalTo: content.trailingAnchor), tocScroll.topAnchor.constraint(equalTo: content.topAnchor), tocScroll.bottomAnchor.constraint(equalTo: content.bottomAnchor)])
-        tocScroll.isHidden = directoryMode
 
         sidebarContainer.addSubview(header); sidebarContainer.addSubview(content)
         NSLayoutConstraint.activate([header.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), header.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), header.topAnchor.constraint(equalTo: sidebarContainer.topAnchor), content.leadingAnchor.constraint(equalTo: sidebarContainer.leadingAnchor), content.trailingAnchor.constraint(equalTo: sidebarContainer.trailingAnchor), content.topAnchor.constraint(equalTo: header.bottomAnchor), content.bottomAnchor.constraint(equalTo: sidebarContainer.bottomAnchor)])
@@ -690,52 +657,23 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         zoomToolbarItem?.visibilityPriority = priorities.zoom
     }
 
-    private func loadDirectory(_ directory: URL) {
-        directoryOperation?.cancel()
-        let operation = BlockOperation()
-        operation.addExecutionBlock { [weak self, weak operation] in
-            guard let operation, !operation.isCancelled else { return }
-            var discovered: [URL] = []
-            let ignoredNames: Set<String> = ["node_modules", ".build", ".git", "Pods", "vendor", "target", "dist", ".cache"]
-            let prefix = directory.path + "/"
-            if let iterator = FileManager.default.enumerator(
-                at: directory,
-                includingPropertiesForKeys: [.isDirectoryKey],
-                options: [.skipsHiddenFiles, .skipsPackageDescendants]
-            ) {
-                for case let url as URL in iterator {
-                    if operation.isCancelled { return }
-                    if let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory, isDir {
-                        if ignoredNames.contains(url.lastPathComponent) {
-                            iterator.skipDescendants()
-                            continue
-                        }
-                    }
-                    if MarkdownDocument.isMarkdown(url: url) {
-                        discovered.append(url)
-                        if discovered.count == 5000 { break }
-                    }
-                }
-            }
-            discovered.sort { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
-            let relativePaths = discovered.map {
-                $0.path.hasPrefix(prefix) ? String($0.path.dropFirst(prefix.count)) : $0.lastPathComponent
-            }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, !operation.isCancelled else { return }
-                self.files = discovered
-                self.fileRelativePaths = relativePaths
-                self.fileTable.reloadData()
-                if let first = discovered.first {
-                    self.openDocument(first)
-                    self.fileTable.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
-                } else {
-                    self.showMessage("No Markdown files found", detail: directory.path)
-                }
-            }
+    private func createFileNavigator() {
+        let navigator = VaultNavigatorView()
+        navigator.onFileSelected = { [weak self] url in
+            guard let self, self.currentURL != url else { return }
+            self.openDocument(url)
         }
-        directoryOperation = operation
-        renderQueue.addOperation(operation)
+        navigator.onCloseRequested = { [weak self] in self?.toggleFileNavigator(nil) }
+        vaultNavigatorView = navigator
+    }
+
+    private func loadDirectory(_ directory: URL) {
+        if !isFileNavigatorVisible { toggleFileNavigator(nil) }
+        vaultNavigatorView?.openDirectory(directory) { [weak self] first in
+            guard let self, !self.isTornDown else { return }
+            if let first { self.openDocument(first) }
+            else { self.showMessage("No Markdown files found", detail: directory.path) }
+        }
     }
 
     func openDocument(_ url: URL, preserveScroll: Bool = false, isHistoryNavigation: Bool = false) {
@@ -886,18 +824,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if let currentURL { openDocument(currentURL, preserveScroll: true) }
     }
 
-    func numberOfRows(in tableView: NSTableView) -> Int { files.count }
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let id = NSUserInterfaceItemIdentifier("cell"); let cell = tableView.makeView(withIdentifier: id, owner: self) as? NSTableCellView ?? NSTableCellView()
-        if cell.textField == nil { let field = NSTextField(labelWithString: ""); field.lineBreakMode = .byTruncatingMiddle; cell.addSubview(field); field.translatesAutoresizingMaskIntoConstraints = false; NSLayoutConstraint.activate([field.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8), field.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8), field.centerYAnchor.constraint(equalTo: cell.centerYAnchor)]); cell.textField = field; cell.identifier = id }
-        cell.textField?.stringValue = row < fileRelativePaths.count ? fileRelativePaths[row] : files[row].lastPathComponent; return cell
-    }
-    func tableViewSelectionDidChange(_ notification: Notification) {
-        guard fileTable.selectedRow >= 0 else { return }
-        let selected = files[fileTable.selectedRow]
-        if selected.standardizedFileURL != currentURL?.standardizedFileURL { openDocument(selected) }
-    }
-
     func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
         (item as? TOCNode)?.children.count ?? tocRoots.count
     }
@@ -958,12 +884,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private func scrollToFragment(_ fragment: String, updateHistory: Bool) {
         guard let literal = jsLiteral(for: fragment) else { return }
         webView.evaluateJavaScript("window.__mdvuScrollToFragment?.(\(literal), \(updateHistory ? "true" : "false"))")
-    }
-
-    @objc private func changeSidebarMode(_ sender: NSSegmentedControl) {
-        let showingContents = sender.selectedSegment == 1
-        fileScrollView?.isHidden = showingContents
-        tocScrollView?.isHidden = !showingContents
     }
 
     private func updateSplitHoldingPriorities() {
@@ -1069,16 +989,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         isFileNavigatorVisible.toggle()
         UserDefaults.standard.set(isFileNavigatorVisible, forKey: "layout.fileNavigatorVisible")
         if isFileNavigatorVisible {
-            if vaultNavigatorView == nil {
-                let newNav = VaultNavigatorView()
-                newNav.onFileSelected = { [weak self] selectedURL in
-                    self?.openDocument(selectedURL)
-                }
-                newNav.onCloseRequested = { [weak self] in
-                    self?.toggleFileNavigator(nil)
-                }
-                vaultNavigatorView = newNav
-            }
+            if vaultNavigatorView == nil { createFileNavigator() }
             if let docURL = currentURL {
                 vaultNavigatorView?.setRoot(documentURL: docURL)
             }
@@ -1369,14 +1280,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 self.pendingScrollRatio = entry.scrollRatio ?? 0
             }
             openDocument(entry.url, isHistoryNavigation: true)
-            selectFileInList(entry.url)
         }
-    }
-
-    private func selectFileInList(_ url: URL) {
-        guard let idx = files.firstIndex(where: { $0.standardizedFileURL == url.standardizedFileURL }), fileTable.selectedRow != idx else { return }
-        fileTable.selectRowIndexes(IndexSet(integer: idx), byExtendingSelection: false)
-        fileTable.scrollRowToVisible(idx)
     }
 
     private func captureCurrentScrollRatio(completion: @escaping (Double?) -> Void) {
@@ -1675,14 +1579,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: standardized.path, isDirectory: &isDirectory) else { return }
         if isDirectory.boolValue {
-            if fileScrollView != nil {
-                loadDirectory(standardized)
-            } else {
-                onOpenURL?(standardized)
-            }
+            loadDirectory(standardized)
         } else if MarkdownDocument.isMarkdown(url: standardized) {
             openDocument(standardized)
-            selectFileInList(standardized)
         }
     }
 

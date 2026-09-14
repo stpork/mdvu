@@ -33,7 +33,7 @@ Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
 * **Native Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
 * **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
-* **File & Vault Navigator (`⌥⌘D`)**: Instant collapsible directory tree pane inspired by Obsidian vaults. Recursively discovers all Markdown notes across your vault or workspace, auto-detects `.obsidian` and `.git` project roots, and navigates seamlessly.
+* **File & Vault Navigator (`⌥⌘D`)**: One right-hand pane with **Tree / List** views. The left pane is dedicated to the table of contents. Automatically detects `.obsidian` and `.git` roots when opening individual files.
 * **Resource hygiene**: Weak message handlers and explicit teardown release window resources. A shared SVG cache has an advisory 16 MiB cost limit. WebKit uses separate processes, so host-process memory alone is not total app memory.
 
 ---
@@ -147,7 +147,7 @@ mdvu README.md
 # Open multiple files in separate tabs/windows
 mdvu ARCHITECTURE.md CHANGELOG.md
 
-# Open a directory (browsing mode with file list sidebar)
+# Open a directory (right-hand file navigator in List mode)
 mdvu ~/Documents/Notes
 
 # Force light, dark, or system theme
@@ -276,10 +276,12 @@ mdvu --snapshot output.png README.md
 ---
 
 ### 🗂️ File & Vault Navigator (`⌥⌘D`)
-* **Obsidian-Style Vault Tree**: Dedicated collapsible right pane displaying all supported Markdown files and directories in your vault or workspace.
+* **Matching Pane Headers**: Both panels have a leading icon, title and × button to hide the panel.
+* **One File Navigator**: The right pane switches between **Tree** (folders and files) and **List** (recursive relative file paths). The left pane shows only the current document’s table of contents.
 * **Smart Root Detection**: Automatically walks up directory ancestors looking for `.obsidian` or `.git` boundaries, anchoring the root at your true vault or repository level.
-* **Instant Lazy Scanning**: Traverses nested subdirectories only upon expansion, keeping memory and CPU footprint near zero even in vaults with thousands of notes.
-* **Auto-Reveal & Active Selection**: Opening or switching documents automatically expands ancestor folders and highlights the current file in the outline.
+* **Folder Opening**: Opening a folder shows List mode and opens its first sorted Markdown file. That folder stays the root while you browse its documents.
+* **Bounded Scanning**: Tree mode loads folders on demand. List mode scans in the background, preserving the existing 5,000-file limit; ignored directories, packages and directory symlinks are skipped. Switching modes releases the previous model.
+* **Active Selection**: Switching views preserves the current document without reloading it. Opening files and navigating Back/Forward highlights the active file in either view.
 * **Native Keyboard & Click Flow**: Single-click opens files; double-click expands or collapses directories; Return/Enter opens the highlighted note.
 * **Push-on/Push-off State**: Toolbar buttons for Table of Contents and File Navigator stay visually depressed when their respective panes are active.
 * **CLI Flag**: Launch directly with navigator open using `mdvu --navigator <path>`.

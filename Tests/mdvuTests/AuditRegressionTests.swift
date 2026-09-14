@@ -4,6 +4,82 @@ import Testing
 @testable import mdvu
 
 struct AuditRegressionTests {
+    @MainActor @Test func unifiedNavigatorModesPreserveRootAndSelection() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let nested = directory.appendingPathComponent("Notes")
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = directory.appendingPathComponent("a.md")
+        let second = nested.appendingPathComponent("b.markdown")
+        for url in [first, second] { try "# Heading".write(to: url, atomically: true, encoding: .utf8) }
+        let nav = VaultNavigatorView()
+        let outlines = nav.subviews.compactMap { ($0 as? NSScrollView)?.documentView as? NSOutlineView }
+        let outline = try #require(outlines.first)
+        var initial: URL?
+        var opened: [URL] = []
+        nav.onFileSelected = { opened.append($0) }
+        nav.openDirectory(directory) { initial = $0 }
+        for _ in 0..<200 where initial == nil { try await Task.sleep(nanoseconds: 10_000_000) }
+        #expect(initial == first)
+        #expect(outline.numberOfRows == 2)
+        nav.setRoot(documentURL: second)
+        #expect(nav.rootItem?.url.path == directory.path)
+        #expect((outline.item(atRow: outline.selectedRow) as? VaultItem)?.url == second)
+        #expect(nav.rootItem?.children == nil)
+        let cell = nav.outlineView(outline, viewFor: nil, item: outline.item(atRow: outline.selectedRow)!) as? NSTableCellView
+        #expect(cell?.textField?.stringValue == "Notes/b.markdown")
+        nav.setMode(.tree)
+        #expect((outline.item(atRow: outline.selectedRow) as? VaultItem)?.url == second)
+        weak var oldTreeChild = nav.rootItem?.children?.first
+        nav.setMode(.list)
+        for _ in 0..<200 where outline.numberOfRows != 2 { try await Task.sleep(nanoseconds: 10_000_000) }
+        #expect((outline.item(atRow: outline.selectedRow) as? VaultItem)?.url == second)
+        #expect(oldTreeChild == nil)
+        #expect(opened.isEmpty) // Changing presentation must not reopen the document.
+        outline.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        #expect(opened == [first])
+    }
+
+    @MainActor @Test func navigatorCancelsObsoleteRootsAndReleasesDuringScan() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let other = directory.appendingPathComponent("Other")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let note = other.appendingPathComponent("only.md")
+        try "# Only".write(to: note, atomically: true, encoding: .utf8)
+        var nav: VaultNavigatorView? = VaultNavigatorView()
+        var obsolete = false
+        var selected: URL?
+        nav?.openDirectory(directory) { _ in obsolete = true }
+        nav?.openDirectory(other) { selected = $0 }
+        nav?.setMode(.tree) // Initial open must still finish if the user switches immediately.
+        for _ in 0..<200 where selected == nil { try await Task.sleep(nanoseconds: 10_000_000) }
+        #expect(selected == note)
+        #expect(!obsolete)
+        #expect(nav?.rootItem?.url.path == other.path)
+        nav?.openDirectory(directory) { _ in obsolete = true }
+        weak var released = nav
+        nav = nil
+        try await Task.sleep(nanoseconds: 30_000_000)
+        #expect(released == nil)
+        #expect(!obsolete)
+    }
+
+    @Test func flatNavigatorScanFiltersAndCancels() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for folder in ["Notes", "node_modules", ".hidden", "Example.app"] {
+            let subdirectory = directory.appendingPathComponent(folder)
+            try FileManager.default.createDirectory(at: subdirectory, withIntermediateDirectories: true)
+            try "# Note".write(to: subdirectory.appendingPathComponent("a.md"), atomically: true, encoding: .utf8)
+        }
+        try FileManager.default.createSymbolicLink(at: directory.appendingPathComponent("Loop"), withDestinationURL: directory)
+        #expect(VaultScanner.scanFiles(in: directory).map { $0.path } == [directory.appendingPathComponent("Notes/a.md").path])
+        #expect(VaultScanner.scanFiles(in: directory, isCancelled: { true }).isEmpty)
+        let root = VaultItem(url: directory, isDirectory: true)
+        #expect(VaultScanner.scanChildren(of: root).map(\.name) == ["Notes"])
+    }
+
     @Test func tocMarkersInsideFencesStayLiteral() {
         let body = MarkdownPipeline(dialect: .github, mermaid: false)
             .render("```text\n[TOC]\n[[_TOC_]]\n```\n\n[TOC]").body

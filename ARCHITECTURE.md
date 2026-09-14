@@ -74,7 +74,7 @@ The app writes a temporary HTML document and calls `loadFileURL`; `loadHTMLStrin
 WebKit can reject `history.pushState` and `replaceState` for `file://` URLs. The runtime catches that failure and still calls `scrollIntoView`; the `navigationHistory` script message records the jump in native history. Tests check the target heading's viewport position, not just the JavaScript return value.
 
 ### A. Document Window Controller (`DocumentWindowController`)
-* **Window Lifecycle**: Manages `DocumentWindow`, toolbar items, TOC sidebar, file list table, and navigation history.
+* **Window Lifecycle**: Manages `DocumentWindow`, toolbar items, TOC sidebar, unified file navigator, and navigation history.
 * **Persistent Window Zoom**:
   * Tracks user scale preference via `targetPageZoom` (bounded between `0.10` [10%] and `5.00` [500%]).
   * Guards against WebKit's automatic internal viewport resets to `1.0` during document loads.
@@ -144,10 +144,17 @@ WebKit can reject `history.pushState` and `replaceState` for `file://` URLs. The
   * Seamlessly anchors root to the workspace or knowledge repository while falling back to the document's immediate directory if no marker exists.
 * **On-Demand Lazy Tree Enumeration (`VaultItem`)**:
   * `loadChildrenIfNeeded()` avoids upfront recursive directory walks. Files and subfolders are scanned only when the user expands a folder row.
-  * Uses bulk directory resource enumeration (`includingPropertiesForKeys: [.isDirectoryKey]`) eliminating redundant `stat()` system calls.
+  * Uses prefetched directory, package and symlink resource values; skips packages and directory symlinks.
   * Automatically filters hidden/system directories (`.git`, `.obsidian`, `node_modules`, `.build`, `Pods`, `vendor`, `target`, `dist`, `.cache`, `.DS_Store`).
   * Sorts folders first alphabetically followed by Markdown files using `localizedStandardCompare`.
+* **Unified Tree / List Presentation (`VaultNavigatorView`)**:
+  * One `NSOutlineView` renders either lazy tree nodes or flat Markdown rows with relative paths. The controller no longer owns a second file table or duplicate file/path arrays.
+  * List enumeration runs on a shared operation queue with at most two workers, cooperatively cancels stale scans, and preserves the existing 5,000-file bound. UI updates run on the main queue.
+  * Switching modes releases inactive tree/list storage; closing the window releases the navigator and cancels its scan. Hiding the pane retains its active model for fast reopening.
+  * Opening a directory selects List mode and pins that directory as the root for its descendants. A document outside it restores automatic root detection.
+  * Programmatic selection and mode changes never invoke file-open callbacks. Initial folder loading survives a presentation toggle, but cannot override a subsequent document choice.
 * **Adaptive 3-Pane `NSSplitView` Coordinator**:
+  * `SidebarHeader` builds the shared icon/title/close header for both panes; the TOC close button uses the existing sidebar toggle.
   * Coordinates three subviews: TOC Sidebar (leading), Document `WKWebView` (center), and Vault Navigator (trailing).
   * Employs frame-based layout with `.autoresizingMask = [.width, .height]` inside `dropView`, eliminating Auto Layout fitting-size calculation traps that cause window enlargement.
   * Dynamically enforces minimum and maximum divider positions with `splitView(_:constrainMinCoordinate:ofSubviewAt:)` and `splitView(_:constrainMaxCoordinate:ofSubviewAt:)`, ensuring the web reading area never dips below 200px.

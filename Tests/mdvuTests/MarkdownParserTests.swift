@@ -1161,8 +1161,11 @@ struct MarkdownParserTests {
         let dividerWidth2 = CGFloat((split?.subviews.count ?? 1) - 1) * (split?.dividerThickness ?? 1)
         #expect(abs((totalSubviewsWidth2 + dividerWidth2) - splitWidth2) <= 2.0)
 
-        // Also test TOC off: returns to 1 subview filling entire window
-        controller.toggleContents(nil)
+        // The TOC header close button uses the same layout/state update as the toolbar.
+        let closeTOC = split?.arrangedSubviews.first?.subviews
+            .flatMap(\.subviews).compactMap { $0 as? NSButton }.first
+        #expect(closeTOC != nil)
+        closeTOC?.performClick(nil)
         #expect(!controller.isSidebarVisible)
         #expect(split?.subviews.count == 1)
         #expect(controller.window?.frame.width == 1080)
@@ -1182,6 +1185,12 @@ struct MarkdownParserTests {
         #expect(split?.subviews.count == 1)
         #expect(controller.window?.frame.width == 1080)
         #expect(abs((split?.subviews[0].frame.width ?? 0) - (split?.bounds.width ?? 0)) <= 2.0)
+
+        // Teardown must detach a visible navigator so its pending scan can be released.
+        controller.toggleFileNavigator(nil)
+        controller.tearDown()
+        #expect(split?.arrangedSubviews.contains(where: { $0 is VaultNavigatorView }) == false)
+        controller.close()
     }
 
     @MainActor
