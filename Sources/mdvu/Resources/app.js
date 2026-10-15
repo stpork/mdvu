@@ -51,10 +51,11 @@ lastTOCKey=newKey;
 window.webkit?.messageHandlers?.tableOfContents?.postMessage(entries);
 }
 };
-const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
+const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
 const scheduleHighlight=()=>{const blocks=document.querySelectorAll('pre>code');if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});blocks.forEach(block=>observer.observe(block))};
-const renderDiagrams=async()=>{
-const clean=s=>{
+let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
+const diagramQueue=[];let isProcessingQueue=false;
+const cleanDiagramSource=s=>{
 let res=s.replace(/^[ \t]*>[ \t]?/gm,'').trim();
 if(/^\s*requirementDiagram/m.test(res)){
 res=res
@@ -64,54 +65,42 @@ res=res
 }
 return res;
 };
-const mermaidNodes=[...document.querySelectorAll('.diagram-pending[data-renderer="mermaid"]')];
-if(mermaidNodes.length&&typeof mermaid!=='undefined'){
+const ensureMermaidInit=async()=>{
+if(typeof mermaid==='undefined')return;
+const selected=document.documentElement.dataset.theme;
+const isDark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
+const targetTheme=isDark?'dark':'default';
+if(mermaidInitialized&&currentMermaidTheme===targetTheme)return;
 if(window['mermaid-zenuml']&&!window.__zenumlRegistered){
 try{await mermaid.registerExternalDiagrams([window['mermaid-zenuml']]);window.__zenumlRegistered=true}
 catch(err){console.error('ZenUML registration error:',err)}
 }
-const selected=document.documentElement.dataset.theme;
-const dark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
-mermaid.initialize({startOnLoad:false,securityLevel:'loose',maxTextSize:1000000,maxEdges:10000,theme:dark?'dark':'default',themeVariables:{background:'transparent'},suppressErrorRendering:true});
-let lastYield=performance.now();
-for(let i=0;i<mermaidNodes.length;i++){
-const node=mermaidNodes[i],pre=node.querySelector('pre');
-if(!pre)continue;
-const source=clean(pre.textContent),key=node.dataset.cacheKey;
+mermaid.initialize({startOnLoad:false,securityLevel:'loose',maxTextSize:1000000,maxEdges:10000,theme:targetTheme,themeVariables:{background:'transparent'},suppressErrorRendering:true});
+mermaidInitialized=true;
+currentMermaidTheme=targetTheme;
+};
+const renderSingleDiagram=async(node)=>{
+if(!node.classList.contains('diagram-pending')||node.__mdvuRendering)return;
+node.__mdvuRendering=true;
+const pre=node.querySelector('pre');
+if(!pre){node.classList.remove('diagram-pending');delete node.__mdvuRendering;return}
+const renderer=node.dataset.renderer,rawSource=pre.textContent,source=cleanDiagramSource(rawSource),key=node.dataset.cacheKey;
 try{
-if(performance.now()-lastYield>16){
-await new Promise(r=>requestAnimationFrame(r));
-lastYield=performance.now();
-}
-const result=await mermaid.render(`mdvu-diagram-${i}-${Date.now()}`,source);
+if(renderer==='mermaid'){
+if(typeof mermaid==='undefined'){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
+await ensureMermaidInit();
+const diagId=`mdvu-diagram-${++diagramSeq}`;
+const result=await mermaid.render(diagId,source);
 node.innerHTML=result.svg;
 node.classList.remove('diagram-pending');
 if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.diagramCache.postMessage({key,svg:result.svg});
-}catch(e){
-node.classList.add('diagram-error');
-node.innerHTML=`<strong>Diagram could not be rendered</strong><pre></pre><small></small>`;
-node.querySelector('pre').textContent=source;
-node.querySelector('small').textContent=String(e.message||e);
-}
-}
-}
-const pumlNodes=[...document.querySelectorAll('.diagram-pending[data-renderer="plantuml"]')];
-if(pumlNodes.length&&typeof PlantUML!=='undefined'&&PlantUML.renderToString){
+}else if(renderer==='plantuml'){
+if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 const selected=document.documentElement.dataset.theme;
-const dark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
-let lastPumlYield=performance.now();
-for(let i=0;i<pumlNodes.length;i++){
-const node=pumlNodes[i],pre=node.querySelector('pre');
-if(!pre)continue;
-const rawSource=pre.textContent,source=clean(rawSource),key=node.dataset.cacheKey;
-try{
-if(performance.now()-lastPumlYield>16){
-await new Promise(r=>requestAnimationFrame(r));
-lastPumlYield=performance.now();
-}
+const isDark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
 let lines=source.trim().split(/\r?\n/);
 if(!lines.some(l=>/^\s*@start/i.test(l))){lines.unshift('@startuml');lines.push('@enduml')}
-if(dark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l))){lines.splice(1,0,'skinparam backgroundColor transparent')}
+if(isDark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l))){lines.splice(1,0,'skinparam backgroundColor transparent')}
 await new Promise((resolve,reject)=>{
 PlantUML.renderToString(lines,svg=>{
 if(!svg){reject(new Error('PlantUML returned empty output'));return}
@@ -121,13 +110,76 @@ if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.di
 resolve();
 },err=>reject(new Error(err)));
 });
+}
 }catch(e){
 node.classList.add('diagram-error');
 node.innerHTML=`<strong>Diagram could not be rendered</strong><pre></pre><small></small>`;
 node.querySelector('pre').textContent=rawSource;
 node.querySelector('small').textContent=String(e.message||e);
+}finally{
+delete node.__mdvuRendering;
+}
+};
+const isElementInViewport=(el,margin=1200)=>{
+const rect=el.getBoundingClientRect(),vh=window.innerHeight||document.documentElement.clientHeight||800;
+return rect.top<=vh+margin&&rect.bottom>=-margin;
+};
+const processQueue=async()=>{
+if(isProcessingQueue)return;
+isProcessingQueue=true;
+while(diagramQueue.length>0){
+const visibleIdx=diagramQueue.findIndex(n=>isElementInViewport(n,200));
+const node=visibleIdx!==-1?diagramQueue.splice(visibleIdx,1)[0]:diagramQueue.shift();
+if(node&&node.classList.contains('diagram-pending')){
+await renderSingleDiagram(node);
+await new Promise(r=>requestAnimationFrame(r));
 }
 }
+isProcessingQueue=false;
+};
+const enqueueDiagram=(node)=>{
+if(!node.classList.contains('diagram-pending')||node.__mdvuQueued)return;
+node.__mdvuQueued=true;
+diagramQueue.push(node);
+processQueue();
+};
+const initDiagramObserver=()=>{
+if(!('IntersectionObserver'in window))return null;
+if(diagramObserver)return diagramObserver;
+diagramObserver=new IntersectionObserver((entries)=>{
+entries.forEach(entry=>{
+if(entry.isIntersecting){
+diagramObserver.unobserve(entry.target);
+enqueueDiagram(entry.target);
+}
+});
+},{rootMargin:'1200px 0px'});
+return diagramObserver;
+};
+const renderDiagrams=async(options)=>{
+const forceAll=options===true||options?.all===true;
+const pendingNodes=[...document.querySelectorAll('.diagram-pending')];
+if(!pendingNodes.length)return;
+const observer=initDiagramObserver();
+if(forceAll||!observer){
+for(const node of pendingNodes){
+if(observer)observer.unobserve(node);
+await renderSingleDiagram(node);
+await new Promise(r=>requestAnimationFrame(r));
+}
+return;
+}
+const initialBatch=[];
+pendingNodes.forEach(node=>{
+if(isElementInViewport(node,1200)){
+initialBatch.push(node);
+}else{
+observer.observe(node);
+}
+});
+for(const node of initialBatch){
+await renderSingleDiagram(node);
+await new Promise(r=>requestAnimationFrame(r));
 }
 };
 window.__mdvuRestoreScroll=()=>{if(window.__mdvuRestore)requestAnimationFrame(()=>scrollTo(0,document.documentElement.scrollHeight*window.__mdvuRestore.ratio))};

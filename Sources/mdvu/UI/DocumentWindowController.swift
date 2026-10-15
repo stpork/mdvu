@@ -873,7 +873,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         tocRoots = roots
         tocOutline.reloadData()
-        tocOutline.expandItem(nil, expandChildren: true)
+        if headings.count <= 250 {
+            tocOutline.expandItem(nil, expandChildren: true)
+        } else {
+            for root in roots {
+                tocOutline.expandItem(root)
+            }
+        }
         fitSidebarToContents(headings)
         if let pendingFragment {
             self.pendingFragment = nil
@@ -1009,7 +1015,13 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         guard !headings.isEmpty else { return }
         let font = NSFont.systemFont(ofSize: 13)
         let baseLevel = headings.map(\.level).min() ?? 1
-        let measuredWidths = headings.map { heading in
+        let candidates: [TOCHeading] = {
+            if headings.count <= 50 { return headings }
+            return Array(headings.sorted(by: {
+                ($0.title.count + $0.level * 4) > ($1.title.count + $1.level * 4)
+            }).prefix(50))
+        }()
+        let measuredWidths = candidates.map { heading in
             let textWidth = ceil((heading.title as NSString).size(withAttributes: [.font: font]).width)
             let indentation = CGFloat(max(0, heading.level - baseLevel)) * tocOutline.indentationPerLevel
             return textWidth + indentation + 52
