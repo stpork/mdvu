@@ -127,6 +127,11 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     match args.output {
         Some(out_path) => {
+            if let Some(parent) = out_path.parent() {
+                if !parent.as_os_str().is_empty() {
+                    let _ = fs::create_dir_all(parent);
+                }
+            }
             fs::write(out_path, html)?;
         }
         None => {
@@ -543,7 +548,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.is_headless() {
         attach_console();
-        return run_headless(args);
+        if let Err(e) = run_headless(args) {
+            eprintln!("mdvu error: {e}");
+            std::process::exit(1);
+        }
+        std::process::exit(0);
     }
 
     run_gui(args)

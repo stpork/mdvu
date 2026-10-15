@@ -40,15 +40,18 @@ update-snapshot: all
 	"$(PROJECT_ROOT)/scripts/update-snapshot.sh"
 visual-test: all
 	"$(PROJECT_ROOT)/scripts/visual-regression.sh"
-app: release package
+app: rust-release release package
 package:
 	rm -rf "$(APP)"
-	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle"
+	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle" "$(APP)/Contents/Frameworks"
 	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdvu"
 	strip -u -r "$(APP)/Contents/MacOS/mdvu"
 	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
 	test ! -f "$(PROJECT_ROOT)/packaging/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/mdvu.icns" "$(APP)/Contents/Resources/"
 	cp "$(PROJECT_ROOT)/packaging/Info.plist" "$(APP)/Contents/Info.plist"
+	if [ -f "$(PROJECT_ROOT)/target/release/libmdvu_core.dylib" ]; then \
+		cp "$(PROJECT_ROOT)/target/release/libmdvu_core.dylib" "$(APP)/Contents/Frameworks/"; \
+	fi
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"
 universal:
@@ -78,13 +81,13 @@ clean:
 	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/Tests"/*.bc
 
 rust-all:
-	cargo build --workspace
+	cargo build -p mdvu-core
 
 rust-release:
-	cargo build --release --workspace
+	cargo build --release -p mdvu-core
 
 rust-test:
-	cargo test --workspace
+	cargo test -p mdvu-core
 
 windows-build:
 	pwsh ./scripts/build-windows.ps1
