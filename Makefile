@@ -21,7 +21,7 @@ endif
 
 SWIFT_RELEASE_FLAGS := -Xswiftc -O -Xswiftc -cross-module-optimization -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
 
-.PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean
+.PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean rust-all rust-release rust-test windows-build
 print-release-flags:
 	@printf '%s\n' '$(SWIFT_RELEASE_FLAGS)'
 all:
@@ -76,3 +76,15 @@ clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"
 	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/Tests"/*.bc
+
+rust-all:
+	cargo build --workspace
+
+rust-release:
+	cargo build --release --workspace
+
+rust-test:
+	cargo test --workspace
+
+windows-build:
+	pwsh ./scripts/build-windows.ps1

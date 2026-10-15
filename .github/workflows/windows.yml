@@ -1,0 +1,38 @@
+name: Windows Build & Release
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Tests
+        run: cargo test --workspace --verbose
+
+      - name: Build Windows Binaries
+        run: cargo build --release --workspace
+
+      - name: Package Windows Release
+        shell: pwsh
+        run: ./scripts/build-windows.ps1
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mdvu-windows-x86_64
+          path: dist/*.zip*
