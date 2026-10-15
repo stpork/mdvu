@@ -7,8 +7,11 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "==> Building MDVu Windows ($Configuration)..." -ForegroundColor Cyan
 
-$CargoFlags = if ($Configuration -eq "release") { @("--release") } else { @() }
-cargo build @CargoFlags -p mdvu-windows --bin mdvu
+if ($Configuration -eq "release") {
+    cargo build --release -p mdvu-windows --bin mdvu
+} else {
+    cargo build -p mdvu-windows --bin mdvu
+}
 
 $DistDir = "dist/windows"
 if (Test-Path $DistDir) {
