@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
-use crate::assets::{get_katex_js, get_mermaid_js, get_plantuml_js};
+use crate::assets::{get_katex_c_str, get_mermaid_c_str, get_plantuml_c_str};
 use crate::parser::MarkdownParser;
 use crate::pipeline::{MarkdownDialect, MarkdownPipeline};
 use crate::template::make_html;
@@ -32,25 +32,25 @@ pub extern "C" fn mdvu_version() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn mdvu_get_mermaid_js() -> *const c_char {
-    match get_mermaid_js() {
-        Ok(s) => s.as_ptr() as *const c_char,
-        Err(_) => std::ptr::null(),
+    match get_mermaid_c_str() {
+        Some(s) => s.as_ptr(),
+        None => std::ptr::null(),
     }
 }
 
 #[no_mangle]
 pub extern "C" fn mdvu_get_plantuml_js() -> *const c_char {
-    match get_plantuml_js() {
-        Ok(s) => s.as_ptr() as *const c_char,
-        Err(_) => std::ptr::null(),
+    match get_plantuml_c_str() {
+        Some(s) => s.as_ptr(),
+        None => std::ptr::null(),
     }
 }
 
 #[no_mangle]
 pub extern "C" fn mdvu_get_katex_js() -> *const c_char {
-    match get_katex_js() {
-        Ok(s) => s.as_ptr() as *const c_char,
-        Err(_) => std::ptr::null(),
+    match get_katex_c_str() {
+        Some(s) => s.as_ptr(),
+        None => std::ptr::null(),
     }
 }
 
@@ -180,12 +180,5 @@ pub unsafe extern "C" fn mdvu_document_has_math(doc: *const MdvuDocument) -> boo
 pub unsafe extern "C" fn mdvu_document_free(doc: *mut MdvuDocument) {
     if !doc.is_null() {
         drop(Box::from_raw(doc));
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn mdvu_string_free(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        drop(CString::from_raw(ptr));
     }
 }

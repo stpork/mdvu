@@ -39,15 +39,18 @@ public final class MdvuCoreBridge: @unchecked Sendable {
         }
 
         // 2. Try standard search paths
-        let candidates: [String] = [
-            Bundle.main.resourceURL?.appendingPathComponent("libmdvu_core.dylib").path ?? "",
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/libmdvu_core.dylib").path,
-            "target/release/libmdvu_core.dylib",
-            "target/debug/libmdvu_core.dylib",
-            "../target/release/libmdvu_core.dylib",
-            "/usr/local/lib/libmdvu_core.dylib",
-            "/opt/homebrew/lib/libmdvu_core.dylib"
-        ]
+        var candidates: [String] = []
+        if let envPath = ProcessInfo.processInfo.environment["MDVU_CORE_LIB"] {
+            candidates.append(envPath)
+        }
+        if let res = Bundle.main.resourceURL?.appendingPathComponent("libmdvu_core.dylib").path {
+            candidates.append(res)
+        }
+        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/libmdvu_core.dylib").path)
+        candidates.append("/opt/homebrew/lib/libmdvu_core.dylib")
+        candidates.append("/usr/local/lib/libmdvu_core.dylib")
+        candidates.append("target/release/libmdvu_core.dylib")
+        candidates.append("../target/release/libmdvu_core.dylib")
 
         for path in candidates where !path.isEmpty && FileManager.default.fileExists(atPath: path) {
             if let h = dlopen(path, RTLD_LAZY | RTLD_LOCAL) {
@@ -55,6 +58,15 @@ public final class MdvuCoreBridge: @unchecked Sendable {
                     return
                 }
             }
+        }
+    }
+
+    @inline(__always)
+    private func withOptionalCString<R>(_ string: String?, _ body: (UnsafePointer<CChar>?) -> R) -> R {
+        if let string = string {
+            return string.withCString { body($0) }
+        } else {
+            return body(nil)
         }
     }
 
@@ -107,30 +119,32 @@ public final class MdvuCoreBridge: @unchecked Sendable {
         }
 
         return source.withCString { cSource in
-            let cTitle = title?.withCString { $0 }
-            let cDialect = dialect?.withCString { $0 }
-            let cBaseUrl = baseURL?.absoluteString.withCString { $0 }
+            theme.withCString { cTheme in
+                withOptionalCString(title) { cTitle in
+                    withOptionalCString(dialect) { cDialect in
+                        withOptionalCString(baseURL?.absoluteString) { cBaseUrl in
+                            guard let doc = fnRender(
+                                cSource,
+                                cTitle,
+                                cDialect,
+                                cTheme,
+                                fullWidth,
+                                cBaseUrl,
+                                embedEngines
+                            ) else {
+                                return nil
+                            }
+                            defer { fnFreeDoc(doc) }
 
-            return theme.withCString { cTheme in
-                guard let doc = fnRender(
-                    cSource,
-                    cTitle,
-                    cDialect,
-                    cTheme,
-                    fullWidth,
-                    cBaseUrl,
-                    embedEngines
-                ) else {
-                    return nil
+                            let html = fnGetHtml(doc).map { String(cString: $0) } ?? ""
+                            let body = fnGetBody(doc).map { String(cString: $0) } ?? ""
+                            let docTitle = fnGetTitle(doc).map { String(cString: $0) }
+                            let toc = fnGetToc(doc).map { String(cString: $0) } ?? "[]"
+
+                            return (html: html, body: body, title: docTitle, tocJSON: toc)
+                        }
+                    }
                 }
-                defer { fnFreeDoc(doc) }
-
-                let html = fnGetHtml(doc).map { String(cString: $0) } ?? ""
-                let body = fnGetBody(doc).map { String(cString: $0) } ?? ""
-                let docTitle = fnGetTitle(doc).map { String(cString: $0) }
-                let toc = fnGetToc(doc).map { String(cString: $0) } ?? "[]"
-
-                return (html: html, body: body, title: docTitle, tocJSON: toc)
             }
         }
     }

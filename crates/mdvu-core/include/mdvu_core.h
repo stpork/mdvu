@@ -96,11 +96,6 @@ bool mdvu_document_has_math(const MdvuDocument* doc);
  */
 void mdvu_document_free(MdvuDocument* doc);
 
-/**
- * Frees a C string allocated by mdvu-core.
- */
-void mdvu_string_free(char* ptr);
-
 #ifdef __cplusplus
 }
 #endif

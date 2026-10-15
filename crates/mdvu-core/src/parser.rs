@@ -20,6 +20,9 @@ pub struct RenderedDocument {
     pub has_math: bool,
 }
 
+use std::collections::{HashMap, HashSet};
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 fn escape_html(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     for c in input.chars() {
@@ -35,13 +38,25 @@ fn escape_html(input: &str) -> String {
     out
 }
 
-fn simple_slug(title: &str) -> String {
-    let clean: String = title
-        .chars()
-        .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '-' || *c == '_')
-        .collect();
-    let lower = clean.to_lowercase();
-    let slug = lower.trim().replace(' ', "-");
+fn base_slug(title: &str) -> String {
+    let mut slug = String::with_capacity(title.len());
+    let mut in_whitespace = false;
+    for c in title.trim().chars() {
+        if c.is_alphanumeric() || c == '-' || c == '_' {
+            for lc in c.to_lowercase() {
+                slug.push(lc);
+            }
+            in_whitespace = false;
+        } else if c.is_whitespace() {
+            if !in_whitespace && !slug.is_empty() {
+                slug.push('-');
+                in_whitespace = true;
+            }
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
     if slug.is_empty() {
         "section".to_string()
     } else {
@@ -49,13 +64,24 @@ fn simple_slug(title: &str) -> String {
     }
 }
 
+fn compute_diagram_cache_key(renderer: &str, theme: &str, source: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    renderer.hash(&mut hasher);
+    theme.hash(&mut hasher);
+    source.hash(&mut hasher);
+    format!("{renderer}-{:016x}", hasher.finish())
+}
+
 // GFM Security Tagfilter: disarm script, iframe, textarea, title, xmp, noembed, noframes, plaintext
-// Note: <style> is explicitly preserved per MDVu spec
+// Note: <style> is explicitly preserved per MDVu spec.
 static DISALLOWED_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)<(/?)((?:script|iframe|textarea|title|xmp|noembed|noframes|plaintext))(\s*[^>]*)>"#).unwrap()
+    Regex::new(r#"(?is)<(/?)((?:script|iframe|textarea|title|xmp|noembed|noframes|plaintext))([/\s][^>]*|)>"#).unwrap()
 });
 
 fn apply_tagfilter(raw_html: &str) -> String {
+    if !raw_html.contains('<') {
+        return raw_html.to_string();
+    }
     DISALLOWED_TAG_RE
         .replace_all(raw_html, |caps: &regex::Captures| {
             let slash = &caps[1];
@@ -95,6 +121,8 @@ impl MarkdownParser {
         let mut current_heading_text = String::new();
         let mut toc = Vec::new();
         let mut doc_title: Option<String> = None;
+        let mut slug_counts: HashMap<String, usize> = HashMap::new();
+        let mut used_slug_ids: HashSet<String> = HashSet::new();
 
         let mut has_mermaid = false;
         let mut has_plantuml = false;
@@ -105,6 +133,10 @@ impl MarkdownParser {
                 Event::Html(raw) => {
                     let filtered = apply_tagfilter(&raw);
                     custom_events.push(Event::Html(filtered.into()));
+                }
+                Event::InlineHtml(raw) => {
+                    let filtered = apply_tagfilter(&raw);
+                    custom_events.push(Event::InlineHtml(filtered.into()));
                 }
                 Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                     inside_code_block = Some(lang.to_string());
@@ -121,7 +153,7 @@ impl MarkdownParser {
 
                         if clean_lang == "mermaid" {
                             has_mermaid = true;
-                            let key = format!("mermaid-{:x}", code_buffer.len());
+                            let key = compute_diagram_cache_key("mermaid", &self.diagram_theme, trimmed_code);
                             let html = format!(
                                 "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
                                 escape_html(trimmed_code)
@@ -129,7 +161,7 @@ impl MarkdownParser {
                             custom_events.push(Event::Html(html.into()));
                         } else if clean_lang == "plantuml" || clean_lang == "puml" {
                             has_plantuml = true;
-                            let key = format!("plantuml-{:x}", code_buffer.len());
+                            let key = compute_diagram_cache_key("plantuml", &self.diagram_theme, trimmed_code);
                             let html = format!(
                                 "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
                                 escape_html(trimmed_code)
@@ -167,7 +199,20 @@ impl MarkdownParser {
                 Event::End(TagEnd::Heading(_)) => {
                     if let Some(level) = current_heading_level.take() {
                         let title = current_heading_text.trim().to_string();
-                        let slug = simple_slug(&title);
+                        let base = base_slug(&title);
+                        let mut count = *slug_counts.get(&base).unwrap_or(&0);
+                        let mut id = if count == 0 {
+                            base.clone()
+                        } else {
+                            format!("{base}-{count}")
+                        };
+                        while used_slug_ids.contains(&id) {
+                            count += 1;
+                            id = format!("{base}-{count}");
+                        }
+                        slug_counts.insert(base, count + 1);
+                        used_slug_ids.insert(id.clone());
+
                         let lvl_num = match level {
                             HeadingLevel::H1 => 1,
                             HeadingLevel::H2 => 2,
@@ -184,7 +229,7 @@ impl MarkdownParser {
                         toc.push(TocEntry {
                             level: lvl_num,
                             title,
-                            id: slug,
+                            id,
                         });
                     }
                     custom_events.push(event);
@@ -203,9 +248,10 @@ impl MarkdownParser {
         html::push_html(&mut html_out, custom_events.into_iter());
 
         let postprocessed = Self::replace_callout_blocks(&html_out);
+        let final_body = apply_tagfilter(&postprocessed);
 
         RenderedDocument {
-            body: postprocessed,
+            body: final_body,
             title: doc_title,
             toc,
             has_mermaid,
@@ -335,5 +381,42 @@ mod tests {
         assert!(doc.body.contains("&lt;script>alert(1)&lt;/script>"));
         assert!(!doc.body.contains("<iframe"));
         assert!(doc.body.contains("&lt;iframe src=\"evil.com\">&lt;/iframe>"));
+    }
+
+    #[test]
+    fn test_tagfilter_disarms_inline_and_multiline_script() {
+        let md = "Inline <script>alert(1)</script> here and <script\nsrc=\"malicious.js\">\n</script>";
+        let parser = MarkdownParser::new("light");
+        let doc = parser.render(md);
+        assert!(!doc.body.contains("<script"));
+        assert!(doc.body.contains("&lt;script>"));
+        assert!(doc.body.contains("&lt;script\nsrc=\"malicious.js\">"));
+        assert!(doc.body.contains("&lt;/script>"));
+    }
+
+    #[test]
+    fn test_tagfilter_does_not_break_safe_or_custom_tags() {
+        let md = "<scripting>custom tag</scripting> and <div>allowed block</div>";
+        let parser = MarkdownParser::new("light");
+        let doc = parser.render(md);
+        assert!(doc.body.contains("<scripting>"));
+        assert!(doc.body.contains("<div>allowed block</div>"));
+    }
+
+    #[test]
+    fn test_duplicate_heading_slug_generation() {
+        let md = "# Introduction\n\n## Section\n\n## Section\n\n## Section\n\n## Section 1\n";
+        let parser = MarkdownParser::new("light");
+        let doc = parser.render(md);
+        let ids: Vec<&str> = doc.toc.iter().map(|t| t.id.as_str()).collect();
+        assert_eq!(ids, vec!["introduction", "section", "section-1", "section-2", "section-1-1"]);
+    }
+
+    #[test]
+    fn test_diagram_cache_key_collision_resistance() {
+        let key1 = compute_diagram_cache_key("mermaid", "light", "graph TD\n  A --> B");
+        let key2 = compute_diagram_cache_key("mermaid", "light", "graph TD\n  C --> D");
+        assert_eq!(key1.len(), "mermaid-".len() + 16);
+        assert_ne!(key1, key2);
     }
 }

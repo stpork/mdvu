@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 #[cfg(windows)]
 mod win32;
 
@@ -35,10 +37,32 @@ struct AppState {
     toc_visible: bool,
 }
 
+fn watch_target(watcher: &mut RecommendedWatcher, target: &Path) {
+    if let Some(parent) = target.parent() {
+        if parent.exists() {
+            let _ = watcher.watch(parent, RecursiveMode::NonRecursive);
+            return;
+        }
+    }
+    let _ = watcher.watch(target, RecursiveMode::NonRecursive);
+}
+
+fn unwatch_target(watcher: &mut RecommendedWatcher, target: &Path) {
+    if let Some(parent) = target.parent() {
+        let _ = watcher.unwatch(parent);
+    }
+    let _ = watcher.unwatch(target);
+}
+
 fn load_document(file_path: &Path) -> Result<(String, RenderedDocument), Box<dyn std::error::Error>> {
     let source = fs::read_to_string(file_path)?;
     let abs_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
-    let base_url = format!("file://{}", abs_path.display());
+    let path_str = abs_path.to_string_lossy().replace('\\', "/");
+    let base_url = if path_str.starts_with('/') {
+        format!("file://{path_str}")
+    } else {
+        format!("file:///{path_str}")
+    };
 
     // embed_diagram_engines is false: we inject engines lazily on demand
     let (html, rendered) = render_markdown(
@@ -166,7 +190,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(windows)]
     {
         use tao::platform::windows::WindowExtWindows;
-        let hwnd = window.hwnd() as isize;
+        let hwnd = window.hwnd() as windows_sys::Win32::Foundation::HWND;
         unsafe {
             win32::apply_dark_mode(hwnd);
             win32::create_main_menu(hwnd);
@@ -202,7 +226,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match RecommendedWatcher::new(tx_watch, notify::Config::default()) {
             Ok(mut w) => {
                 if let Some(ref p) = initial_file {
-                    let _ = w.watch(p, RecursiveMode::NonRecursive);
+                    watch_target(&mut w, p);
                 }
                 Some(w)
             }
@@ -214,12 +238,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Background thread to relay file modification events
     let proxy_clone = proxy.clone();
+    let state_watcher = Arc::clone(&state);
     std::thread::spawn(move || {
         while let Ok(event_res) = rx_watch.recv() {
             if let Ok(event) = event_res {
                 match event.kind {
-                    EventKind::Modify(_) | EventKind::Create(_) => {
-                        let _ = proxy_clone.send_event(UserEvent::FileChanged);
+                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Any => {
+                        let cur_file = state_watcher.lock().unwrap().current_file.clone();
+                        if let Some(ref target) = cur_file {
+                            let matches = event.paths.is_empty()
+                                || event.paths.iter().any(|p| {
+                                    p == target || p.file_name() == target.file_name()
+                                });
+                            if matches {
+                                let _ = proxy_clone.send_event(UserEvent::FileChanged);
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -274,9 +308,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let mut st = state.lock().unwrap();
                     if let Some(ref mut w) = watcher {
                         if let Some(ref old_path) = st.current_file {
-                            let _ = w.unwatch(old_path);
+                            unwatch_target(w, old_path);
                         }
-                        let _ = w.watch(&new_path, RecursiveMode::NonRecursive);
+                        watch_target(w, &new_path);
                     }
 
                     match load_document(&new_path) {
