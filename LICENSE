@@ -31,7 +31,32 @@ This project incorporates or bundles components from the following open-source s
 - **License**: BSD 2-Clause License & MIT License
 - **Copyright**: (c) 2014, John MacFarlane; (c) 2017 GitHub, Inc.; (c) 2020 Apple Inc. and the Swift project authors.
 
-#### 2. Mermaid.js
+#### 2. pulldown-cmark
+- **Repository**: https://github.com/raphlinus/pulldown-cmark
+- **License**: MIT License / Apache License 2.0
+- **Copyright**: (c) 2015 Raph Levien and pulldown-cmark contributors.
+
+#### 3. Mermaid.js & ZenUML
 - **Repository**: https://github.com/mermaid-js/mermaid
 - **License**: MIT License
-- **Copyright**: (c) 2014 - 2024 Knut Sveidqvist and Mermaid Contributors
+- **Copyright**: (c) 2014 - 2024 Knut Sveidqvist and Mermaid Contributors.
+
+#### 4. PlantUML Core & Viz.js (Graphviz)
+- **Repositories**: https://github.com/plantuml/plantuml-core, https://github.com/mdaines/viz.js
+- **License**: GPL / LGPL / Apache-2.0 / MIT License
+- **Copyright**: (c) PlantUML Team; (c) Michael Daines and Graphviz Contributors.
+
+#### 5. KaTeX
+- **Repository**: https://github.com/KaTeX/KaTeX
+- **License**: MIT License
+- **Copyright**: (c) 2013-2020 Khan Academy and other contributors.
+
+#### 6. wry & tao
+- **Repositories**: https://github.com/tauri-apps/wry, https://github.com/tauri-apps/tao
+- **License**: MIT License / Apache License 2.0
+- **Copyright**: (c) 2019 - Present Tauri Programme within The Commons Conservancy.
+
+#### 7. lzma-rs
+- **Repository**: https://github.com/gendx/lzma-rs
+- **License**: MIT License / Apache License 2.0
+- **Copyright**: (c) 2019 Corentin Henry.

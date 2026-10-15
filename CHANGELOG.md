@@ -4,6 +4,40 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-15
+
+### Added
+- **Cross-Platform Rust Core (`crates/mdvu-core`)**:
+  - High-throughput pull parser powered by `pulldown-cmark` with full GitHub Flavored Markdown (GFM) support.
+  - Dialect preprocessing pipeline supporting Obsidian callouts, wikilinks, embeds, MkDocs admonitions, Docusaurus/VuePress containers, CriticMarkup, sub/superscript, GitLab TOC, and YAML frontmatter.
+  - Embedded offline diagram and math engines compressed with LZMA Ultra (Mermaid 11.17.2 + ZenUML 0.2.3, PlantUML Core 1.2026.7 + Viz.js Wasm, and KaTeX).
+  - Stable C-ABI foreign function interface (`include/mdvu_core.h`) for Swift and external language bindings.
+- **Windows Native Desktop Application (`crates/mdvu-windows`)**:
+  - Standalone desktop Markdown viewer (`mdvu.exe`, ~5.1 MB) using native Win32 window management and the Microsoft Edge WebView2 runtime.
+  - DWM Windows 11 immersive dark mode window titlebars.
+  - Native Win32 menu bar and status bar controls.
+  - Live file watcher (`notify`) with directory-level monitoring, debounced reloading, and atomic save tracking for editors like VS Code, Notepad++, and Vim.
+  - Full keyboard shortcuts (`Ctrl+O`, `Ctrl+R` / `F5`, `Ctrl++` / `Ctrl+-` / `Ctrl+0`, `Ctrl+B`, `F11`).
+- **Headless CLI (`crates/mdvu-cli`)**:
+  - Ultra-fast headless Markdown-to-HTML compiler and JSON Table of Contents extractor for CI/CD and automation scripts.
+- **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
+  - Integration bridge connecting the macOS AppKit application to `mdvu-core` with memory-safe scoped closures (`withOptionalCString`).
+- **Cross-Platform Build & CI/CD Tooling**:
+  - Added root `build.ps1` and `build.cmd` scripts for native Windows compilation and release packaging.
+  - Added `windows` command to `build.sh` and created standalone POSIX `scripts/build-windows.sh`.
+  - Added automated GitHub Actions Windows CI/CD pipeline (`.github/workflows/windows.yml`) producing release zip archives with SHA-256 sidecars.
+
+### Security & Performance
+- **GFM Security Tagfilter**:
+  - Disarms malicious `<script>`, `<iframe>`, `<textarea>`, `<title>`, `<xmp>`, `<noembed>`, `<noframes>`, and `<plaintext>` tags across block and inline HTML, while preserving user-defined `<style>` blocks per MDVu specification.
+- **Deterministic Diagram Caching**:
+  - Replaced length-based cache keys with 64-bit SipHash/DefaultHasher digests (`compute_diagram_cache_key`), eliminating cache collisions across documents and themes.
+- **Memory Safety & NUL-Termination**:
+  - Ensured all FFI string pointers returned by `mdvu-core` are NUL-terminated via `CString` backing in `assets.rs`.
+  - Removed dangling `mdvu_string_free` export.
+- **TOC Anchor Deduplication**:
+  - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
+
 ## [0.4.1] - 2026-09-15
 
 ### Fixed

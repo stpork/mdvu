@@ -3,15 +3,16 @@
   <h1>MDVu - Superfast Markdown Viewer</h1>
 
   <p>
-    The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for macOS.<br>
-    Built with pure AppKit &amp; WebKit. Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+    The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for <b>macOS &amp; Windows</b>.<br>
+    Built with pure AppKit &amp; WebKit (macOS) and Win32 &amp; WebView2 (Windows). Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
   </p>
 
   <p>
-    <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
+    <a href="https://github.com/stpork/mdvu/actions"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-    <a href="#installation"><img src="https://img.shields.io/badge/version-0.4.1-emerald" alt="Version 0.4.1"></a>
-    <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB-brightgreen" alt="Bundle Size 3.4 MB"></a>
+    <a href="#windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/version-0.5.0-emerald" alt="Version 0.5.0"></a>
+    <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB_macOS_%7C_5.1_MB_Windows-brightgreen" alt="Bundle Size"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
   </p>
 </div>
@@ -25,16 +26,16 @@
 ## Why mdvu?
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
-* **Fast startup and parsing**: Markdown preparation overlaps AppKit startup, and a prewarmed WebView is kept for subsequent windows. Byte-level extension checks avoid unnecessary preprocessing. See the reproducible measurements below.
-* **Compact distribution**: About **3.4 MiB** for a native app or **4.2 MiB** for Universal, including compressed offline diagram engines. No bundled Electron, Node, or JVM.
-* **Reference Markdown Engine**: Powered by Apple / Swift's reference `cmark-gfm` parser with full CommonMark and GitHub Flavored Markdown compliance.
+* **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS (~3.4 MB bundle) and native **Win32 & WebView2** on Windows (`mdvu.exe`, ~5.1 MB standalone). Both run on the shared, high-throughput `mdvu-core` Rust engine with zero Electron, Node, or JVM.
+* **Instant Startup & Minimal Memory**: Launches in 30–50 ms and uses a fraction of Electron's memory footprint.
+* **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
-* **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native WebKit MathML Core rendering, featuring dark/light mode integration, zero font download overhead, and textbook-quality typography.
+* **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
-* **Native Zoom Engine**: Hardware-accelerated GPU layer zoom with compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping eliminating indicator jitter (`201%`), trailing settle timers for bounce-back, manual percentage input, 10%–500% boundaries, and 10% discrete stepping.
-* **Titlebar Quick-Open**: Click the window title to instantly open a new document or folder, preserving macOS proxy icon drag and directory popups.
-* **File & Vault Navigator (`⌥⌘D`)**: One right-hand pane with **Tree / List** views. The left pane is dedicated to the table of contents. Automatically detects `.obsidian` and `.git` roots when opening individual files.
-* **Resource hygiene**: Weak message handlers and explicit teardown release window resources. A shared SVG cache has an advisory 16 MiB cost limit. WebKit uses separate processes, so host-process memory alone is not total app memory.
+* **Native Zoom & Window Management**:
+  * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, titlebar quick-open, and 3-pane split view with Vault Navigator (`⌥⌘D`).
+  * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, status bar, and live atomic-save file watcher (`notify`).
+* **Resource Hygiene**: Strict memory management, collision-resistant diagram caching, and zero background telemetry.
 
 ---
 
@@ -76,16 +77,44 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-Pre-compiled signed binaries and disk images are available on the [GitHub Releases](https://github.com/stpork/mdvu/releases) page:
+Pre-compiled binaries, installers, and archives are available on the [GitHub Releases](https://github.com/stpork/mdvu/releases) page:
 
-| Package | Target Architecture | Description |
+| Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
-| **`mdvu-X.Y.Z-macos.dmg`** | Universal (`arm64` + `x86_64`) | Graphical macOS installer with Drag-to-Applications |
-| **`mdvu-X.Y.Z-macos-universal.zip`** | Universal (`arm64` + `x86_64`) | Portable archive for both Apple Silicon and Intel |
-| **`mdvu-X.Y.Z-macos-arm64.zip`** | Apple Silicon (`arm64`) | Ultra-compact (2.9 MB) optimized for M1/M2/M3/M4 |
-| **`mdvu-X.Y.Z-macos-x86_64.zip`** | Intel (`x86_64`) | Ultra-compact (2.9 MB) optimized for Intel Macs |
+| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Standalone package containing `mdvu.exe` and `mdvu-cli.exe` |
+| **`mdvu-X.Y.Z-macos.dmg`** | macOS Universal (`arm64` + `x86_64`) | Graphical macOS installer with Drag-to-Applications |
+| **`mdvu-X.Y.Z-macos-universal.zip`** | macOS Universal (`arm64` + `x86_64`) | Portable archive for both Apple Silicon and Intel |
+| **`mdvu-X.Y.Z-macos-arm64.zip`** | macOS Apple Silicon (`arm64`) | Ultra-compact (2.9 MB) optimized for M1/M2/M3/M4 |
+| **`mdvu-X.Y.Z-macos-x86_64.zip`** | macOS Intel (`x86_64`) | Ultra-compact (2.9 MB) optimized for Intel Macs |
 
-**Manual Installation Steps:**
+---
+
+### 3. Windows Installation & Usage
+
+1. Download **`mdvu-X.Y.Z-windows-x86_64.zip`** from [Releases](https://github.com/stpork/mdvu/releases).
+2. Extract the archive into your preferred tools folder (e.g. `C:\Tools\MDVu` or `%LOCALAPPDATA%\Programs\MDVu`).
+3. Launch `mdvu.exe` directly or run it from command line or PowerShell:
+   ```cmd
+   mdvu.exe document.md
+   ```
+4. *(Optional)* Add the folder to your `PATH` environment variable to use `mdvu` and `mdvu-cli` anywhere.
+
+**Building from source on Windows:**
+```powershell
+# Using the root PowerShell driver:
+.\build.ps1
+
+# Or using the Command Prompt wrapper:
+build.cmd
+
+# Or using Cargo directly:
+cargo build --release -p mdvu-windows -p mdvu-cli
+```
+
+---
+
+### 4. macOS Manual Installation
+
 1. Download the `.dmg` or `.zip` from [Releases](https://github.com/stpork/mdvu/releases).
 2. Move `mdvu.app` into `/Applications` (or `~/Applications`).
 3. *(If macOS Gatekeeper flags an ad-hoc release on first launch)*:
@@ -310,47 +339,34 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| `⌘O` | Open File or Folder |
-| `⌘W` | Close Window |
-| `⌘F` | Find in Document |
-| `⌘G` / `⇧⌘G` | Find Next / Find Previous |
-| `⌘+` / `⌘=` | Zoom In (+10%) |
-| `⌘-` | Zoom Out (-10%) |
-| `⌘0` | Actual Size (100%) |
-| `⇧⌘W` | Toggle Full Width / Readable Width |
-| `^⌘S` | Toggle Table of Contents Sidebar |
-| `⌥⌘D` | Toggle File / Vault Navigator Pane |
-| `⌘[` / `⌘←` | Navigate Back in History |
-| `⌘]` / `⌘→` | Navigate Forward in History |
-| `⌘R` | Reload Document |
-| `⌘Q` | Quit mdvu |
+| Action | macOS | Windows |
+| :--- | :--- | :--- |
+| Open File or Folder | `⌘O` | `Ctrl+O` |
+| Close Window | `⌘W` | `Alt+F4` |
+| Reload Document | `⌘R` | `F5` / `Ctrl+R` |
+| Zoom In (+10%) | `⌘+` / `⌘=` | `Ctrl++` / `Ctrl+=` |
+| Zoom Out (-10%) | `⌘-` | `Ctrl+-` |
+| Actual Size (100%) | `⌘0` | `Ctrl+0` |
+| Toggle Fullscreen | `^⌘F` | `F11` |
+| Toggle Table of Contents | `^⌘S` | `Ctrl+B` |
+| Toggle File / Vault Navigator | `⌥⌘D` | — |
+| Find in Document | `⌘F` | `Ctrl+F` |
+| Find Next / Previous | `⌘G` / `⇧⌘G` | `F3` / `⇧F3` |
+| Toggle Full Width Mode | `⇧⌘W` | — |
+| Navigate Back / Forward | `⌘[` / `⌘]` | `Alt+←` / `Alt+→` |
+| Quit Application | `⌘Q` | `Alt+F4` |
 
 ---
 
 ## Architecture
 
-`mdvu` is designed as an native AppKit host with WebKit auxiliary processes:
-```
-File on Disk / Watcher
-        │
-        ▼
-MarkdownPipeline (Dialect Preprocessing: Callouts, Wikilinks)
-        │
-        ▼
-cmark-gfm (C AST Parser, GFM Extensions, Tag Filter)
-        │
-        ▼
-HTMLDocument Assembly (Theme, Highlighting, CSS, Placeholders)
-        │
-        ▼
-WKWebView (AppKit Chrome + Hardware Accelerated Viewport)
-        │
-        ▼
-Async DiagramRenderer (Mermaid 11.17.2 + ZenUML / PlantUML 1.2026.7 + SHA-256 Cache)
-```
-For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+`mdvu` uses a unified cross-platform architecture:
+* **Core (`crates/mdvu-core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
+* **macOS Frontend**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, and trackpad gesture engine.
+* **Windows Frontend (`crates/mdvu-windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, and atomic-save file watching.
+* **Headless CLI (`crates/mdvu-cli`)**: Ultra-fast headless renderer and JSON TOC extractor for CI/CD and scripts.
+
+For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
@@ -359,9 +375,13 @@ For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
 * **Author**: Finn de Bear ([finndebear@gmail.com](mailto:finndebear@gmail.com))
 * **License**: Released under the [MIT License](LICENSE).
 
-### Third-Party Software
+### Third-Party Software & Licenses
+* [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) — MIT / Apache-2.0 (c) Raph Levien and pulldown-cmark contributors.
+* [wry](https://github.com/tauri-apps/wry) & [tao](https://github.com/tauri-apps/tao) — MIT / Apache-2.0 (c) The Tauri Programme within The Commons Conservancy.
+* [lzma-rs](https://github.com/gendx/lzma-rs) — MIT / Apache-2.0 (c) Corentin Henry.
 * [swift-cmark](https://github.com/swiftlang/swift-cmark) — BSD-2-Clause / MIT (c) John MacFarlane, GitHub, Apple.
 * [Mermaid.js 11.17.2](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
 * [ZenUML Plugin 0.2.3](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
 * [PlantUML Core 1.2026.7](https://github.com/plantuml/plantuml-core) — GPL / LGPL / Apache-2.0 / MIT (c) PlantUML Team.
 * [Viz.js 3.24.0 (Graphviz 14.1.1)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.
+* [KaTeX 0.16.21](https://github.com/KaTeX/KaTeX) — MIT (c) Emily Eisenberg, Sophie Alpert, and KaTeX Contributors.
