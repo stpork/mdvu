@@ -83,6 +83,15 @@ struct MarkdownPipeline {
 
     func render(_ source: String, diagramTheme: String = "light") -> RenderedDocument {
         let effectiveDialect = isDialectExplicit ? dialect : (MarkdownDocumentDirective.extractDialect(from: source) ?? dialect)
+        if (ProcessInfo.processInfo.environment["MDVU_ENGINE"] == "rust" || ProcessInfo.processInfo.arguments.contains("--engine=rust")) && MdvuCoreBridge.shared.isAvailable {
+            if let result = MdvuCoreBridge.shared.render(
+                source: source,
+                dialect: effectiveDialect.rawValue,
+                theme: diagramTheme
+            ) {
+                return RenderedDocument(body: result.body, title: result.title, dialect: effectiveDialect)
+            }
+        }
         let prepared = extensions.reduce(source) { $1.preprocess($0, dialect: effectiveDialect) }
         let rendered = MarkdownParser(diagrams: diagrams, cache: cache, diagramTheme: diagramTheme).render(prepared)
         return RenderedDocument(body: rendered.body, title: rendered.title, dialect: effectiveDialect)

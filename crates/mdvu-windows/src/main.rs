@@ -1,4 +1,7 @@
-use mdvu_core::{render_markdown, MarkdownDialect};
+#[cfg(windows)]
+mod win32;
+
+use mdvu_core::{render_markdown, MarkdownDialect, RenderedDocument};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::env;
 use std::fs;
@@ -14,12 +17,13 @@ use tao::{
     keyboard::{KeyCode, ModifiersState},
     window::WindowBuilder,
 };
-use wry::WebViewBuilder;
+use wry::{WebView, WebViewBuilder};
 
 #[derive(Debug)]
 enum UserEvent {
     FileChanged,
     OpenFile(PathBuf),
+    ToggleTOC,
 }
 
 struct AppState {
@@ -27,13 +31,16 @@ struct AppState {
     current_title: String,
     zoom_level: f64,
     last_reload: Instant,
+    last_rendered: Option<RenderedDocument>,
+    toc_visible: bool,
 }
 
-fn load_document(file_path: &Path) -> Result<(String, String), Box<dyn std::error::Error>> {
+fn load_document(file_path: &Path) -> Result<(String, RenderedDocument), Box<dyn std::error::Error>> {
     let source = fs::read_to_string(file_path)?;
     let abs_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
     let base_url = format!("file://{}", abs_path.display());
 
+    // embed_diagram_engines is false: we inject engines lazily on demand
     let (html, rendered) = render_markdown(
         &source,
         None,
@@ -41,19 +48,66 @@ fn load_document(file_path: &Path) -> Result<(String, String), Box<dyn std::erro
         "system",
         false,
         Some(&base_url),
-        true, // embed offline diagram engines
+        false,
     );
 
-    let doc_title = rendered
-        .title
-        .or_else(|| {
-            file_path
-                .file_name()
-                .map(|f| f.to_string_lossy().to_string())
-        })
-        .unwrap_or_else(|| "MDVu".to_string());
+    Ok((html, rendered))
+}
 
-    Ok((html, doc_title))
+fn inject_engines_if_needed(webview: &WebView, doc: &RenderedDocument) {
+    if doc.has_math {
+        if let Ok(katex) = mdvu_core::get_katex_js() {
+            let escaped_js = serde_json::to_string(katex).unwrap_or_default();
+            let script = format!(
+                r#"(function() {{
+                    if (!window.__katexLoaded) {{
+                        const s = document.createElement('script');
+                        s.textContent = {escaped_js};
+                        document.head.appendChild(s);
+                        window.__katexLoaded = true;
+                    }}
+                    window.__mdvuRenderMath?.();
+                }})();"#
+            );
+            let _ = webview.evaluate_script(&script);
+        }
+    }
+
+    if doc.has_mermaid {
+        if let Ok(mermaid) = mdvu_core::get_mermaid_js() {
+            let escaped_js = serde_json::to_string(mermaid).unwrap_or_default();
+            let script = format!(
+                r#"(function() {{
+                    if (!window.__mermaidLoaded) {{
+                        const s = document.createElement('script');
+                        s.textContent = {escaped_js};
+                        document.head.appendChild(s);
+                        window.__mermaidLoaded = true;
+                    }}
+                    window.__mdvuRenderDiagrams?.();
+                }})();"#
+            );
+            let _ = webview.evaluate_script(&script);
+        }
+    }
+
+    if doc.has_plantuml {
+        if let Ok(plantuml) = mdvu_core::get_plantuml_js() {
+            let escaped_js = serde_json::to_string(plantuml).unwrap_or_default();
+            let script = format!(
+                r#"(function() {{
+                    if (!window.__plantumlLoaded) {{
+                        const s = document.createElement('script');
+                        s.textContent = {escaped_js};
+                        document.head.appendChild(s);
+                        window.__plantumlLoaded = true;
+                    }}
+                    window.__mdvuRenderDiagrams?.();
+                }})();"#
+            );
+            let _ = webview.evaluate_script(&script);
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -75,12 +129,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let event_loop: EventLoop<UserEvent> = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
 
-    let (initial_html, initial_title) = if let Some(ref path) = initial_file {
+    let (initial_html, initial_title, initial_rendered) = if let Some(ref path) = initial_file {
         match load_document(path) {
-            Ok((h, t)) => (h, format!("{t} — MDVu")),
+            Ok((h, doc)) => {
+                let title = doc
+                    .title
+                    .clone()
+                    .or_else(|| path.file_name().map(|f| f.to_string_lossy().to_string()))
+                    .unwrap_or_else(|| "MDVu".to_string());
+                (h, format!("{title} — MDVu"), Some(doc))
+            }
             Err(e) => (
                 format!("<h1>Error opening document</h1><p>{e}</p>"),
                 "MDVu - Error".to_string(),
+                None,
             ),
         }
     } else {
@@ -91,6 +153,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             </div>"#
                 .to_string(),
             "MDVu".to_string(),
+            None,
         )
     };
 
@@ -104,15 +167,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         use tao::platform::windows::WindowExtWindows;
         let hwnd = window.hwnd() as isize;
-        // DwmSetWindowAttribute dark mode (DWMWA_USE_IMMERSIVE_DARK_MODE = 20)
         unsafe {
-            let use_dark_mode: i32 = 1;
-            windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
-                hwnd,
-                20,
-                &use_dark_mode as *const _ as *const _,
-                std::mem::size_of::<i32>() as u32,
-            );
+            win32::apply_dark_mode(hwnd);
+            win32::create_main_menu(hwnd);
+            win32::create_status_bar(hwnd);
         }
     }
 
@@ -121,11 +179,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_devtools(cfg!(debug_assertions))
         .build(&window)?;
 
+    // Lazy injection for initial document
+    if let Some(ref doc) = initial_rendered {
+        inject_engines_if_needed(&webview, doc);
+    }
+
     let state = Arc::new(Mutex::new(AppState {
         current_file: initial_file.clone(),
         current_title: initial_title,
         zoom_level: 1.0,
         last_reload: Instant::now(),
+        last_rendered: initial_rendered,
+        toc_visible: true,
     }));
 
     // Setup file watcher
@@ -147,7 +212,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-    // Background thread to relay file modification events to the event loop
+    // Background thread to relay file modification events
     let proxy_clone = proxy.clone();
     std::thread::spawn(move || {
         while let Ok(event_res) = rx_watch.recv() {
@@ -177,8 +242,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     st.last_reload = Instant::now();
 
                     if let Some(ref path) = st.current_file {
-                        if let Ok((new_html, doc_title)) = load_document(path) {
-                            let window_title = format!("{doc_title} — MDVu");
+                        if let Ok((new_html, doc)) = load_document(path) {
+                            let title = doc
+                                .title
+                                .clone()
+                                .or_else(|| path.file_name().map(|f| f.to_string_lossy().to_string()))
+                                .unwrap_or_else(|| "MDVu".to_string());
+                            let window_title = format!("{title} — MDVu");
                             window.set_title(&window_title);
                             st.current_title = window_title;
 
@@ -195,6 +265,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 }})()"#
                             );
                             let _ = webview.evaluate_script(&script);
+                            inject_engines_if_needed(&webview, &doc);
+                            st.last_rendered = Some(doc);
                         }
                     }
                 }
@@ -208,17 +280,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     match load_document(&new_path) {
-                        Ok((new_html, doc_title)) => {
-                            let window_title = format!("{doc_title} — MDVu");
+                        Ok((new_html, doc)) => {
+                            let title = doc
+                                .title
+                                .clone()
+                                .or_else(|| new_path.file_name().map(|f| f.to_string_lossy().to_string()))
+                                .unwrap_or_else(|| "MDVu".to_string());
+                            let window_title = format!("{title} — MDVu");
                             window.set_title(&window_title);
                             st.current_file = Some(new_path);
                             st.current_title = window_title;
                             let _ = webview.load_html(&new_html);
+                            inject_engines_if_needed(&webview, &doc);
+                            st.last_rendered = Some(doc);
                         }
                         Err(e) => {
                             eprintln!("Failed to open document: {e}");
                         }
                     }
+                }
+                UserEvent::ToggleTOC => {
+                    let mut st = state.lock().unwrap();
+                    st.toc_visible = !st.toc_visible;
                 }
             },
 
@@ -256,6 +339,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                             KeyCode::KeyR if is_ctrl_or_cmd => {
                                 let _ = proxy.send_event(UserEvent::FileChanged);
+                            }
+                            KeyCode::KeyB if is_ctrl_or_cmd => {
+                                let _ = proxy.send_event(UserEvent::ToggleTOC);
                             }
                             KeyCode::Equal | KeyCode::NumpadAdd if is_ctrl_or_cmd => {
                                 let mut st = state.lock().unwrap();

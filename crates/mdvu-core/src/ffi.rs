@@ -1,14 +1,19 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
-use crate::pipeline::{MarkdownDialect, MarkdownPipeline};
+use crate::assets::{get_katex_js, get_mermaid_js, get_plantuml_js};
 use crate::parser::MarkdownParser;
+use crate::pipeline::{MarkdownDialect, MarkdownPipeline};
 use crate::template::make_html;
 
 pub struct MdvuDocument {
     html: CString,
+    body: CString,
     title: CString,
     toc_json: CString,
+    has_mermaid: bool,
+    has_plantuml: bool,
+    has_math: bool,
 }
 
 unsafe fn c_str_to_rust<'a>(ptr: *const c_char) -> Option<&'a str> {
@@ -23,6 +28,30 @@ unsafe fn c_str_to_rust<'a>(ptr: *const c_char) -> Option<&'a str> {
 pub extern "C" fn mdvu_version() -> *const c_char {
     static VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
     VERSION.as_ptr() as *const c_char
+}
+
+#[no_mangle]
+pub extern "C" fn mdvu_get_mermaid_js() -> *const c_char {
+    match get_mermaid_js() {
+        Ok(s) => s.as_ptr() as *const c_char,
+        Err(_) => std::ptr::null(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn mdvu_get_plantuml_js() -> *const c_char {
+    match get_plantuml_js() {
+        Ok(s) => s.as_ptr() as *const c_char,
+        Err(_) => std::ptr::null(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn mdvu_get_katex_js() -> *const c_char {
+    match get_katex_js() {
+        Ok(s) => s.as_ptr() as *const c_char,
+        Err(_) => std::ptr::null(),
+    }
 }
 
 #[no_mangle]
@@ -73,8 +102,12 @@ pub unsafe extern "C" fn mdvu_render_to_html(
 
     let doc = Box::new(MdvuDocument {
         html: CString::new(html).unwrap_or_default(),
+        body: CString::new(rendered.body).unwrap_or_default(),
         title: CString::new(final_title).unwrap_or_default(),
         toc_json: CString::new(toc_json).unwrap_or_default(),
+        has_mermaid: rendered.has_mermaid,
+        has_plantuml: rendered.has_plantuml,
+        has_math: rendered.has_math,
     });
 
     Box::into_raw(doc)
@@ -86,6 +119,15 @@ pub unsafe extern "C" fn mdvu_document_get_html(doc: *const MdvuDocument) -> *co
         std::ptr::null()
     } else {
         (*doc).html.as_ptr()
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mdvu_document_get_body(doc: *const MdvuDocument) -> *const c_char {
+    if doc.is_null() {
+        std::ptr::null()
+    } else {
+        (*doc).body.as_ptr()
     }
 }
 
@@ -104,6 +146,33 @@ pub unsafe extern "C" fn mdvu_document_get_toc_json(doc: *const MdvuDocument) ->
         std::ptr::null()
     } else {
         (*doc).toc_json.as_ptr()
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mdvu_document_has_mermaid(doc: *const MdvuDocument) -> bool {
+    if doc.is_null() {
+        false
+    } else {
+        (*doc).has_mermaid
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mdvu_document_has_plantuml(doc: *const MdvuDocument) -> bool {
+    if doc.is_null() {
+        false
+    } else {
+        (*doc).has_plantuml
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn mdvu_document_has_math(doc: *const MdvuDocument) -> bool {
+    if doc.is_null() {
+        false
+    } else {
+        (*doc).has_math
     }
 }
 

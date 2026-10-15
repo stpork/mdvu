@@ -46,7 +46,7 @@ package:
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle"
 	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdvu"
 	strip -u -r "$(APP)/Contents/MacOS/mdvu"
-	cp "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
+	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
 	test ! -f "$(PROJECT_ROOT)/packaging/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/mdvu.icns" "$(APP)/Contents/Resources/"
 	cp "$(PROJECT_ROOT)/packaging/Info.plist" "$(APP)/Contents/Info.plist"
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"

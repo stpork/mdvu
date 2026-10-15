@@ -1,5 +1,7 @@
 use pulldown_cmark::{html, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TocEntry {
@@ -13,6 +15,9 @@ pub struct RenderedDocument {
     pub body: String,
     pub title: Option<String>,
     pub toc: Vec<TocEntry>,
+    pub has_mermaid: bool,
+    pub has_plantuml: bool,
+    pub has_math: bool,
 }
 
 fn escape_html(input: &str) -> String {
@@ -42,6 +47,23 @@ fn simple_slug(title: &str) -> String {
     } else {
         slug
     }
+}
+
+// GFM Security Tagfilter: disarm script, iframe, textarea, title, xmp, noembed, noframes, plaintext
+// Note: <style> is explicitly preserved per MDVu spec
+static DISALLOWED_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?i)<(/?)((?:script|iframe|textarea|title|xmp|noembed|noframes|plaintext))(\s*[^>]*)>"#).unwrap()
+});
+
+fn apply_tagfilter(raw_html: &str) -> String {
+    DISALLOWED_TAG_RE
+        .replace_all(raw_html, |caps: &regex::Captures| {
+            let slash = &caps[1];
+            let tag_name = &caps[2];
+            let rest = &caps[3];
+            format!("&lt;{slash}{tag_name}{rest}>")
+        })
+        .into_owned()
 }
 
 pub struct MarkdownParser {
@@ -74,8 +96,16 @@ impl MarkdownParser {
         let mut toc = Vec::new();
         let mut doc_title: Option<String> = None;
 
+        let mut has_mermaid = false;
+        let mut has_plantuml = false;
+        let mut has_math = source.contains("math-inline") || source.contains("math-display");
+
         for event in parser {
             match event {
+                Event::Html(raw) => {
+                    let filtered = apply_tagfilter(&raw);
+                    custom_events.push(Event::Html(filtered.into()));
+                }
                 Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                     inside_code_block = Some(lang.to_string());
                     code_buffer.clear();
@@ -90,6 +120,7 @@ impl MarkdownParser {
                         let trimmed_code = code_buffer.trim_matches(|c| c == '\n' || c == '\r');
 
                         if clean_lang == "mermaid" {
+                            has_mermaid = true;
                             let key = format!("mermaid-{:x}", code_buffer.len());
                             let html = format!(
                                 "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
@@ -97,6 +128,7 @@ impl MarkdownParser {
                             );
                             custom_events.push(Event::Html(html.into()));
                         } else if clean_lang == "plantuml" || clean_lang == "puml" {
+                            has_plantuml = true;
                             let key = format!("plantuml-{:x}", code_buffer.len());
                             let html = format!(
                                 "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
@@ -104,6 +136,7 @@ impl MarkdownParser {
                             );
                             custom_events.push(Event::Html(html.into()));
                         } else if clean_lang == "math" || clean_lang == "latex" || clean_lang == "katex" {
+                            has_math = true;
                             let html = format!(
                                 "<div class=\"math-display\">{}</div>",
                                 escape_html(trimmed_code)
@@ -175,11 +208,14 @@ impl MarkdownParser {
             body: postprocessed,
             title: doc_title,
             toc,
+            has_mermaid,
+            has_plantuml,
+            has_math,
         }
     }
 
     fn replace_callout_blocks(input: &str) -> String {
-        let marker = "MDVU-CALLOUT-";
+        let marker = "MDVU-CALLOUT-" ;
         if !input.contains(marker) {
             return input.to_string();
         }
@@ -282,5 +318,22 @@ impl MarkdownParser {
 
         result.push_str(&input[cursor..]);
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tagfilter_disarms_script_while_preserving_style() {
+        let md = "<style>body { color: red; }</style>\n\n<script>alert(1)</script>\n\n<iframe src=\"evil.com\"></iframe>";
+        let parser = MarkdownParser::new("light");
+        let doc = parser.render(md);
+        assert!(doc.body.contains("<style>body { color: red; }</style>"));
+        assert!(!doc.body.contains("<script>"));
+        assert!(doc.body.contains("&lt;script>alert(1)&lt;/script>"));
+        assert!(!doc.body.contains("<iframe"));
+        assert!(doc.body.contains("&lt;iframe src=\"evil.com\">&lt;/iframe>"));
     }
 }

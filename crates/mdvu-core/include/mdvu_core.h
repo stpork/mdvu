@@ -16,6 +16,21 @@ typedef struct MdvuDocument MdvuDocument;
 const char* mdvu_version(void);
 
 /**
+ * Returns decompressed Mermaid JS engine string (cached in memory).
+ */
+const char* mdvu_get_mermaid_js(void);
+
+/**
+ * Returns decompressed PlantUML JS engine string (cached in memory).
+ */
+const char* mdvu_get_plantuml_js(void);
+
+/**
+ * Returns decompressed KaTeX JS engine string (cached in memory).
+ */
+const char* mdvu_get_katex_js(void);
+
+/**
  * Renders a Markdown string to a complete HTML document.
  * 
  * @param source Null-terminated UTF-8 markdown source.
@@ -44,6 +59,12 @@ MdvuDocument* mdvu_render_to_html(
 const char* mdvu_document_get_html(const MdvuDocument* doc);
 
 /**
+ * Retrieves the raw HTML body (inner article content) from an MdvuDocument.
+ * The pointer is valid until mdvu_document_free is called.
+ */
+const char* mdvu_document_get_body(const MdvuDocument* doc);
+
+/**
  * Retrieves the document title from an MdvuDocument.
  * The pointer is valid until mdvu_document_free is called.
  */
@@ -54,6 +75,21 @@ const char* mdvu_document_get_title(const MdvuDocument* doc);
  * The pointer is valid until mdvu_document_free is called.
  */
 const char* mdvu_document_get_toc_json(const MdvuDocument* doc);
+
+/**
+ * Returns true if the rendered document contains Mermaid diagrams.
+ */
+bool mdvu_document_has_mermaid(const MdvuDocument* doc);
+
+/**
+ * Returns true if the rendered document contains PlantUML diagrams.
+ */
+bool mdvu_document_has_plantuml(const MdvuDocument* doc);
+
+/**
+ * Returns true if the rendered document contains Math formulas.
+ */
+bool mdvu_document_has_math(const MdvuDocument* doc);
 
 /**
  * Frees an MdvuDocument allocated by mdvu_render_to_html().
