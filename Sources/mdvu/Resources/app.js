@@ -263,5 +263,26 @@ allMatches[currentIndex].scrollIntoView({block:'center',behavior:'smooth'});
 return{count:allMatches.length,current:currentIndex+1};
 };
 window.__mdvuFind={search:searchFind,next:()=>stepFind(1),previous:()=>stepFind(-1),clear:clearFind};
+window.__mdvuToggleTOC=()=>{
+let panel=document.getElementById('mdvu-toc-panel');
+if(panel){panel.classList.toggle('visible');return}
+const headings=document.querySelectorAll('h1,h2,h3,h4,h5,h6');
+if(!headings.length)return;
+panel=document.createElement('nav');
+panel.id='mdvu-toc-panel';
+panel.className='visible';
+let html='<div class="toc-header"><strong>Table of Contents</strong><button id="mdvu-toc-close" type="button" title="Close (Esc)">&times;</button></div><ul class="toc-list">';
+headings.forEach(h=>{
+const lvl=h.tagName.slice(1);
+const title=h.textContent.replace(/^#\s*/,'').trim();
+html+=`<li class="toc-item toc-lvl-${lvl}"><a href="#${encodeURIComponent(h.id)}">${esc(title)}</a></li>`;
+});
+html+='</ul>';
+panel.innerHTML=html;
+document.body.appendChild(panel);
+panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
+panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
+};
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('mdvu-toc-panel')?.classList.remove('visible')}});
 document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{decorateHeadings();wrapTables();scheduleHighlight()})});
 })();

@@ -15,13 +15,15 @@ fn escape_html(input: &str) -> String {
     out
 }
 
-pub fn make_html(
+pub fn make_html_selective(
     body: &str,
     title: &str,
     theme: &str,
     full_width: bool,
     base_url: Option<&str>,
-    embed_diagram_engines: bool,
+    embed_katex: bool,
+    embed_mermaid: bool,
+    embed_plantuml: bool,
 ) -> String {
     let base_tag = match base_url {
         Some(url) => format!("<base href=\"{}\">", escape_html(url)),
@@ -32,17 +34,21 @@ pub fn make_html(
     let theme_val = if theme.is_empty() { "system" } else { theme };
 
     let mut extra_scripts = String::new();
-    if embed_diagram_engines {
+    if embed_katex {
         if let Ok(katex) = get_katex_js() {
             extra_scripts.push_str("<script>");
             extra_scripts.push_str(katex);
             extra_scripts.push_str("</script>\n");
         }
+    }
+    if embed_mermaid {
         if let Ok(mermaid) = get_mermaid_js() {
             extra_scripts.push_str("<script>");
             extra_scripts.push_str(mermaid);
             extra_scripts.push_str("</script>\n");
         }
+    }
+    if embed_plantuml {
         if let Ok(plantuml) = get_plantuml_js() {
             extra_scripts.push_str("<script>");
             extra_scripts.push_str(plantuml);
@@ -71,5 +77,25 @@ pub fn make_html(
 </body>
 </html>"#,
         escaped_title = escape_html(title),
+    )
+}
+
+pub fn make_html(
+    body: &str,
+    title: &str,
+    theme: &str,
+    full_width: bool,
+    base_url: Option<&str>,
+    embed_diagram_engines: bool,
+) -> String {
+    make_html_selective(
+        body,
+        title,
+        theme,
+        full_width,
+        base_url,
+        embed_diagram_engines,
+        embed_diagram_engines,
+        embed_diagram_engines,
     )
 }

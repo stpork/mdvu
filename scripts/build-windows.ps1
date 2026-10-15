@@ -15,7 +15,7 @@ if ($Configuration -eq "release") {
 
 $DistDir = "dist/windows"
 if (Test-Path $DistDir) {
-    Remove-Item -Recurse -Force $DistDir
+    Get-ChildItem -Path $DistDir -Exclude "*.WebView2" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 
@@ -46,11 +46,19 @@ if ($LoaderDll) {
 Copy-Item "README.md" (Join-Path $DistDir "README.txt")
 Copy-Item "LICENSE" (Join-Path $DistDir "LICENSE.txt")
 
+# Normalize timestamps to prevent PKWare zip crash (dates prior to 1980 like WebView2Loader.dll 1973)
+Get-ChildItem -Path $DistDir | ForEach-Object {
+    if ($_.LastWriteTime.Year -lt 1980) {
+        $_.LastWriteTime = (Get-Date)
+    }
+}
+
 $Version = (Get-Content "version.txt").Trim()
 $ZipPath = "dist/mdvu-$Version-windows-x86_64.zip"
 Write-Host "==> Creating release archive: $ZipPath" -ForegroundColor Cyan
 
-Compress-Archive -Path "$DistDir/*" -DestinationPath $ZipPath -Force
+$ArchiveItems = Get-ChildItem -Path $DistDir -Exclude "*.WebView2" | Select-Object -ExpandProperty FullName
+Compress-Archive -Path $ArchiveItems -DestinationPath $ZipPath -Force
 
 $Hash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()
 Set-Content -Path "$ZipPath.sha256" -Value "$Hash  $(Split-Path $ZipPath -Leaf)"

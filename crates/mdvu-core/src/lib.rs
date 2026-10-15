@@ -7,7 +7,7 @@ pub mod template;
 pub use assets::*;
 pub use parser::{MarkdownParser, RenderedDocument, TocEntry};
 pub use pipeline::{FastScan, MarkdownDialect, MarkdownPipeline};
-pub use template::make_html;
+pub use template::{make_html, make_html_selective};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -32,13 +32,21 @@ pub fn render_markdown(
         .or_else(|| rendered.title.clone())
         .unwrap_or_else(|| "MDVu Document".to_string());
 
-    let html = make_html(
+    let (embed_katex, embed_mermaid, embed_plantuml) = if embed_diagram_engines {
+        (true, true, true)
+    } else {
+        (rendered.has_math, rendered.has_mermaid, rendered.has_plantuml)
+    };
+
+    let html = make_html_selective(
         &rendered.body,
         &title,
         theme,
         full_width,
         base_url,
-        embed_diagram_engines,
+        embed_katex,
+        embed_mermaid,
+        embed_plantuml,
     );
 
     (html, rendered)
