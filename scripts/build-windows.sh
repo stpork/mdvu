@@ -9,35 +9,48 @@ VERSION=$(echo "$VERSION" | tr -d '[:space:]')
 
 echo "==> Building MDVu Windows ($VERSION)..."
 
-# Build with cargo
+# Determine target
+TARGET=""
 if [ -n "${CARGO_TARGET:-}" ]; then
-    cargo build --release -p mdvu-windows -p mdvu-cli --target "$CARGO_TARGET"
-else
-    # Check if native Windows or cross-compilation target is available
-    if [ "$(uname -s)" = "Darwin" ] || [ "$(uname -s)" = "Linux" ]; then
-        if rustup target list 2>/dev/null | grep -q "x86_64-pc-windows-msvc (installed)"; then
-            cargo build --release -p mdvu-windows -p mdvu-cli --target x86_64-pc-windows-msvc 2>/dev/null || cargo build --release -p mdvu-windows -p mdvu-cli || true
-        else
-            cargo build --release -p mdvu-windows -p mdvu-cli || true
-        fi
+    TARGET="$CARGO_TARGET"
+elif [ "$(uname -s)" = "Darwin" ] || [ "$(uname -s)" = "Linux" ]; then
+    if rustup target list 2>/dev/null | grep -q "x86_64-pc-windows-gnu (installed)" && command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+        TARGET="x86_64-pc-windows-gnu"
+    elif rustup target list 2>/dev/null | grep -q "x86_64-pc-windows-msvc (installed)" && command -v cargo-xwin >/dev/null 2>&1; then
+        TARGET="x86_64-pc-windows-msvc"
     else
-        cargo build --release -p mdvu-windows -p mdvu-cli
+        echo "Error: Cannot cross-compile Windows PE binaries on $(uname -s)." >&2
+        echo "Required tools missing. Please either:" >&2
+        echo "  1) Install MinGW-w64: rustup target add x86_64-pc-windows-gnu && brew install mingw-w64" >&2
+        echo "  2) Or run on Windows using: .\\build.ps1 or build.cmd" >&2
+        exit 1
     fi
+fi
+
+if [ -n "$TARGET" ]; then
+    echo "    Using cargo target: $TARGET"
+    if [ "$TARGET" = "x86_64-pc-windows-msvc" ] && command -v cargo-xwin >/dev/null 2>&1; then
+        cargo xwin build --release -p mdvu-windows -p mdvu-cli --target "$TARGET"
+    else
+        cargo build --release -p mdvu-windows -p mdvu-cli --target "$TARGET"
+    fi
+else
+    cargo build --release -p mdvu-windows -p mdvu-cli
 fi
 
 DIST_DIR="$ROOT/dist/windows"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
+# Locate compiled .exe binaries (only true Windows PE executables)
 EXE=""
 for candidate in \
-    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-windows.exe" \
+    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu-windows.exe"} \
     "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu-windows.exe" \
+    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-windows.exe" \
     "$ROOT/target/release/mdvu-windows.exe" \
-    "$ROOT/target/release/mdvu-windows" \
-    "$ROOT/target/debug/mdvu-windows.exe" \
-    "$ROOT/target/debug/mdvu-windows"; do
-    if [ -f "$candidate" ]; then
+    "$ROOT/target/debug/mdvu-windows.exe"; do
+    if [ -n "$candidate" ] && [ -f "$candidate" ]; then
         EXE="$candidate"
         break
     fi
@@ -45,29 +58,40 @@ done
 
 CLI=""
 for candidate in \
-    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-cli.exe" \
+    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu-cli.exe"} \
     "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu-cli.exe" \
+    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-cli.exe" \
     "$ROOT/target/release/mdvu-cli.exe" \
-    "$ROOT/target/release/mdvu-cli" \
-    "$ROOT/target/debug/mdvu-cli.exe" \
-    "$ROOT/target/debug/mdvu-cli"; do
-    if [ -f "$candidate" ]; then
+    "$ROOT/target/debug/mdvu-cli.exe"; do
+    if [ -n "$candidate" ] && [ -f "$candidate" ]; then
         CLI="$candidate"
         break
     fi
 done
 
-if [ -n "$EXE" ]; then
-    cp "$EXE" "$DIST_DIR/mdvu.exe"
-    echo "  [OK] Copied $(basename "$EXE") -> mdvu.exe"
-else
-    echo "  [INFO] mdvu-windows.exe will be built on Windows host or via MSVC toolchain"
-fi
+validate_pe() {
+    file_path="$1"
+    name="$2"
+    if [ -z "$file_path" ] || [ ! -f "$file_path" ]; then
+        echo "Error: $name executable not found!" >&2
+        exit 1
+    fi
+    # Must be PE32 / PE32+ Windows binary
+    if ! file -b "$file_path" | grep -q "PE32"; then
+        echo "Error: $name ($file_path) is not a Windows PE executable:" >&2
+        file "$file_path" >&2
+        exit 1
+    fi
+}
 
-if [ -n "$CLI" ]; then
-    cp "$CLI" "$DIST_DIR/mdvu-cli.exe"
-    echo "  [OK] Copied $(basename "$CLI") -> mdvu-cli.exe"
-fi
+validate_pe "$EXE" "mdvu-windows.exe"
+validate_pe "$CLI" "mdvu-cli.exe"
+
+cp "$EXE" "$DIST_DIR/mdvu.exe"
+echo "  [OK] Copied $(basename "$EXE") -> mdvu.exe ($(file -b "$DIST_DIR/mdvu.exe"))"
+
+cp "$CLI" "$DIST_DIR/mdvu-cli.exe"
+echo "  [OK] Copied $(basename "$CLI") -> mdvu-cli.exe ($(file -b "$DIST_DIR/mdvu-cli.exe"))"
 
 [ -f "README.md" ] && cp "README.md" "$DIST_DIR/README.txt"
 [ -f "LICENSE" ] && cp "LICENSE" "$DIST_DIR/LICENSE.txt"
