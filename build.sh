@@ -18,6 +18,7 @@ Commands:
   check      Run unit and visual regression tests
   install    Install a local optimized app into ~/Applications
   publish    Publish release from develop to GitHub and Homebrew (-y|--yes)
+  windows    Build and package Windows release (mdvu.exe, mdvu-cli.exe)
   clean      Remove build and distribution products
 
 Signing overrides for app/universal/archive:
@@ -35,6 +36,17 @@ case "$command" in
     publish)
         shift
         exec "$ROOT/scripts/publish-release.sh" "$@"
+        ;;
+    windows)
+        shift
+        if [ -f "$ROOT/scripts/build-windows.sh" ]; then
+            exec "$ROOT/scripts/build-windows.sh" "$@"
+        elif command -v pwsh >/dev/null 2>&1; then
+            exec pwsh "$ROOT/scripts/build-windows.ps1" "$@"
+        else
+            echo "Error: Neither scripts/build-windows.sh nor pwsh found" >&2
+            exit 1
+        fi
         ;;
     debug)     exec make ;;
     release)   exec make release ;;
