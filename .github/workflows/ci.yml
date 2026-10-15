@@ -141,14 +141,17 @@ jobs:
       - name: Test Windows Headless CLI Functionality
         shell: pwsh
         run: |
-          $exe = "dist/windows/mdvu.exe"
-          & $exe --help
-          & $exe --version
-          & $exe README.md -o dist/test-output.html --standalone
+          $exe = (Resolve-Path "dist/windows/mdvu.exe").Path
+          & $exe --help | Out-Host
+          & $exe --version | Out-Host
+          $proc = Start-Process -FilePath $exe -ArgumentList "README.md -o dist/test-output.html --standalone" -Wait -NoNewWindow -PassThru
+          if ($proc.ExitCode -ne 0) {
+            throw "CLI HTML generation failed with exit code $($proc.ExitCode)"
+          }
           if (-not (Test-Path "dist/test-output.html")) {
             throw "CLI HTML output was not generated"
           }
-          $toc = & $exe README.md --toc
+          $toc = & $exe README.md --toc | Out-String
           if ($toc -notmatch "why-mdvu") {
             throw "CLI TOC JSON extraction failed"
           }

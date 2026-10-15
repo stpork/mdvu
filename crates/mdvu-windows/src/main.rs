@@ -122,6 +122,7 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     if args.toc {
         let toc_json = serde_json::to_string_pretty(&rendered.toc)?;
         println!("{toc_json}");
+        let _ = io::stdout().flush();
         return Ok(());
     }
 
@@ -136,6 +137,7 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         }
         None => {
             io::stdout().write_all(html.as_bytes())?;
+            let _ = io::stdout().flush();
         }
     }
 
@@ -550,8 +552,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         attach_console();
         if let Err(e) = run_headless(args) {
             eprintln!("mdvu error: {e}");
+            let _ = io::stderr().flush();
             std::process::exit(1);
         }
+        let _ = io::stdout().flush();
         std::process::exit(0);
     }
 
