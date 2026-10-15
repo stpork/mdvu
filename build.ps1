@@ -35,10 +35,10 @@ Usage: .\build.ps1 [command]
 
 Commands:
   app        Build and package MDVu for Windows into dist/ (default)
-  release    Build optimized release binaries (mdvu-windows, mdvu-cli)
-  debug      Build unoptimized debug binaries
+  release    Build optimized release binary (mdvu.exe)
+  debug      Build unoptimized debug binary
   test       Run Rust workspace tests
-  package    Package existing binaries into dist/ ZIP archive with SHA-256
+  package    Package existing binary into dist/ ZIP archive with SHA-256
   clean      Remove build artifacts and dist/ directory
   help       Show this help message
 "@
@@ -56,12 +56,12 @@ switch ($Command) {
     }
     "debug" {
         Write-Host "==> Building debug binaries..." -ForegroundColor Cyan
-        cargo build -p mdvu-windows -p mdvu-cli
+        cargo build -p mdvu-windows --bin mdvu
         exit $LASTEXITCODE
     }
     "release" {
         Write-Host "==> Building optimized release binaries..." -ForegroundColor Cyan
-        cargo build --release -p mdvu-windows -p mdvu-cli
+        cargo build --release -p mdvu-windows --bin mdvu
         exit $LASTEXITCODE
     }
     "clean" {

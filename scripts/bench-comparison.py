@@ -53,12 +53,11 @@ def main():
     # 1. Binary Sizes
     print("\n--- 1. Binary & Bundle Sizes ---")
     binaries = [
-        ("Swift macOS binary", ".build/release/mdvu"),
+        ("Swift macOS binary (GUI & CLI)", ".build/release/mdvu"),
         ("Swift macOS app bundle", "dist/mdvu.app"),
         ("Rust Core static library", "target/release/libmdvu_core.a"),
         ("Rust Core dylib", "target/release/libmdvu_core.dylib"),
-        ("Rust CLI binary", "target/release/mdvu-cli"),
-        ("Rust Windows binary (host/simulated)", "target/release/mdvu-windows"),
+        ("Windows binary (PE32+)", "dist/windows/mdvu.exe"),
     ]
     
     for name, path in binaries:
@@ -88,9 +87,9 @@ def main():
             print(f"  {name:42}: {sz / 1024:.1f} KB ({sz:,} bytes)")
     print(f"  {'Total Embedded Assets':42}: {total_assets / (1024*1024):.2f} MB ({total_assets:,} bytes)")
 
-    # 3. Rust CLI Performance Benchmark
-    print("\n--- 3. Rust mdvu-core Throughput Benchmark (via mdvu-cli) ---")
-    cli_bin = "target/release/mdvu-cli"
+    # 3. MDVu Headless Throughput Benchmark
+    print("\n--- 3. MDVu Unified Headless Throughput Benchmark ---")
+    cli_bin = ".build/release/mdvu" if os.path.exists(".build/release/mdvu") else ".build/debug/mdvu"
     if os.path.exists(cli_bin):
         for label, fpath in FIXTURES:
             if os.path.exists(fpath):

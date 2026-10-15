@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "==> Building MDVu Windows ($Configuration)..." -ForegroundColor Cyan
 
 $CargoFlags = if ($Configuration -eq "release") { @("--release") } else { @() }
-cargo build @CargoFlags -p mdvu-windows -p mdvu-cli
+cargo build @CargoFlags -p mdvu-windows --bin mdvu
 
 $DistDir = "dist/windows"
 if (Test-Path $DistDir) {
@@ -17,31 +17,20 @@ if (Test-Path $DistDir) {
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 
 $ExeCandidates = @(
-    "target/$Configuration/mdvu-windows.exe",
-    "target/x86_64-pc-windows-msvc/$Configuration/mdvu-windows.exe",
-    "target/release/mdvu-windows.exe",
-    "target/debug/mdvu-windows.exe"
-)
-$CliCandidates = @(
-    "target/$Configuration/mdvu-cli.exe",
-    "target/x86_64-pc-windows-msvc/$Configuration/mdvu-cli.exe",
-    "target/release/mdvu-cli.exe",
-    "target/debug/mdvu-cli.exe"
+    "target/$Configuration/mdvu.exe",
+    "target/x86_64-pc-windows-msvc/$Configuration/mdvu.exe",
+    "target/x86_64-pc-windows-gnu/$Configuration/mdvu.exe",
+    "target/release/mdvu.exe",
+    "target/debug/mdvu.exe"
 )
 
 $ExeSource = $ExeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-$CliSource = $CliCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if ($ExeSource) {
     Copy-Item $ExeSource (Join-Path $DistDir "mdvu.exe")
     Write-Host "  [OK] Copied $ExeSource -> mdvu.exe" -ForegroundColor Green
 } else {
-    Write-Warning "Binary mdvu-windows.exe not found in target directories"
-}
-
-if ($CliSource) {
-    Copy-Item $CliSource (Join-Path $DistDir "mdvu-cli.exe")
-    Write-Host "  [OK] Copied $CliSource -> mdvu-cli.exe" -ForegroundColor Green
+    Write-Warning "Binary mdvu.exe not found in target directories"
 }
 
 Copy-Item "README.md" (Join-Path $DistDir "README.txt")

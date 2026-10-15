@@ -81,7 +81,7 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 
 | Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
-| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Standalone package containing `mdvu.exe` and `mdvu-cli.exe` |
+| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Standalone package containing unified `mdvu.exe` (GUI & CLI) |
 | **`mdvu-X.Y.Z-macos.dmg`** | macOS Universal (`arm64` + `x86_64`) | Graphical macOS installer with Drag-to-Applications |
 | **`mdvu-X.Y.Z-macos-universal.zip`** | macOS Universal (`arm64` + `x86_64`) | Portable archive for both Apple Silicon and Intel |
 | **`mdvu-X.Y.Z-macos-arm64.zip`** | macOS Apple Silicon (`arm64`) | Ultra-compact (2.9 MB) optimized for M1/M2/M3/M4 |
@@ -97,7 +97,7 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
    ```cmd
    mdvu.exe document.md
    ```
-4. *(Optional)* Add the folder to your `PATH` environment variable to use `mdvu` and `mdvu-cli` anywhere.
+4. *(Optional)* Add the folder to your `PATH` environment variable to use `mdvu` anywhere from terminal or File Explorer.
 
 **Building from source on Windows:**
 ```powershell
@@ -108,7 +108,7 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 build.cmd
 
 # Or using Cargo directly:
-cargo build --release -p mdvu-windows -p mdvu-cli
+cargo build --release -p mdvu-windows --bin mdvu
 ```
 
 ---
@@ -170,13 +170,14 @@ cp .build/release/mdvu ~/.local/bin/
 ### Command Line Interface
 
 ```sh
+# --- Interactive GUI Mode ---
 # Open a single file
 mdvu README.md
 
 # Open multiple files in separate tabs/windows
 mdvu ARCHITECTURE.md CHANGELOG.md
 
-# Open a directory (right-hand file navigator in List mode)
+# Open a directory (file navigator in List mode)
 mdvu ~/Documents/Notes
 
 # Force light, dark, or system theme
@@ -188,7 +189,23 @@ mdvu --dialect obsidian note.md
 # Open directly in edge-to-edge Full Width mode
 mdvu --full-width document.md
 
-# Headless snapshot generation (render Markdown to PNG without opening a window)
+# --- Headless CLI Mode (No GUI Window) ---
+# Export Markdown to self-contained HTML file
+mdvu README.md -o output.html
+
+# Embed offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
+mdvu README.md -o output.html --standalone
+
+# Stream rendered HTML directly to stdout (useful for piping)
+mdvu README.md --stdout | grep -i "<article>"
+
+# Read from stdin and render to file or stdout
+cat document.md | mdvu - -o rendered.html
+
+# Extract Table of Contents as JSON structure
+mdvu README.md --toc
+
+# Headless snapshot generation (render Markdown to PNG without opening a window, macOS)
 mdvu --snapshot output.png README.md
 ```
 
@@ -196,12 +213,19 @@ mdvu --snapshot output.png README.md
 
 | Flag | Description | Default |
 | :--- | :--- | :--- |
-| `--theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
-| `--dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
-| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
+| **`-o, --output <FILE>`** | **Headless**: Write rendered HTML to file instead of opening GUI | None |
+| **`--stdout`** | **Headless**: Force render HTML to stdout instead of opening GUI | Disabled |
+| **`--toc`** | **Headless**: Print Table of Contents (JSON) to stdout and exit | Disabled |
+| **`-s, --standalone`** | **Headless**: Embed offline diagram & math engines into HTML | `false` |
+| `--title <TITLE>` | Override document title | Filename |
+| `-t, --theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
+| `-d, --dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
+| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
 | `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
-| `--snapshot <file.png>` | Headless render to PNG image and exit | None |
+| `--snapshot <file.png>` | Headless render to PNG image and exit (macOS) | None |
+| `-v, --version` | Display version information and exit | None |
+| `-h, --help` | Display command-line usage help | None |
 
 ---
 
@@ -360,11 +384,11 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 
 ## Architecture
 
-`mdvu` uses a unified cross-platform architecture:
+`mdvu` uses a unified cross-platform hybrid architecture:
 * **Core (`crates/mdvu-core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
-* **macOS Frontend**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, and trackpad gesture engine.
-* **Windows Frontend (`crates/mdvu-windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, and atomic-save file watching.
-* **Headless CLI (`crates/mdvu-cli`)**: Ultra-fast headless renderer and JSON TOC extractor for CI/CD and scripts.
+* **Unified Binary Design**: Single executable on both platforms that functions seamlessly as an interactive GUI viewer and as a headless CLI renderer when options (`-o`, `--stdout`, `--toc`) or pipes are used.
+* **macOS**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
+* **Windows (`crates/mdvu-windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
 
 For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 

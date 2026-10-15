@@ -111,19 +111,22 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
 
 ---
 
-## 5. Headless CLI (`crates/mdvu-cli`)
+## 5. Unified Single-Binary Mode (GUI & Headless CLI)
 
-For CI/CD pipelines, documentation site generation, and headless scripting:
+MDVu follows a unified single-binary philosophy across all platforms:
+* **Interactive Mode (GUI)**: When invoked without CLI export flags (`mdvu document.md` or via Desktop/Finder/Explorer), MDVu launches its full hardware-accelerated GUI viewport.
+* **Headless Mode (CLI)**: When invoked with export or batch flags (`-o`, `--stdout`, `--toc`, `-s`, stdin `-`), MDVu skips window creation, directly invokes the `mdvu-core` rendering pipeline, streams the result to the target file or stdout, and exits with code 0.
+* **Windows Console Integration (`AttachConsole`)**: On Windows, the binary is compiled with `windows_subsystem = "windows"` to ensure clean launches from File Explorer without terminal flashing. When CLI flags are detected, it dynamically calls Win32 `AttachConsole(ATTACH_PARENT_PROCESS)` to pipe standard I/O directly to the caller's console (Windows Terminal, PowerShell, Git Bash, cmd).
 
 ```sh
 # Render markdown to standalone HTML with embedded offline diagrams
-mdvu-cli document.md -o output.html --standalone
+mdvu document.md -o output.html --standalone
 
 # Stream from stdin to stdout
-cat notes.md | mdvu-cli - > output.html
+cat notes.md | mdvu - --stdout > output.html
 
 # Extract Table of Contents as JSON
-mdvu-cli document.md --toc
+mdvu document.md --toc
 ```
 
 ---

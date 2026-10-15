@@ -30,41 +30,28 @@ fi
 if [ -n "$TARGET" ]; then
     echo "    Using cargo target: $TARGET"
     if [ "$TARGET" = "x86_64-pc-windows-msvc" ] && command -v cargo-xwin >/dev/null 2>&1; then
-        cargo xwin build --release -p mdvu-windows -p mdvu-cli --target "$TARGET"
+        cargo xwin build --release -p mdvu-windows --bin mdvu --target "$TARGET"
     else
-        cargo build --release -p mdvu-windows -p mdvu-cli --target "$TARGET"
+        cargo build --release -p mdvu-windows --bin mdvu --target "$TARGET"
     fi
 else
-    cargo build --release -p mdvu-windows -p mdvu-cli
+    cargo build --release -p mdvu-windows --bin mdvu
 fi
 
 DIST_DIR="$ROOT/dist/windows"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
-# Locate compiled .exe binaries (only true Windows PE executables)
+# Locate compiled .exe binary (only true Windows PE executable)
 EXE=""
 for candidate in \
-    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu-windows.exe"} \
-    "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu-windows.exe" \
-    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-windows.exe" \
-    "$ROOT/target/release/mdvu-windows.exe" \
-    "$ROOT/target/debug/mdvu-windows.exe"; do
+    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu.exe"} \
+    "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu.exe" \
+    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu.exe" \
+    "$ROOT/target/release/mdvu.exe" \
+    "$ROOT/target/debug/mdvu.exe"; do
     if [ -n "$candidate" ] && [ -f "$candidate" ]; then
         EXE="$candidate"
-        break
-    fi
-done
-
-CLI=""
-for candidate in \
-    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu-cli.exe"} \
-    "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu-cli.exe" \
-    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu-cli.exe" \
-    "$ROOT/target/release/mdvu-cli.exe" \
-    "$ROOT/target/debug/mdvu-cli.exe"; do
-    if [ -n "$candidate" ] && [ -f "$candidate" ]; then
-        CLI="$candidate"
         break
     fi
 done
@@ -84,20 +71,17 @@ validate_pe() {
     fi
 }
 
-validate_pe "$EXE" "mdvu-windows.exe"
-validate_pe "$CLI" "mdvu-cli.exe"
+validate_pe "$EXE" "mdvu.exe"
 
 cp "$EXE" "$DIST_DIR/mdvu.exe"
 echo "  [OK] Copied $(basename "$EXE") -> mdvu.exe ($(file -b "$DIST_DIR/mdvu.exe"))"
-
-cp "$CLI" "$DIST_DIR/mdvu-cli.exe"
-echo "  [OK] Copied $(basename "$CLI") -> mdvu-cli.exe ($(file -b "$DIST_DIR/mdvu-cli.exe"))"
 
 [ -f "README.md" ] && cp "README.md" "$DIST_DIR/README.txt"
 [ -f "LICENSE" ] && cp "LICENSE" "$DIST_DIR/LICENSE.txt"
 
 ZIP_PATH="$ROOT/dist/mdvu-$VERSION-windows-x86_64.zip"
 mkdir -p "$ROOT/dist"
+rm -f "$ZIP_PATH" "$ZIP_PATH.sha256"
 
 echo "==> Creating release archive: $ZIP_PATH"
 if command -v zip >/dev/null 2>&1; then

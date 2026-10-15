@@ -1728,15 +1728,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
 
 [[package]]
-name = "mdvu-cli"
-version = "0.4.1"
-dependencies = [
- "clap",
- "mdvu-core",
- "serde_json",
-]
-
-[[package]]
 name = "mdvu-core"
 version = "0.4.1"
 dependencies = [
@@ -1753,6 +1744,7 @@ dependencies = [
 name = "mdvu-windows"
 version = "0.4.1"
 dependencies = [
+ "clap",
  "mdvu-core",
  "notify",
  "rfd",

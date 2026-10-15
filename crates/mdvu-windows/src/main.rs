@@ -3,12 +3,13 @@
 #[cfg(windows)]
 mod win32;
 
+use clap::Parser as ClapParser;
 use mdvu_core::{render_markdown, MarkdownDialect, RenderedDocument};
-use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::env;
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::fs;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -20,6 +21,121 @@ use tao::{
     window::WindowBuilder,
 };
 use wry::{WebView, WebViewBuilder};
+
+#[derive(ClapParser, Debug)]
+#[command(name = "mdvu")]
+#[command(
+    about = "Ultra-fast native Markdown viewer & headless renderer",
+    version = "0.5.0",
+    long_about = None
+)]
+struct Args {
+    /// Input Markdown file path (reads from stdin if omitted with -o/--stdout or "-")
+    #[arg(value_name = "FILE")]
+    input: Option<PathBuf>,
+
+    /// Write output to file instead of launching GUI (headless mode)
+    #[arg(short, long, value_name = "OUTPUT")]
+    output: Option<PathBuf>,
+
+    /// Force render HTML to stdout instead of launching GUI (headless mode)
+    #[arg(long)]
+    stdout: bool,
+
+    /// Print Table of Contents (JSON) to stdout and exit
+    #[arg(long)]
+    toc: bool,
+
+    /// Document title override
+    #[arg(long)]
+    title: Option<String>,
+
+    /// Markdown dialect: generic, obsidian, mkdocs, docusaurus, gfm, commonmark
+    #[arg(short, long, default_value = "generic")]
+    dialect: String,
+
+    /// Color theme: light, dark, system
+    #[arg(short = 'T', long, default_value = "system")]
+    theme: String,
+
+    /// Enable full-width view (removes article max-width)
+    #[arg(long)]
+    full_width: bool,
+
+    /// Embed all offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
+    #[arg(short, long)]
+    standalone: bool,
+}
+
+impl Args {
+    fn is_headless(&self) -> bool {
+        self.output.is_some()
+            || self.stdout
+            || self.toc
+            || self.input.as_ref().map(|p| p.to_string_lossy()) == Some("-".into())
+    }
+}
+
+#[cfg(windows)]
+fn attach_console() {
+    use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    unsafe {
+        AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+}
+
+#[cfg(not(windows))]
+fn attach_console() {}
+
+fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    let (content, base_url) = match args.input {
+        Some(ref path) if path.to_string_lossy() != "-" => {
+            let s = fs::read_to_string(path)?;
+            let abs_path = fs::canonicalize(path).unwrap_or_else(|_| path.clone());
+            let path_str = abs_path.to_string_lossy().replace('\\', "/");
+            let url = if path_str.starts_with('/') {
+                format!("file://{path_str}")
+            } else {
+                format!("file:///{path_str}")
+            };
+            (s, Some(url))
+        }
+        _ => {
+            let mut buf = String::new();
+            io::stdin().read_to_string(&mut buf)?;
+            (buf, None)
+        }
+    };
+
+    let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
+
+    let (html, rendered) = render_markdown(
+        &content,
+        args.title.as_deref(),
+        dialect,
+        &args.theme,
+        args.full_width,
+        base_url.as_deref(),
+        args.standalone,
+    );
+
+    if args.toc {
+        let toc_json = serde_json::to_string_pretty(&rendered.toc)?;
+        println!("{toc_json}");
+        return Ok(());
+    }
+
+    match args.output {
+        Some(out_path) => {
+            fs::write(out_path, html)?;
+        }
+        None => {
+            io::stdout().write_all(html.as_bytes())?;
+        }
+    }
+
+    Ok(())
+}
 
 #[derive(Debug)]
 enum UserEvent {
@@ -35,6 +151,9 @@ struct AppState {
     last_reload: Instant,
     last_rendered: Option<RenderedDocument>,
     toc_visible: bool,
+    dialect: MarkdownDialect,
+    theme: String,
+    full_width: bool,
 }
 
 fn watch_target(watcher: &mut RecommendedWatcher, target: &Path) {
@@ -54,7 +173,12 @@ fn unwatch_target(watcher: &mut RecommendedWatcher, target: &Path) {
     let _ = watcher.unwatch(target);
 }
 
-fn load_document(file_path: &Path) -> Result<(String, RenderedDocument), Box<dyn std::error::Error>> {
+fn load_document(
+    file_path: &Path,
+    dialect: MarkdownDialect,
+    theme: &str,
+    full_width: bool,
+) -> Result<(String, RenderedDocument), Box<dyn std::error::Error>> {
     let source = fs::read_to_string(file_path)?;
     let abs_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
     let path_str = abs_path.to_string_lossy().replace('\\', "/");
@@ -68,9 +192,9 @@ fn load_document(file_path: &Path) -> Result<(String, RenderedDocument), Box<dyn
     let (html, rendered) = render_markdown(
         &source,
         None,
-        MarkdownDialect::Generic,
-        "system",
-        false,
+        dialect,
+        theme,
+        full_width,
         Some(&base_url),
         false,
     );
@@ -134,27 +258,24 @@ fn inject_engines_if_needed(webview: &WebView, doc: &RenderedDocument) {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    let initial_file: Option<PathBuf> = if args.len() > 1 {
-        let p = PathBuf::from(&args[1]);
-        if p.exists() {
-            Some(p)
-        } else {
-            None
-        }
-    } else {
-        rfd::FileDialog::new()
+fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
+    let theme = args.theme;
+    let full_width = args.full_width;
+
+    let initial_file: Option<PathBuf> = match args.input {
+        Some(p) if p.exists() => Some(p),
+        _ => rfd::FileDialog::new()
             .set_title("Open Markdown Document - MDVu")
             .add_filter("Markdown Files", &["md", "markdown", "mdown", "mkd", "txt"])
-            .pick_file()
+            .pick_file(),
     };
 
     let event_loop: EventLoop<UserEvent> = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
 
     let (initial_html, initial_title, initial_rendered) = if let Some(ref path) = initial_file {
-        match load_document(path) {
+        match load_document(path, dialect, &theme, full_width) {
             Ok((h, doc)) => {
                 let title = doc
                     .title
@@ -215,53 +336,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         last_reload: Instant::now(),
         last_rendered: initial_rendered,
         toc_visible: true,
+        dialect,
+        theme,
+        full_width,
     }));
 
     // Setup file watcher
-    let (tx_watch, rx_watch): (
-        std::sync::mpsc::Sender<notify::Result<Event>>,
-        Receiver<notify::Result<Event>>,
-    ) = channel();
-    let mut watcher: Option<RecommendedWatcher> =
-        match RecommendedWatcher::new(tx_watch, notify::Config::default()) {
+    let mut watcher: Option<RecommendedWatcher> = {
+        let proxy_clone = proxy.clone();
+        let (tx, rx) = channel();
+        match RecommendedWatcher::new(
+            tx,
+            notify::Config::default().with_poll_interval(Duration::from_millis(200)),
+        ) {
             Ok(mut w) => {
-                if let Some(ref p) = initial_file {
-                    watch_target(&mut w, p);
+                if let Some(ref path) = initial_file {
+                    watch_target(&mut w, path);
                 }
+
+                std::thread::spawn(move || {
+                    while let Ok(res) = rx.recv() {
+                        if let Ok(event) = res {
+                            match event.kind {
+                                notify::EventKind::Modify(_)
+                                | notify::EventKind::Create(_) => {
+                                    let _ = proxy_clone.send_event(UserEvent::FileChanged);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                });
+
                 Some(w)
             }
             Err(err) => {
                 eprintln!("Warning: Failed to initialize file watcher: {err}");
                 None
             }
-        };
-
-    // Background thread to relay file modification events
-    let proxy_clone = proxy.clone();
-    let state_watcher = Arc::clone(&state);
-    std::thread::spawn(move || {
-        while let Ok(event_res) = rx_watch.recv() {
-            if let Ok(event) = event_res {
-                match event.kind {
-                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Any => {
-                        let cur_file = state_watcher.lock().unwrap().current_file.clone();
-                        if let Some(ref target) = cur_file {
-                            let matches = event.paths.is_empty()
-                                || event.paths.iter().any(|p| {
-                                    p == target || p.file_name() == target.file_name()
-                                });
-                            if matches {
-                                let _ = proxy_clone.send_event(UserEvent::FileChanged);
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
         }
-    });
+    };
 
-    let mut modifiers = ModifiersState::empty();
+    let mut modifiers = ModifiersState::default();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -276,7 +392,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     st.last_reload = Instant::now();
 
                     if let Some(ref path) = st.current_file {
-                        if let Ok((new_html, doc)) = load_document(path) {
+                        let d = st.dialect;
+                        let t = st.theme.clone();
+                        let fw = st.full_width;
+                        if let Ok((new_html, doc)) = load_document(path, d, &t, fw) {
                             let title = doc
                                 .title
                                 .clone()
@@ -313,7 +432,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         watch_target(w, &new_path);
                     }
 
-                    match load_document(&new_path) {
+                    let d = st.dialect;
+                    let t = st.theme.clone();
+                    let fw = st.full_width;
+                    match load_document(&new_path, d, &t, fw) {
                         Ok((new_html, doc)) => {
                             let title = doc
                                 .title
@@ -407,4 +529,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         }
     });
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = match Args::try_parse() {
+        Ok(a) => a,
+        Err(err) => {
+            attach_console();
+            let _ = err.print();
+            std::process::exit(err.exit_code());
+        }
+    };
+
+    if args.is_headless() {
+        attach_console();
+        return run_headless(args);
+    }
+
+    run_gui(args)
 }

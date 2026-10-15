@@ -18,8 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Native Win32 menu bar and status bar controls.
   - Live file watcher (`notify`) with directory-level monitoring, debounced reloading, and atomic save tracking for editors like VS Code, Notepad++, and Vim.
   - Full keyboard shortcuts (`Ctrl+O`, `Ctrl+R` / `F5`, `Ctrl++` / `Ctrl+-` / `Ctrl+0`, `Ctrl+B`, `F11`).
-- **Headless CLI (`crates/mdvu-cli`)**:
-  - Ultra-fast headless Markdown-to-HTML compiler and JSON Table of Contents extractor for CI/CD and automation scripts.
+- **Unified Single-Binary Architecture**:
+  - Unified interactive GUI viewer and headless CLI compiler into a single executable `mdvu` (`mdvu.exe` on Windows).
+  - Automatically switches between GUI and headless modes based on passed command-line flags (`-o`, `--stdout`, `--toc`, `-s`, stdin `-`).
+  - Added Win32 `AttachConsole` dynamic hook to wire standard I/O to terminal callers without console window flashing on double-click.
 - **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
   - Integration bridge connecting the macOS AppKit application to `mdvu-core` with memory-safe scoped closures (`withOptionalCString`).
 - **Cross-Platform Build & CI/CD Tooling**:
