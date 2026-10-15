@@ -76,6 +76,13 @@ validate_pe "$EXE" "mdvu.exe"
 cp "$EXE" "$DIST_DIR/mdvu.exe"
 echo "  [OK] Copied $(basename "$EXE") -> mdvu.exe ($(file -b "$DIST_DIR/mdvu.exe"))"
 
+# Copy WebView2Loader.dll (required by GNU/MinGW target runtime)
+LOADER_DLL=$(find "$ROOT/target" -name "WebView2Loader.dll" | grep -E "x64/WebView2Loader\.dll" | head -n 1)
+if [ -n "$LOADER_DLL" ] && [ -f "$LOADER_DLL" ]; then
+    cp "$LOADER_DLL" "$DIST_DIR/WebView2Loader.dll"
+    echo "  [OK] Copied $(basename "$LOADER_DLL") -> WebView2Loader.dll"
+fi
+
 [ -f "README.md" ] && cp "README.md" "$DIST_DIR/README.txt"
 [ -f "LICENSE" ] && cp "LICENSE" "$DIST_DIR/LICENSE.txt"
 

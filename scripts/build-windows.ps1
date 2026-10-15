@@ -33,6 +33,13 @@ if ($ExeSource) {
     Write-Warning "Binary mdvu.exe not found in target directories"
 }
 
+# Copy WebView2Loader.dll if present
+$LoaderDll = Get-ChildItem -Path "target" -Filter "WebView2Loader.dll" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
+if ($LoaderDll) {
+    Copy-Item $LoaderDll.FullName (Join-Path $DistDir "WebView2Loader.dll")
+    Write-Host "  [OK] Copied $($LoaderDll.Name) -> WebView2Loader.dll" -ForegroundColor Green
+}
+
 Copy-Item "README.md" (Join-Path $DistDir "README.txt")
 Copy-Item "LICENSE" (Join-Path $DistDir "LICENSE.txt")
 
