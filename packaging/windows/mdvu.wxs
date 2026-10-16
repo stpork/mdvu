@@ -55,31 +55,137 @@
             <Component Id="MainExecutable" Guid="B491A77E-9A56-4D83-8C45-2C8B69262301" Win64="yes">
                 <File Id="MdvuExe" Name="mdvu.exe" Source="$(var.DistDir)\mdvu.exe" KeyPath="yes" />
 
-                <!-- Register MDVu.MarkdownDocument ProgId and file associations (HKMU redirects to HKLM or HKCU) -->
+                <!-- Register MDVu.MarkdownDocument ProgId with Open command and icon -->
                 <RegistryKey Root="HKMU" Key="Software\Classes\MDVu.MarkdownDocument">
                     <RegistryValue Type="string" Value="Markdown Document" />
+                    <RegistryValue Name="FriendlyTypeName" Type="string" Value="Markdown Document" />
                     <RegistryKey Key="DefaultIcon">
                         <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell">
+                        <RegistryValue Type="string" Value="open" />
+                        <RegistryKey Key="open">
+                            <RegistryValue Type="string" Value="&amp;Open with MDVu" />
+                            <RegistryKey Key="command">
+                                <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                            </RegistryKey>
+                        </RegistryKey>
+                    </RegistryKey>
+                </RegistryKey>
+
+                <!-- File Extensions (.md, .markdown, .mdown, .mkd, .mdx, .mdtxt) -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\.md">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.markdown">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mdown">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mkd">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mdx">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mdtxt">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <!-- Application Registration for Windows "Default Apps" & "Open With" -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe">
+                    <RegistryValue Name="FriendlyAppName" Type="string" Value="MDVu" />
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="SupportedTypes">
+                        <RegistryValue Name=".md" Type="string" Value="" />
+                        <RegistryValue Name=".markdown" Type="string" Value="" />
+                        <RegistryValue Name=".mdown" Type="string" Value="" />
+                        <RegistryValue Name=".mkd" Type="string" Value="" />
+                        <RegistryValue Name=".mdx" Type="string" Value="" />
+                        <RegistryValue Name=".mdtxt" Type="string" Value="" />
                     </RegistryKey>
                     <RegistryKey Key="shell\open\command">
                         <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
                     </RegistryKey>
                 </RegistryKey>
 
-                <RegistryKey Root="HKMU" Key="Software\Classes\.md\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                <!-- Explorer context menu to open folders as Markdown Vault in MDVu -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\Directory\shell\MDVu">
+                    <RegistryValue Type="string" Value="Open with MDVu" />
+                    <RegistryValue Name="Icon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    <RegistryKey Key="command">
+                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                    </RegistryKey>
                 </RegistryKey>
-                <RegistryKey Root="HKMU" Key="Software\Classes\.markdown\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\Directory\Background\shell\MDVu">
+                    <RegistryValue Type="string" Value="Open with MDVu" />
+                    <RegistryValue Name="Icon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    <RegistryKey Key="command">
+                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%V&quot;" />
+                    </RegistryKey>
                 </RegistryKey>
-                <RegistryKey Root="HKMU" Key="Software\Classes\.mdown\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+
+                <!-- Windows RegisteredApplications Capabilities (Default Apps Settings integration) -->
+                <RegistryKey Root="HKMU" Key="Software\RegisteredApplications">
+                    <RegistryValue Name="MDVu" Type="string" Value="Software\MDVu\Capabilities" />
                 </RegistryKey>
-                <RegistryKey Root="HKMU" Key="Software\Classes\.mkd\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                </RegistryKey>
-                <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe\shell\open\command">
-                    <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                <RegistryKey Root="HKMU" Key="Software\MDVu\Capabilities">
+                    <RegistryValue Name="ApplicationName" Type="string" Value="MDVu" />
+                    <RegistryValue Name="ApplicationDescription" Type="string" Value="Fast, lightweight native Markdown and Mermaid viewer" />
+                    <RegistryValue Name="ApplicationIcon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    <RegistryKey Key="FileAssociations">
+                        <RegistryValue Name=".md" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".markdown" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mdown" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mkd" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mdx" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mdtxt" Type="string" Value="MDVu.MarkdownDocument" />
+                    </RegistryKey>
                 </RegistryKey>
             </Component>
 
