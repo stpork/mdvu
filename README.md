@@ -96,8 +96,9 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 1. Download **`mdvu-X.Y.Z-windows-x86_64.msi`** from [Releases](https://github.com/stpork/mdvu/releases).
 2. **Interactive GUI install**:
    * Double-click the `.msi` package.
-   * To install without administrative privileges: click **Advanced** on the welcome screen and choose **Install just for you** (installs to `%LOCALAPPDATA%\Programs\MDVu` without UAC elevation).
-   * Or click **Install** to install system-wide for all users (`C:\Program Files\MDVu`, requires UAC elevation).
+   * Check **Install for current user only (no administrator privileges needed)** to install without administrative privileges (installs to `%LOCALAPPDATA%\Programs\MDVu` without UAC elevation — the UAC shield icon dynamically disappears from the Install button).
+   * Or leave it unchecked to install system-wide for all users (`C:\Program Files\MDVu`, requires UAC elevation).
+   * Click **Install**.
 3. **Silent / unattended install**:
    ```cmd
    :: Install just for current user (no admin rights required):

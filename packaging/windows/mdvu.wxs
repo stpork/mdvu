@@ -33,14 +33,19 @@
         <Property Id="MSIINSTALLPERUSER" Value="0" />
         <Property Id="ApplicationFolderName" Value="MDVu" />
         <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
-        <WixVariable Id="WixUISupportPerUser" Value="1" />
-        <WixVariable Id="WixUISupportPerMachine" Value="1" />
 
-        <!-- Override WiX default folders: 64-bit Program Files for per-machine, LocalAppData\Programs for per-user -->
-        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]" After="WixSetDefaultPerMachineFolder" Sequence="both">
+        <!-- Folder targets: 64-bit Program Files for per-machine, LocalAppData\Programs for per-user -->
+        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]" Before="CostInitialize" Sequence="both">
             <![CDATA[VersionNT64]]>
         </SetProperty>
-        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]" After="WixSetDefaultPerUserFolder" Sequence="both" />
+        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]" Before="CostInitialize" Sequence="both" />
+
+        <SetProperty Id="APPLICATIONFOLDER" Action="SetAppFolderPerUser" Value="[WixPerUserFolder]" After="CostFinalize" Sequence="both">
+            <![CDATA[MSIINSTALLPERUSER = "1"]]>
+        </SetProperty>
+        <SetProperty Id="APPLICATIONFOLDER" Action="SetAppFolderPerMachine" Value="[WixPerMachineFolder]" After="CostFinalize" Sequence="both">
+            <![CDATA[NOT (MSIINSTALLPERUSER = "1")]]>
+        </SetProperty>
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
@@ -153,23 +158,6 @@
                     </RegistryKey>
                 </RegistryKey>
 
-                <!-- Explorer context menu to open folders as Markdown Vault in MDVu -->
-                <RegistryKey Root="HKMU" Key="Software\Classes\Directory\shell\MDVu">
-                    <RegistryValue Type="string" Value="Open with MDVu" />
-                    <RegistryValue Name="Icon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
-                    <RegistryKey Key="command">
-                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
-                    </RegistryKey>
-                </RegistryKey>
-
-                <RegistryKey Root="HKMU" Key="Software\Classes\Directory\Background\shell\MDVu">
-                    <RegistryValue Type="string" Value="Open with MDVu" />
-                    <RegistryValue Name="Icon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
-                    <RegistryKey Key="command">
-                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%V&quot;" />
-                    </RegistryKey>
-                </RegistryKey>
-
                 <!-- Windows RegisteredApplications Capabilities (Default Apps Settings integration) -->
                 <RegistryKey Root="HKMU" Key="Software\RegisteredApplications">
                     <RegistryValue Name="MDVu" Type="string" Value="Software\MDVu\Capabilities" />
@@ -256,9 +244,89 @@
             <ComponentRef Id="ApplicationShortcut" />
         </Feature>
 
-        <WixVariable Id="WixUILicenseRtf" Value="packaging\windows\license.rtf" />
         <WixVariable Id="WixUIDialogBmp" Value="packaging\windows\dialog.bmp" />
         <WixVariable Id="WixUIBannerBmp" Value="packaging\windows\banner.bmp" />
-        <UIRef Id="WixUI_Advanced" />
+
+        <!-- Streamlined Single-Screen Setup UI with Dynamic UAC Shield Checkbox Toggle -->
+        <UI Id="WixUI_QuickInstall">
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+
+            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+            <Property Id="WixUI_Mode" Value="InstallDir" />
+
+            <DialogRef Id="ErrorDlg" />
+            <DialogRef Id="FatalError" />
+            <DialogRef Id="FilesInUse" />
+            <DialogRef Id="MsiRMFilesInUse" />
+            <DialogRef Id="PrepareDlg" />
+            <DialogRef Id="ProgressDlg" />
+            <DialogRef Id="ResumeDlg" />
+            <DialogRef Id="UserExit" />
+            <DialogRef Id="ExitDialog" />
+
+            <Dialog Id="QuickInstallDlg" Width="370" Height="270" Title="MDVu Setup">
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+                <Control Id="Title" Type="Text" X="15" Y="15" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Install MDVu" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Fast, lightweight native Markdown and Mermaid viewer" />
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+
+                <Control Id="LicenseText" Type="ScrollableText" X="20" Y="55" Width="330" Height="120" Sunken="yes" TabSkip="no">
+                    <Text SourceFile="packaging\windows\license.rtf" />
+                </Control>
+
+                <Control Id="LicenseAcceptedCheckBox" Type="CheckBox" X="20" Y="185" Width="330" Height="15" CheckBoxValue="1" Property="LicenseAccepted" Text="I accept the terms in the License Agreement" />
+
+                <!-- Checkbox to install for current user only -->
+                <Control Id="PerUserCheckBox" Type="CheckBox" X="20" Y="205" Width="330" Height="15" CheckBoxValue="1" Property="MSIINSTALLPERUSER" Text="Install for current user only (no administrator privileges needed)" />
+
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+                <!-- Install button WITH UAC shield (active when MSIINSTALLPERUSER is NOT 1) -->
+                <Control Id="InstallShield" Type="PushButton" ElevationShield="yes" X="222" Y="243" Width="66" Height="17" Default="yes" Text="Install">
+                    <Condition Action="enable">LicenseAccepted = "1"</Condition>
+                    <Condition Action="disable">NOT (LicenseAccepted = "1")</Condition>
+                    <Condition Action="show">NOT (MSIINSTALLPERUSER = "1")</Condition>
+                    <Condition Action="hide">MSIINSTALLPERUSER = "1"</Condition>
+                    <Publish Property="ALLUSERS" Value="1" Order="1">1</Publish>
+                    <Publish Property="WixAppFolder" Value="WixPerMachineFolder" Order="2">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="3">1</Publish>
+                </Control>
+
+                <!-- Install button WITHOUT UAC shield (active when MSIINSTALLPERUSER IS 1) -->
+                <Control Id="InstallNoShield" Type="PushButton" X="222" Y="243" Width="66" Height="17" Default="yes" Text="Install">
+                    <Condition Action="enable">LicenseAccepted = "1"</Condition>
+                    <Condition Action="disable">NOT (LicenseAccepted = "1")</Condition>
+                    <Condition Action="show">MSIINSTALLPERUSER = "1"</Condition>
+                    <Condition Action="hide">NOT (MSIINSTALLPERUSER = "1")</Condition>
+                    <Publish Property="ALLUSERS" Order="1">1</Publish>
+                    <Publish Property="WixAppFolder" Value="WixPerUserFolder" Order="2">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="3">1</Publish>
+                </Control>
+
+                <Control Id="Cancel" Type="PushButton" X="298" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+            </Dialog>
+
+            <InstallUISequence>
+                <Show Dialog="FatalError" OnExit="error" />
+                <Show Dialog="UserExit" OnExit="cancel" />
+                <Show Dialog="ExitDialog" OnExit="success" />
+                <Show Dialog="PrepareDlg" Before="QuickInstallDlg">1</Show>
+                <Show Dialog="QuickInstallDlg" Before="ExecuteAction">NOT Installed</Show>
+            </InstallUISequence>
+
+            <AdminUISequence>
+                <Show Dialog="FatalError" OnExit="error" />
+                <Show Dialog="UserExit" OnExit="cancel" />
+                <Show Dialog="ExitDialog" OnExit="success" />
+                <Show Dialog="PrepareDlg" Before="QuickInstallDlg">1</Show>
+                <Show Dialog="QuickInstallDlg" Before="ExecuteAction">NOT Installed</Show>
+            </AdminUISequence>
+        </UI>
+
+        <UIRef Id="WixUI_Common" />
     </Product>
 </Wix>
