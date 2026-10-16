@@ -58,6 +58,13 @@ $Version = (Get-Content "version.txt").Trim()
 $ZipPath = "dist/mdvu-$Version-windows-x86_64.zip"
 Write-Host "==> Creating portable release archive: $ZipPath" -ForegroundColor Cyan
 
+# Normalize timestamps to prevent PKWare zip crash (dates prior to 1980 like WebView2Loader.dll)
+Get-ChildItem -Path $DistDir | ForEach-Object {
+    if ($_.LastWriteTime.Year -lt 1980) {
+        $_.LastWriteTime = (Get-Date)
+    }
+}
+
 $ArchiveItems = Get-ChildItem -Path $DistDir -Exclude "*.WebView2" | Select-Object -ExpandProperty FullName
 Compress-Archive -Path $ArchiveItems -DestinationPath $ZipPath -Force
 
