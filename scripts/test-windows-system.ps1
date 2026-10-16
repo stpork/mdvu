@@ -125,9 +125,13 @@ public static class MdvuCapture {
             $OldUIScript = $env:MDVU_UI_SCRIPT; $OldUIResult = $env:MDVU_UI_RESULT_FILE
             New-Item -ItemType Directory -Force $Profile | Out-Null
             $FixtureKey = $Fixture.FullName.Substring((Resolve-Path 'tests/fixtures').Path.Length+1).Replace('\','/')
-            $Expected = if ($null -ne $ExpectedErrors.$FixtureKey) { @($ExpectedErrors.$FixtureKey) } else { @() }
+            # Assign arrays directly: a PowerShell if-expression unwraps empty/singleton results.
+            $Expected = @()
+            if ($null -ne $ExpectedErrors.$FixtureKey) { $Expected = @($ExpectedErrors.$FixtureKey) }
+            $ExpectedJSON = ConvertTo-Json -InputObject $Expected -Depth 6 -Compress
+            if (-not $ExpectedJSON.StartsWith('[')) { throw 'Expected diagram errors must serialize as a JSON array' }
             $CheckScript = Join-Path $Profile 'check.js'
-            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuExpectedDiagramErrors=' + (ConvertTo-Json -InputObject $Expected -Depth 6 -Compress) + ';' + [Environment]::NewLine + $UISource))
+            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuExpectedDiagramErrors=' + $ExpectedJSON + ';' + [Environment]::NewLine + $UISource))
             $env:MDVU_UI_SCRIPT = $CheckScript
             $UIResult = Join-Path $Output ($Fixture.BaseName+'-ui.json')
             Remove-Item $UIResult -ErrorAction SilentlyContinue
@@ -153,6 +157,7 @@ public static class MdvuCapture {
                 $Samples | Export-Csv (Join-Path $Output ($Fixture.BaseName+'-process-tree.csv')) -NoTypeInformation
                 $Ready = if (Test-Path $Telemetry) { Get-Content $Telemetry -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
                 $UI = if (Test-Path $UIResult) { Get-Content $UIResult -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
+                if ($null -eq $UI) { throw 'UI report missing: check the interactive desktop and renderer before continuing' }
                 Assert-Test "UI checks $($Fixture.Name)" ($null -ne $UI -and $UI.passed)
                 $Results.metrics += [ordered]@{fixture=$Fixture.FullName.Substring((Resolve-Path 'tests/fixtures').Path.Length+1); ui=$UI; firstWindowMs=$FirstWindowMs; documentReady=$Ready; samples=$Samples; note='Working sets sum shared pages; private bytes are the better total. First window is not first content.'}
                 [void][MdvuCapture]::SetForegroundWindow($Process.MainWindowHandle)
@@ -167,7 +172,10 @@ public static class MdvuCapture {
                 }
                 Assert-Test "GUI fixture $($Fixture.Name)" ($null -ne $FirstWindowMs -and $null -ne $Ready)
                 Save-Results
-            } catch { $Failures.Add("$($Fixture.Name): $($_.Exception.Message)"); Write-Warning $_ } finally {
+            } catch {
+                $Failures.Add("$($Fixture.Name): $($_.Exception.Message)"); Write-Warning $_
+                if (-not (Test-Path $UIResult)) { break }
+            } finally {
                 if ($Process -and -not $Process.HasExited) { [void]$Process.CloseMainWindow(); if (-not $Process.WaitForExit(5000)) { $Process.Kill() } }
                 $env:WEBVIEW2_USER_DATA_FOLDER = $OldProfile
                 $env:MDVU_METRICS_FILE = $OldMetrics
