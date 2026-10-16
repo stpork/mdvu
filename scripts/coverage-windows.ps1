@@ -28,7 +28,7 @@ try {
         [Environment]::SetEnvironmentVariable($Name,$Value)
     }
     # Build through llvm-cov so a cached ordinary binary cannot masquerade as instrumented.
-    & cargo llvm-cov run --no-clean --no-report -p mdvu-windows --bin mdvu -- --help
+    & cargo llvm-cov run --no-report -p mdvu-windows --bin mdvu -- --help
     if ($LASTEXITCODE -ne 0) { throw 'Instrumented GUI preparation failed' }
     $Messages = @(& cargo build -p mdvu-windows --bin mdvu --message-format=json-render-diagnostics)
     if ($LASTEXITCODE -ne 0) { throw 'Instrumented GUI build failed' }
