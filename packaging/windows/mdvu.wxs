@@ -8,10 +8,10 @@
         Manufacturer="Finn de Bear"
         UpgradeCode="A834D8F1-5E1B-4C72-9F0E-7C64112E5B10">
 
+        <!-- Single Package Authoring: supports both per-machine (all users) and per-user installs -->
         <Package
             InstallerVersion="500"
             Compressed="yes"
-            InstallScope="perMachine"
             Platform="x64"
             Description="MDVu - Fast, lightweight native Markdown and Mermaid viewer"
             Comments="Copyright (c) 2026 Finn de Bear" />
@@ -27,55 +27,87 @@
         <Property Id="ARPHELPLINK" Value="https://github.com/stpork/mdvu" />
         <Property Id="ARPURLINFOABOUT" Value="https://github.com/stpork/mdvu" />
 
+        <!-- Dual-purpose package properties: ALLUSERS=2 allows per-user or per-machine selection -->
+        <Property Id="ALLUSERS" Value="2" />
+        <Property Id="MSIINSTALLPERUSER" Value="0" />
+        <Property Id="ApplicationFolderName" Value="MDVu" />
+        <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
+        <WixVariable Id="WixUISupportPerUser" Value="1" />
+        <WixVariable Id="WixUISupportPerMachine" Value="1" />
+
+        <!-- Override WiX default folders: 64-bit Program Files for per-machine, LocalAppData\Programs for per-user -->
+        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]" After="WixSetDefaultPerMachineFolder" Sequence="both">
+            <![CDATA[VersionNT64]]>
+        </SetProperty>
+        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]" After="WixSetDefaultPerUserFolder" Sequence="both" />
+
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
-                <Directory Id="INSTALLDIR" Name="MDVu" />
+                <Directory Id="APPLICATIONFOLDER" Name="MDVu" />
             </Directory>
             <Directory Id="ProgramMenuFolder">
                 <Directory Id="ApplicationProgramsFolder" Name="MDVu" />
             </Directory>
         </Directory>
 
-        <DirectoryRef Id="INSTALLDIR">
+        <DirectoryRef Id="APPLICATIONFOLDER">
             <Component Id="MainExecutable" Guid="B491A77E-9A56-4D83-8C45-2C8B69262301" Win64="yes">
                 <File Id="MdvuExe" Name="mdvu.exe" Source="$(var.DistDir)\mdvu.exe" KeyPath="yes" />
 
-                <!-- Add INSTALLDIR to system PATH so 'mdvu' works in PowerShell / CMD -->
+                <!-- Register MDVu.MarkdownDocument ProgId and file associations (HKMU redirects to HKLM or HKCU) -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\MDVu.MarkdownDocument">
+                    <RegistryValue Type="string" Value="Markdown Document" />
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell\open\command">
+                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                    </RegistryKey>
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.md\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKMU" Key="Software\Classes\.markdown\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mdown\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mkd\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe\shell\open\command">
+                    <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                </RegistryKey>
+            </Component>
+
+            <!-- Set system-wide PATH when installed for all users -->
+            <Component Id="PathSystem" Guid="F149A87E-1234-4D83-8C45-2C8B69262305" Win64="yes">
+                <Condition>ALLUSERS = 1</Condition>
+                <CreateFolder />
                 <Environment
-                    Id="PATH"
+                    Id="PATH_SYSTEM"
                     Name="PATH"
-                    Value="[INSTALLDIR]"
+                    Value="[APPLICATIONFOLDER]"
                     Permanent="no"
                     Part="last"
                     Action="set"
                     System="yes" />
+            </Component>
 
-                <!-- Register MDVu.MarkdownDocument ProgId and file associations -->
-                <RegistryKey Root="HKLM" Key="Software\Classes\MDVu.MarkdownDocument">
-                    <RegistryValue Type="string" Value="Markdown Document" />
-                    <RegistryKey Key="DefaultIcon">
-                        <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot;,0" />
-                    </RegistryKey>
-                    <RegistryKey Key="shell\open\command">
-                        <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot; &quot;%1&quot;" />
-                    </RegistryKey>
-                </RegistryKey>
-
-                <RegistryKey Root="HKLM" Key="Software\Classes\.md\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                </RegistryKey>
-                <RegistryKey Root="HKLM" Key="Software\Classes\.markdown\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                </RegistryKey>
-                <RegistryKey Root="HKLM" Key="Software\Classes\.mdown\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                </RegistryKey>
-                <RegistryKey Root="HKLM" Key="Software\Classes\.mkd\OpenWithProgids">
-                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                </RegistryKey>
-                <RegistryKey Root="HKLM" Key="Software\Classes\Applications\mdvu.exe\shell\open\command">
-                    <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot; &quot;%1&quot;" />
-                </RegistryKey>
+            <!-- Set user-specific PATH when installed just for current user (no admin rights needed) -->
+            <Component Id="PathUser" Guid="F259B98F-5678-4D83-8C45-2C8B69262306" Win64="yes">
+                <Condition>NOT (ALLUSERS = 1)</Condition>
+                <CreateFolder />
+                <Environment
+                    Id="PATH_USER"
+                    Name="PATH"
+                    Value="[APPLICATIONFOLDER]"
+                    Permanent="no"
+                    Part="last"
+                    Action="set"
+                    System="no" />
             </Component>
 
             <Component Id="DocumentationFiles" Guid="C192B88F-3B67-4E94-9D56-3D9C7A373402" Win64="yes">
@@ -94,12 +126,12 @@
                     Id="ApplicationStartMenuShortcut"
                     Name="MDVu"
                     Description="Markdown and Mermaid Viewer"
-                    Target="[INSTALLDIR]mdvu.exe"
-                    WorkingDirectory="INSTALLDIR"
+                    Target="[APPLICATIONFOLDER]mdvu.exe"
+                    WorkingDirectory="APPLICATIONFOLDER"
                     Icon="MdvuIcon.ico" />
                 <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
                 <RegistryValue
-                    Root="HKCU"
+                    Root="HKMU"
                     Key="Software\FinnDeBear\MDVu"
                     Name="installed"
                     Type="integer"
@@ -110,15 +142,16 @@
 
         <Feature Id="ProductFeature" Title="MDVu" Level="1">
             <ComponentRef Id="MainExecutable" />
+            <ComponentRef Id="PathSystem" />
+            <ComponentRef Id="PathUser" />
             <ComponentRef Id="DocumentationFiles" />
             <ComponentRef Id="WebView2LoaderDll" />
             <ComponentRef Id="ApplicationShortcut" />
         </Feature>
 
-        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
         <WixVariable Id="WixUILicenseRtf" Value="packaging\windows\license.rtf" />
         <WixVariable Id="WixUIDialogBmp" Value="packaging\windows\dialog.bmp" />
         <WixVariable Id="WixUIBannerBmp" Value="packaging\windows\banner.bmp" />
-        <UIRef Id="WixUI_InstallDir" />
+        <UIRef Id="WixUI_Advanced" />
     </Product>
 </Wix>

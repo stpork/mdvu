@@ -94,9 +94,19 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 
 #### Option A: MSI Installer (Recommended)
 1. Download **`mdvu-X.Y.Z-windows-x86_64.msi`** from [Releases](https://github.com/stpork/mdvu/releases).
-2. Double-click to install (or run silently via `msiexec /i mdvu-X.Y.Z-windows-x86_64.msi /qn`).
-   * Installs to `C:\Program Files\MDVu`
-   * Automatically adds `mdvu` to your `PATH`
+2. **Interactive GUI install**:
+   * Double-click the `.msi` package.
+   * To install without administrative privileges: click **Advanced** on the welcome screen and choose **Install just for you** (installs to `%LOCALAPPDATA%\Programs\MDVu` without UAC elevation).
+   * Or click **Install** to install system-wide for all users (`C:\Program Files\MDVu`, requires UAC elevation).
+3. **Silent / unattended install**:
+   ```cmd
+   :: Install just for current user (no admin rights required):
+   msiexec /i mdvu-X.Y.Z-windows-x86_64.msi MSIINSTALLPERUSER=1 /qn
+
+   :: Install for all users (system-wide, requires admin):
+   msiexec /i mdvu-X.Y.Z-windows-x86_64.msi ALLUSERS=1 /qn
+   ```
+   * Automatically configures `mdvu` in `PATH` (user `PATH` for per-user, system `PATH` for all users).
    * Creates a Start Menu shortcut (`MDVu`) and registers `.md`, `.markdown`, `.mdown`, `.mkd` in Explorer's **Open with** menu.
 
 #### Option B: Scoop / WinGet / Chocolatey
