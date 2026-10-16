@@ -17,6 +17,7 @@
             Comments="Copyright (c) 2026 Finn de Bear" />
 
         <MajorUpgrade
+            AllowSameVersionUpgrades="yes"
             DowngradeErrorMessage="A newer version of [ProductName] is already installed."
             Schedule="afterInstallInitialize" />
 
