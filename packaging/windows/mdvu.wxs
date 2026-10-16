@@ -82,6 +82,10 @@
                 <File Id="ReadmeTxt" Name="README.txt" Source="$(var.DistDir)\README.txt" KeyPath="yes" />
                 <File Id="LicenseTxt" Name="LICENSE.txt" Source="$(var.DistDir)\LICENSE.txt" />
             </Component>
+
+            <Component Id="WebView2LoaderDll" Guid="E63B48D1-3467-463C-9C1D-89F12A675304" Win64="yes">
+                <File Id="WebView2LoaderFile" Name="WebView2Loader.dll" Source="$(var.DistDir)\WebView2Loader.dll" KeyPath="yes" />
+            </Component>
         </DirectoryRef>
 
         <DirectoryRef Id="ApplicationProgramsFolder">
@@ -107,11 +111,14 @@
         <Feature Id="ProductFeature" Title="MDVu" Level="1">
             <ComponentRef Id="MainExecutable" />
             <ComponentRef Id="DocumentationFiles" />
+            <ComponentRef Id="WebView2LoaderDll" />
             <ComponentRef Id="ApplicationShortcut" />
         </Feature>
 
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
         <WixVariable Id="WixUILicenseRtf" Value="packaging\windows\license.rtf" />
+        <WixVariable Id="WixUIDialogBmp" Value="packaging\windows\dialog.bmp" />
+        <WixVariable Id="WixUIBannerBmp" Value="packaging\windows\banner.bmp" />
         <UIRef Id="WixUI_InstallDir" />
     </Product>
 </Wix>

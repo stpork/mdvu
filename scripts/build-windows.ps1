@@ -16,7 +16,7 @@ if ($Configuration -eq "release") {
 $DistDir = "dist/windows"
 Get-Process -Name "mdvu" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 if (Test-Path $DistDir) {
-    Get-ChildItem -Path $DistDir -Exclude "*.WebView2" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $DistDir -Exclude @("*.WebView2", "WebView2Loader.dll") | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 
@@ -36,6 +36,15 @@ if ($ExeSource) {
     Write-Host "  [OK] Copied $ExeSource -> mdvu.exe ($([math]::Round($ExeSize / 1MB, 2)) MB standalone)" -ForegroundColor Green
 } else {
     throw "Binary mdvu.exe not found in target directories"
+}
+
+# Copy WebView2Loader.dll (required by GNU/MinGW targets, helpful for MSVC)
+$LoaderDll = Get-ChildItem -Path "target" -Recurse -Filter "WebView2Loader.dll" -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -like "*x64*WebView2Loader.dll" } |
+    Select-Object -First 1
+if ($LoaderDll) {
+    Copy-Item $LoaderDll.FullName (Join-Path $DistDir "WebView2Loader.dll") -Force
+    Write-Host "  [OK] Copied $($LoaderDll.Name) -> WebView2Loader.dll" -ForegroundColor Green
 }
 
 Copy-Item "README.md" (Join-Path $DistDir "README.txt") -Force

@@ -364,6 +364,8 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
+For a detailed side-by-side benchmark comparison against rivals (Obsidian, Typora, MarkText, Marked 2, VS Code), complete throughput curves, startup latency measurements, and compressed asset breakdowns, see **[COMPARISON.md](COMPARISON.md)**.
+
 Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 | Property | Configuration / measurement |

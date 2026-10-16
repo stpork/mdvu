@@ -576,7 +576,58 @@ fn sync_win32_menu(hwnd: windows_sys::Win32::Foundation::HWND, st: &AppState) {
 }
 
 #[cfg(windows)]
+fn find_latest_webview2_dir(base: &Path) -> Option<PathBuf> {
+    if !base.exists() {
+        return None;
+    }
+    if let Ok(entries) = fs::read_dir(base) {
+        let mut dirs: Vec<PathBuf> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.is_dir()
+                    && (p.join("msedgewebview2.exe").exists()
+                        || p.join("msedge.exe").exists()
+                        || p.join("EmbeddedBrowserWebView.dll").exists())
+            })
+            .collect();
+        dirs.sort();
+        return dirs.pop();
+    }
+    None
+}
+
+fn get_webview2_user_data_dir() -> PathBuf {
+    if let Ok(custom) = std::env::var("WEBVIEW2_USER_DATA_FOLDER") {
+        if !custom.trim().is_empty() {
+            let p = PathBuf::from(custom.trim());
+            let _ = fs::create_dir_all(&p);
+            return p;
+        }
+    }
+
+    let base = if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        PathBuf::from(local_app_data)
+    } else if let Ok(user_profile) = std::env::var("USERPROFILE") {
+        PathBuf::from(user_profile).join("AppData").join("Local")
+    } else {
+        std::env::temp_dir()
+    };
+
+    let dir = base.join("MDVu").join("WebView2");
+    let _ = fs::create_dir_all(&dir);
+    dir
+}
+
+#[cfg(windows)]
 fn ensure_webview2_runtime_env() {
+    // 1. Mandatory user data folder configuration:
+    // When mdvu is installed in C:\Program Files\MDVu, default UDF creation (<exe_dir>\<exe>.WebView2)
+    // fails with E_ACCESSDENIED (0x80070005) for standard users. We redirect UDF to %LOCALAPPDATA%\MDVu\WebView2.
+    let user_data = get_webview2_user_data_dir();
+    std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &user_data);
+
+    // 2. Discover WebView2 browser executable folder if not already explicitly configured
     if std::env::var_os("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER").is_none() {
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(parent) = exe_path.parent() {
@@ -604,16 +655,48 @@ fn ensure_webview2_runtime_env() {
             return;
         }
 
+        // Check per-user EdgeWebView
         if let Ok(localappdata) = std::env::var("LOCALAPPDATA") {
             let edge_wv = PathBuf::from(localappdata).join(r"Microsoft\EdgeWebView\Application");
-            if edge_wv.exists() {
-                if let Ok(entries) = fs::read_dir(&edge_wv) {
-                    for entry in entries.flatten() {
-                        if entry.path().is_dir() && entry.path().join("msedgewebview2.exe").exists() {
-                            std::env::set_var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", entry.path());
-                            return;
-                        }
-                    }
+            if let Some(dir) = find_latest_webview2_dir(&edge_wv) {
+                std::env::set_var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", dir);
+                return;
+            }
+        }
+
+        // Check system-wide Evergreen WebView2 Runtime in Program Files (x86) and Program Files
+        let pf_candidates = [
+            std::env::var("ProgramFiles(x86)").ok(),
+            std::env::var("ProgramFiles").ok(),
+            Some(r"C:\Program Files (x86)".to_string()),
+            Some(r"C:\Program Files".to_string()),
+        ];
+
+        for pf in pf_candidates.into_iter().flatten() {
+            let edge_wv = PathBuf::from(&pf).join(r"Microsoft\EdgeWebView\Application");
+            if let Some(dir) = find_latest_webview2_dir(&edge_wv) {
+                std::env::set_var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", dir);
+                return;
+            }
+        }
+
+        // Fallback: Check Microsoft Edge browser (Stable, Beta, Dev, Canary)
+        for pf in [
+            std::env::var("ProgramFiles(x86)").ok(),
+            std::env::var("ProgramFiles").ok(),
+            Some(r"C:\Program Files (x86)".to_string()),
+            Some(r"C:\Program Files".to_string()),
+        ].into_iter().flatten() {
+            for edge_channel in [
+                r"Microsoft\Edge\Application",
+                r"Microsoft\Edge Dev\Application",
+                r"Microsoft\Edge Beta\Application",
+                r"Microsoft\Edge Canary\Application",
+            ] {
+                let edge_app = PathBuf::from(&pf).join(edge_channel);
+                if let Some(dir) = find_latest_webview2_dir(&edge_app) {
+                    std::env::set_var("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER", dir);
+                    return;
                 }
             }
         }
@@ -725,7 +808,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let proxy_ipc = proxy.clone();
     let proxy_nav = proxy.clone();
-    let webview = match WebViewBuilder::new()
+    let user_data_dir = get_webview2_user_data_dir();
+    let web_context = Box::leak(Box::new(wry::WebContext::new(Some(user_data_dir))));
+    let webview = match WebViewBuilder::with_web_context(web_context)
         .with_html(&initial_html)
         .with_navigation_handler(move |uri: String| {
             let lower = uri.to_ascii_lowercase();
@@ -813,10 +898,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     MessageBoxW, IDYES, MB_ICONERROR, MB_YESNO,
                 };
                 let title = win32::to_wide_null("mdvu - WebView2 Runtime Required");
-                let text = win32::to_wide_null(
+                let err_msg = err.to_string();
+                let text = win32::to_wide_null(&format!(
                     "Microsoft Edge WebView2 Runtime is required to display Markdown documents in mdvu.\n\n\
-                    Would you like to open the official Microsoft download page to install it now?"
-                );
+                    Error details:\n{err_msg}\n\n\
+                    Would you like to open the official Microsoft download page to install or update it now?"
+                ));
                 if MessageBoxW(hwnd, text.as_ptr(), title.as_ptr(), MB_YESNO | MB_ICONERROR) == IDYES {
                     win32::open_url_in_browser("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
                 }
