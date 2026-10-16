@@ -38,7 +38,7 @@ Benchmarked on an Apple Silicon M-series host using the built-in micro-benchmark
 
 ```
 === mdvu Engine Throughput Benchmark ===
-Target: Tests/Fixtures/test-light.md synthetic expansions (CommonMark + GFM tables + code fences)
+Target: tests/fixtures/test-light.md synthetic expansions (CommonMark + GFM tables + code fences)
 
 File Size     Median Time       Throughput       Status
 ----------------------------------------------------------------------
@@ -142,7 +142,7 @@ TOTAL EMBEDDED ENGINES & ASSETS              15,719 KB          2,681 KB        
                                       |
                                       v
 +-------------------------------------------------------------------------+
-|                  Shared Rust Core (`crates/mdvu-core`)                  |
+|                  Shared Rust Core (`src/core`)                  |
 |  * pulldown-cmark zero-allocation event parser                          |
 |  * SIMD-accelerated tagfilter & CriticMarkup transforms                 |
 |  * Dialect pipelines: GFM, Obsidian Callouts, MkDocs, Docusaurus        |
@@ -216,8 +216,8 @@ python3 scripts/bench-comparison.py
 scripts/benchmark.sh .build/release/mdvu
 
 # 3. Benchmark a specific Markdown file directly:
-mdvu --benchmark Tests/Fixtures/test-heavy.md
+mdvu --benchmark tests/fixtures/test-heavy.md
 
 # 4. Measure execution time and peak memory footprint (macOS):
-/usr/bin/time -l .build/release/mdvu Tests/Fixtures/test-heavy.md -o /tmp/out.html
+/usr/bin/time -l .build/release/mdvu tests/fixtures/test-heavy.md -o /tmp/out.html
 ```

@@ -1,0 +1,46 @@
+{
+  "test-heavy.md": [
+    {
+      "source": "eventmodeling\n    timeframe 01 ui Viewer\n    timeframe 02 command RenderDiagram [[RenderRequest]]\n    timeframe 03 event DiagramRendered [[RenderResult]]\n    data RenderRequest {\n      language: 'mermaid'\n      chars: 1200\n    }\n    data RenderResult {\n      format: 'svg'\n      ok: true\n    }",
+      "reason": "Forward compatibility probe: relaxed Event Modeling data syntax is rejected by the bundled runtime."
+    },
+    {
+      "source": "gitGraph\n    commit id: \"初始化项目\"\n    commit id: \"添加基础结构\"\n    branch 开发分支\n    checkout 开发分支\n    commit id: \"添加登录功能\"\n    commit id: \"添加注册功能\"\n    checkout main\n    merge 开发分支\n    branch 功能A\n    checkout 功能A\n    commit id: \"开发功能A-1\"\n    commit id: \"开发功能A-2\"\n    checkout main\n    branch 功能B\n    checkout 功能B\n    commit id: \"开发功能B\"\n    checkout main\n    merge 功能A\n    merge 功能B\n    commit id: \"发布v1.0\"",
+      "reason": "Fixture uses unquoted Unicode gitGraph branch names rejected by the bundled runtime."
+    },
+    {
+      "source": "notARealDiagram\n    A --> B",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "flowchart LR\n    A --> end\n    end --> B",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "sequenceDiagram\n    A->>B: begin\n    alt condition\n      B-->>A: branch",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "stateDiagram-v2\n    [*] --> A\n    state <<choice>>\n    A -->",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "erDiagram\n    CUSTOMER ||--o{ : missing-target",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "---\nconfig:\n  theme: [not, valid, mapping\n---\nflowchart LR\nA-->B",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    },
+    {
+      "source": "futureDiagram-beta\n  item A",
+      "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
+    }
+  ],
+  "test-complete.md": [
+    {
+      "source": "@startditaa\n+------------+     +-------------+     +-----------+\n| Markdown   | --> | mdvu        | --> | Document  |\n| source {d} |     | renderer    |     | view      |\n+------------+     +------+------+     +-----------+\n                         |\n                         v\n                    +----+-----+\n                    | Cache {s}|\n                    +----------+\n@endditaa",
+      "reason": "The offline PlantUML runtime does not implement Ditaa."
+    }
+  ]
+}

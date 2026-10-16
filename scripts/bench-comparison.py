@@ -7,8 +7,8 @@ import statistics
 
 FIXTURES = [
     ("README.md", "README.md"),
-    ("test-heavy.md", "Tests/Fixtures/test-heavy.md"),
-    ("test-complete.md", "Tests/Fixtures/test-complete.md"),
+    ("test-heavy.md", "tests/fixtures/test-heavy.md"),
+    ("test-complete.md", "tests/fixtures/test-complete.md"),
 ]
 
 def measure_file_size(path):
@@ -73,11 +73,11 @@ def main():
     # 2. Embedded Assets Breakdown
     print("\n--- 2. Compressed Assets Breakdown (Embedded in mdvu-core & mdvu) ---")
     assets = [
-        ("Mermaid 11.17.2 + ZenUML (mermaid.lzma)", "Sources/mdvu/Resources/mermaid.lzma"),
-        ("PlantUML 1.2026.7 + Viz.js (plantuml.lzma)", "Sources/mdvu/Resources/plantuml.lzma"),
-        ("KaTeX MathML Engine (katex.lzma)", "Sources/mdvu/Resources/katex.lzma"),
-        ("Markdown Stylesheet (markdown.css)", "Sources/mdvu/Resources/markdown.css"),
-        ("App Runtime Script (app.js)", "Sources/mdvu/Resources/app.js"),
+        ("Mermaid 11.17.2 + ZenUML (mermaid.lzma)", "assets/mermaid.lzma"),
+        ("PlantUML 1.2026.7 + Viz.js (plantuml.lzma)", "assets/plantuml.lzma"),
+        ("KaTeX MathML Engine (katex.lzma)", "assets/katex.lzma"),
+        ("Markdown Stylesheet (markdown.css)", "assets/markdown.css"),
+        ("App Runtime Script (app.js)", "assets/app.js"),
     ]
     total_assets = 0
     for name, path in assets:

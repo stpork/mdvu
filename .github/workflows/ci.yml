@@ -42,18 +42,29 @@ jobs:
       - name: Run Rust Core Unit Tests
         run: cargo test --workspace --verbose
 
+      - name: Run shared Rust coverage
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov --locked
+          mkdir -p target/coverage
+          cargo llvm-cov --workspace --lcov --output-path target/coverage/rust.lcov
+
       - name: Run Swift & AppKit Test Suite
         run: |
           set -o pipefail
           mkdir -p test-results
-          make test 2>&1 | tee test-results/tests.log
+          ./scripts/coverage-swift.sh 2>&1 | tee test-results/tests.log
+          python3 scripts/coverage-summary.py | tee test-results/coverage.txt
 
       - name: Upload test diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-diagnostics-macos
-          path: test-results/
+          path: |
+            test-results/
+            target/coverage/
+            .build/**/codecov/*.json
           retention-days: 7
 
       - name: Build Application Bundle
@@ -77,6 +88,9 @@ jobs:
           test -f /tmp/cli-output.html
           $CLI README.md --toc | grep -q "why-mdvu"
           cat README.md | $CLI - --stdout | grep -q "MDVu"
+
+      - name: Run cross-platform CLI contract
+        run: python3 scripts/test-cli.py dist/mdvu.app/Contents/MacOS/mdvu
 
       - name: Run Performance Benchmark
         run: make benchmark
@@ -112,12 +126,21 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+          components: llvm-tools-preview
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
       - name: Run Rust Workspace Tests
         run: cargo test --workspace --verbose
+
+      - name: Measure Windows Rust coverage
+        shell: pwsh
+        run: |
+          cargo install cargo-llvm-cov --locked
+          New-Item -ItemType Directory -Force target/coverage | Out-Null
+          cargo llvm-cov --workspace --lcov --output-path target/coverage/windows.lcov
+          if ($LASTEXITCODE -ne 0) { throw "Coverage tests failed" }
 
       - name: Build Windows Release Binary
         run: cargo build --release -p mdvu-windows --bin mdvu
@@ -165,9 +188,23 @@ jobs:
           if ($toc -notmatch "why-mdvu") {
             throw "CLI TOC JSON extraction failed"
           }
-          & $exe --benchmark Tests/Fixtures/test-complete.md | Out-Host
-          & $exe --benchmark Tests/Fixtures/test-heavy.md | Out-Host
+          & $exe --benchmark tests/fixtures/test-complete.md | Out-Host
+          & $exe --benchmark tests/fixtures/test-heavy.md | Out-Host
           Write-Host "Windows CLI and benchmark tests passed successfully" -ForegroundColor Green
+
+      - name: Verify native Windows CLI and WebView2 GUI
+        shell: pwsh
+        run: |
+          python scripts/test-cli.py dist/windows/mdvu.exe
+          if ($LASTEXITCODE -ne 0) { throw "CLI contract failed" }
+          ./scripts/test-windows-gui.ps1 -Exe dist/windows/mdvu.exe
+
+      - name: Upload Windows coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-windows
+          path: target/coverage/
 
       - name: Upload Windows Release Artifacts
         uses: actions/upload-artifact@v4
@@ -182,3 +219,12 @@ jobs:
             dist/chocolatey/**
           if-no-files-found: ignore
           retention-days: 14
+
+  linux-core:
+    name: Cross-platform Rust core (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p mdvu-core

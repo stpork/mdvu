@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "crates/mdvu-core",
-    "crates/mdvu-windows",
+    "src/core",
+    "src/windows",
 ]
 resolver = "2"
 

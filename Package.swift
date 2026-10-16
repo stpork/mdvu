@@ -15,10 +15,12 @@ let package = Package(
                 .product(name: "cmark-gfm", package: "swift-cmark"),
                 .product(name: "cmark-gfm-extensions", package: "swift-cmark")
             ],
-            path: "Sources/mdvu",
-            resources: [.process("Resources")],
+            path: ".",
+            exclude: ["src/core", "src/windows", "tests", "vendor", "packaging", "scripts", "dist", "target", "test-results", ".github", "README.md", "ARCHITECTURE.md", "COMPARISON.md", "CHANGELOG.md", "LICENSE", "Makefile", "Cargo.toml", "Cargo.lock", "version.txt", "build.sh", "build.ps1", "build.cmd"],
+            sources: ["src/macos"],
+            resources: [.process("assets")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        .testTarget(name: "mdvuTests", dependencies: ["mdvu"], path: "Tests/mdvuTests")
+        .testTarget(name: "mdvuTests", dependencies: ["mdvu"], path: "tests/macos")
     ]
 )

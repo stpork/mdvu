@@ -34,9 +34,9 @@ Both platforms achieve sub-50 ms cold startup, negligible memory overhead, and 1
 
 ---
 
-## 2. Cross-Platform Core Subsystem (`crates/mdvu-core`)
+## 2. Cross-Platform Core Subsystem (`src/core`)
 
-The core repository logic lives in `crates/mdvu-core` and is shared across all frontends:
+The core repository logic lives in `src/core` and is shared across all frontends:
 
 ### A. High-Throughput Markdown Parsing & GFM
 * Powered by `pulldown-cmark`, an event-driven pull-parser with zero heap allocations during tokenization.
@@ -90,7 +90,7 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
 
 ---
 
-## 4. Windows Native Application (`crates/mdvu-windows`)
+## 4. Windows Native Application (`src/windows`)
 
 The Windows frontend is a lightweight standalone binary leveraging native Win32 controls and the Evergreen WebView2 runtime:
 

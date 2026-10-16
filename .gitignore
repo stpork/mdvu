@@ -3,6 +3,7 @@
 .swiftpm/
 dist/
 target/
+test-results/
 
 __pycache__/
 *.py[cod]

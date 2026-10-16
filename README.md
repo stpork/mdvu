@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="packaging/AppIcon-256.png" alt="MDVu App Icon" width="128" height="128">
+  <img src="packaging/assets/AppIcon-256.png" alt="MDVu App Icon" width="128" height="128">
   <h1>MDVu - Superfast Markdown Viewer</h1>
 
   <p>
@@ -18,7 +18,7 @@
 </div>
 
 <p align="center">
-  <img src="packaging/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+  <img src="packaging/assets/MDVu.jpg" alt="mdvu screenshot" width="900" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
 </p>
 
 ---
@@ -297,7 +297,7 @@ mdvu --snapshot output.png README.md
   * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
   * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
 * **Safe HTML & Styling**:
-  * Uses `cmark-gfm` tag filtering while preserving presentation markup and raw `<style>` blocks. This is not a complete HTML sanitizer: use trusted documents, particularly when they contain raw HTML or remote resources.
+  * Preserves presentation markup and raw `<style>` blocks. A per-document nonce policy authorizes bundled scripts and blocks scripts and event handlers embedded in Markdown.
 * **Code Fence Protection**:
   * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
@@ -419,10 +419,31 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 ## Architecture
 
 `mdvu` uses a unified cross-platform hybrid architecture:
-* **Core (`crates/mdvu-core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
+* **Core (`src/core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
 * **Unified Binary Design**: Single executable on both platforms that functions seamlessly as an interactive GUI viewer and as a headless CLI renderer when options (`-o`, `--stdout`, `--toc`) or pipes are used.
-* **macOS**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
-* **Windows (`crates/mdvu-windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
+* **macOS (`src/macos`)**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
+* **Windows (`src/windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
+
+The repository has one source root and one test root:
+
+```text
+src/core/          Shared Rust renderer and C ABI
+src/macos/         Swift, AppKit and WebKit host
+src/windows/       Rust, Win32 and WebView2 host
+assets/            Shared CSS, JavaScript and compressed runtimes
+vendor/            Upstream runtime distributions
+tests/fixtures/   Shared Markdown fixtures and local assets
+tests/macos/      Swift and WebKit regression tests
+tests/ui/         Browser checks used on both platforms
+tests/snapshots/  Reference images
+packaging/macos/   macOS metadata and icon
+packaging/windows/ MSI metadata and Windows branding
+scripts/           Build, validation and benchmark entry points
+```
+
+Build output belongs in `.build/`, `target/` and `dist/`; measurements and screenshots belong in `test-results/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
+
+Run `make check` and `make coverage` on macOS. After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. Pass `-Msi <path> -Install` to the Windows runner to validate an MSI installation. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
 
 For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 

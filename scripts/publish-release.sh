@@ -244,9 +244,9 @@ cd "$ROOT"
 echo "--> Switching back to develop and bumping version counter to v$NEXT_VERSION..."
 git checkout develop
 echo "$NEXT_VERSION" > "$ROOT/version.txt"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEXT_VERSION" "$ROOT/packaging/Info.plist" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEXT_VERSION" "$ROOT/packaging/macos/Info.plist" 2>/dev/null || true
 
-git add "$ROOT/version.txt" "$ROOT/packaging/Info.plist"
+git add "$ROOT/version.txt" "$ROOT/packaging/macos/Info.plist"
 git commit -m "chore: bump version to $NEXT_VERSION"
 git push origin develop
 

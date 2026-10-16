@@ -7,28 +7,20 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "==> Building MDVu Windows ($Configuration)..." -ForegroundColor Cyan
 
-if ($Configuration -eq "release") {
-    cargo build --release -p mdvu-windows --bin mdvu
-} else {
-    cargo build -p mdvu-windows --bin mdvu
-}
+$BuildArgs = @('build', '--message-format=json-render-diagnostics', '-p', 'mdvu-windows', '--bin', 'mdvu')
+if ($Configuration -eq "release") { $BuildArgs += '--release' }
+$BuildMessages = & cargo @BuildArgs
+if ($LASTEXITCODE -ne 0) { throw "cargo build failed with exit code $LASTEXITCODE" }
+$ExeSource = $BuildMessages | ForEach-Object { $_ | ConvertFrom-Json } |
+    Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'mdvu' -and $_.executable } |
+    Select-Object -Last 1 -ExpandProperty executable
+if (-not $ExeSource -or -not (Test-Path $ExeSource)) { throw 'Cargo did not return the built mdvu executable' }
 
 $DistDir = "dist/windows"
-Get-Process -Name "mdvu" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 if (Test-Path $DistDir) {
     Get-ChildItem -Path $DistDir -Exclude @("*.WebView2", "WebView2Loader.dll") | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
-
-$ExeCandidates = @(
-    "target/$Configuration/mdvu.exe",
-    "target/x86_64-pc-windows-msvc/$Configuration/mdvu.exe",
-    "target/x86_64-pc-windows-gnu/$Configuration/mdvu.exe",
-    "target/release/mdvu.exe",
-    "target/debug/mdvu.exe"
-)
-
-$ExeSource = $ExeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if ($ExeSource) {
     Copy-Item $ExeSource (Join-Path $DistDir "mdvu.exe") -Force
@@ -39,9 +31,10 @@ if ($ExeSource) {
 }
 
 # Copy WebView2Loader.dll (required by GNU/MinGW targets, helpful for MSVC)
-$LoaderDll = Get-ChildItem -Path "target" -Recurse -Filter "WebView2Loader.dll" -ErrorAction SilentlyContinue |
+$LoaderDll = Get-ChildItem -Path (Join-Path (Split-Path $ExeSource -Parent) "build") -Recurse -Filter "WebView2Loader.dll" -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -like "*x64*WebView2Loader.dll" } |
     Select-Object -First 1
+if (-not $LoaderDll) { throw "WebView2Loader.dll is missing from the Cargo build output" }
 if ($LoaderDll) {
     Copy-Item $LoaderDll.FullName (Join-Path $DistDir "WebView2Loader.dll") -Force
     Write-Host "  [OK] Copied $($LoaderDll.Name) -> WebView2Loader.dll" -ForegroundColor Green
@@ -58,14 +51,11 @@ $Version = (Get-Content "version.txt").Trim()
 $ZipPath = "dist/mdvu-$Version-windows-x86_64.zip"
 Write-Host "==> Creating portable release archive: $ZipPath" -ForegroundColor Cyan
 
-# Normalize timestamps to prevent PKWare zip crash (dates prior to 1980 like WebView2Loader.dll)
-Get-ChildItem -Path $DistDir | ForEach-Object {
-    if ($_.LastWriteTime.Year -lt 1980) {
-        $_.LastWriteTime = (Get-Date)
-    }
-}
-
-$ArchiveItems = Get-ChildItem -Path $DistDir -Exclude "*.WebView2" | Select-Object -ExpandProperty FullName
+$ArchiveFiles = @(Get-ChildItem -Path $DistDir -Exclude "*.WebView2")
+# SDK DLLs can have a reproducible 1970 timestamp, outside ZIP's 1980..2107 range.
+$ArchiveFiles | Where-Object { $_.LastWriteTime.Year -lt 1980 -or $_.LastWriteTime.Year -gt 2107 } |
+    ForEach-Object { $_.LastWriteTime = [datetime]'1980-01-01' }
+$ArchiveItems = $ArchiveFiles | Select-Object -ExpandProperty FullName
 Compress-Archive -Path $ArchiveItems -DestinationPath $ZipPath -Force
 
 $ZipHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()

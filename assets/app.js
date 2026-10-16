@@ -1,0 +1,359 @@
+(()=>{'use strict';
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const highlightOne=el=>{
+const source=el.textContent;
+if(!source||source.length>300000)return;
+const lang=(el.className.match(/\blanguage-([\w-]+)\b/)||[,''])[1].toLowerCase();
+const isHashComment=/^(py|python|sh|bash|zsh|rb|ruby|yaml|yml|r|pl|perl|dockerfile|makefile)$/.test(lang);
+const isCStyle=/^(c|cpp|cxx|h|hpp|objc|m|mm|cs|swift|go|rust|rs|java|kt|kotlin|js|javascript|ts|typescript|json)$/.test(lang);
+const token=/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\*[\s\S]*?\*\/|\/\/[^\n]*|#[^\n]*|\b(?:class|struct|enum|protocol|func|let|var|if|else|for|while|return|import|from|def|async|await|throw|throws|try|catch|switch|case|const|function|new|true|false|null|nil|public|private|static|final)\b|\b\d+(?:\.\d+)?\b)/g;
+let out='',last=0,match;
+while((match=token.exec(source))!==null){
+const start=match.index;
+if(start>last)out+=esc(source.slice(last,start));
+const part=match[0];
+last=start+part.length;
+let type='keyword';
+const c0=part.charCodeAt(0);
+if(c0===34||c0===39||c0===96){type='string';}
+else if(part.startsWith('/*')||part.startsWith('//')){type='comment';}
+else if(c0===35){
+if(isCStyle&&/^#\s*(?:include|define|undef|pragma|import|ifdef|ifndef|endif|if|elif|else)\b/.test(part)){type='preproc';}
+else if(isHashComment||!isCStyle){type='comment';}
+else{type='preproc';}
+}else if(c0>=48&&c0<=57){type='number';}
+out+=`<span class="tok-${type}">${esc(part)}</span>`;
+}
+if(last<source.length)out+=esc(source.slice(last));
+el.innerHTML=out;
+};
+let lastTOCKey='';
+const decorateHeadings=()=>{
+const counts=new Map,usedIDs=new Set,entries=[];
+document.querySelectorAll('article h1,article h2,article h3,article h4,article h5,article h6').forEach(heading=>{
+heading.querySelector('.heading-anchor')?.remove();
+const copy=heading.cloneNode(true);copy.querySelectorAll('img[alt]').forEach(img=>img.replaceWith(document.createTextNode(img.alt)));
+const title=copy.textContent.trim();
+let base=title.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu,'').trim().replace(/\s+/g,'-')||'section',count=counts.get(base)||0;
+const explicit=!!heading.id&&!heading.dataset.mdvuGeneratedId;
+let id=heading.dataset.mdvuGeneratedId===heading.id?'':heading.id;
+id=id||(count?`${base}-${count}`:base);
+while(usedIDs.has(id)){count++;id=`${base}-${count}`}
+counts.set(base,count+1);usedIDs.add(id);
+heading.id=id;if(!explicit)heading.dataset.mdvuGeneratedId=id;
+entries.push({level:Number(heading.tagName.slice(1)),title,id:heading.id});
+const anchor=document.createElement('a');
+anchor.className='heading-anchor';
+anchor.href=`#${heading.id}`;
+anchor.textContent='#';
+heading.prepend(anchor);
+});
+const newKey=JSON.stringify(entries);
+if(newKey!==lastTOCKey){
+lastTOCKey=newKey;
+window.webkit?.messageHandlers?.tableOfContents?.postMessage(entries);
+window.__mdvuOnTOC?.(entries);
+}
+};
+const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
+let highlightObserver=null;
+const scheduleHighlight=()=>{highlightObserver?.disconnect();const blocks=document.querySelectorAll('pre>code');if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}const observer=highlightObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});blocks.forEach(block=>observer.observe(block))};
+// Mermaid measures temporary SVGs in its own document, independent of the reading DOM.
+window.__mdvuLoadMermaid=source=>{
+if(window.__mdvuMermaidReady)return window.__mdvuMermaidReady;
+window.__mdvuMermaidReady=new Promise((resolve,reject)=>{
+const frame=document.createElement('iframe');frame.title='Diagram renderer';frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;
+frame.style.cssText='position:fixed;left:-10000px;top:0;width:920px;height:800px;visibility:hidden;pointer-events:none;border:0';
+frame.onload=()=>{try{const context=frame.contentWindow,script=context.document.createElement('script');script.nonce=document.querySelector('meta[name=mdvu-script-nonce]').content;script.textContent=source;context.document.head.append(script);script.remove();source='';if(!context.mermaid)throw new Error('Mermaid runtime failed to initialize');window.mermaid=context.mermaid;window['mermaid-zenuml']=context['mermaid-zenuml'];resolve();window.__mdvuRenderDiagrams?.()}catch(error){window.__mdvuMermaidError=String(error);reject(error)}};
+frame.srcdoc='<!doctype html><html><head><style>body{margin:0;font:16px Arial,sans-serif}</style></head><body></body></html>';document.body.append(frame);
+});
+return window.__mdvuMermaidReady;
+};
+let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
+const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
+// SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
+const installDiagramSVG=(node,svg)=>{
+let host=node.querySelector('.diagram-content');
+if(!host){host=document.createElement('div');host.className='diagram-content';host.attachShadow({mode:'open'});node.replaceChildren(host)}
+host.shadowRoot.innerHTML=diagramStyle+svg;
+};
+const diagramQueue=[];let isProcessingQueue=false,lastReadingInput=-Infinity;
+['wheel','touchmove','keydown'].forEach(type=>window.addEventListener(type,event=>{if(event.isTrusted)lastReadingInput=performance.now()},{passive:true}));
+const cleanDiagramSource=s=>{
+let res=s.replace(/^[ \t]*>[ \t]?/gm,'').trim();
+if(/^\s*requirementDiagram/m.test(res)){
+res=res
+.replace(/^(\s*id:\s*)([^"\s\n\r][^\n\r]*)$/gm,(m,p1,p2)=>`${p1}"${p2.trim()}"`)
+.replace(/^(\s*text:\s*)([^"\s\n\r][^\n\r]*)$/gm,(m,p1,p2)=>`${p1}"${p2.trim()}"`)
+.replace(/^(\s*docref:\s*)([^"\s\n\r][^\n\r]*)$/gm,(m,p1,p2)=>`${p1}"${p2.trim()}"`);
+}
+return res;
+};
+const ensureMermaidInit=async()=>{
+if(typeof mermaid==='undefined')return;
+const selected=document.documentElement.dataset.theme;
+const isDark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
+const targetTheme=isDark?'dark':'default';
+if(mermaidInitialized&&currentMermaidTheme===targetTheme)return;
+if(window['mermaid-zenuml']&&!window.__zenumlRegistered){
+try{await mermaid.registerExternalDiagrams([window['mermaid-zenuml']]);window.__zenumlRegistered=true}
+catch(err){console.error('ZenUML registration error:',err)}
+}
+mermaid.initialize({startOnLoad:false,securityLevel:'strict',maxTextSize:1000000,maxEdges:10000,theme:targetTheme,themeVariables:{background:'transparent'},suppressErrorRendering:true});
+mermaidInitialized=true;
+currentMermaidTheme=targetTheme;
+};
+const postDiagramCache=(key,svg)=>{if(!key||!svg)return;if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.diagramCache.postMessage({key,svg});if(window.ipc?.postMessage)window.ipc.postMessage('cache_diagram:'+JSON.stringify({key,svg}))};
+const renderSingleDiagram=async(node)=>{
+if(!node.isConnected||!node.classList.contains('diagram-pending')||node.__mdvuRendering)return;
+node.__mdvuRendering=true;
+const pre=node.querySelector('pre');
+if(!pre){node.classList.remove('diagram-pending');delete node.__mdvuRendering;return}
+const renderer=node.dataset.renderer,rawSource=pre.textContent,source=cleanDiagramSource(rawSource),key=node.dataset.cacheKey;
+try{
+if(renderer==='mermaid'){
+if(typeof mermaid==='undefined'){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
+await ensureMermaidInit();
+const diagId=`mdvu-diagram-${++diagramSeq}`;
+const result=await mermaid.render(diagId,source);
+if(!node.isConnected)return;
+installDiagramSVG(node,result.svg);
+node.classList.remove('diagram-pending');
+node.classList.add('diagram-rendered');
+postDiagramCache(key,result.svg);
+}else if(renderer==='plantuml'){
+if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
+const selected=document.documentElement.dataset.theme;
+const isDark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
+let lines=source.trim().split(/\r?\n/);
+if(!lines.some(l=>/^\s*@start/i.test(l))){lines.unshift('@startuml');lines.push('@enduml')}
+if(isDark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l))){lines.splice(1,0,'skinparam backgroundColor transparent')}
+await new Promise((resolve,reject)=>{
+PlantUML.renderToString(lines,svg=>{
+if(!svg){reject(new Error('PlantUML returned empty output'));return}
+if(!node.isConnected){resolve();return}
+installDiagramSVG(node,svg);
+node.classList.remove('diagram-pending');
+node.classList.add('diagram-rendered');
+postDiagramCache(key,svg);
+resolve();
+},err=>reject(new Error(err)));
+});
+}
+}catch(e){
+node.classList.remove('diagram-pending');
+node.classList.add('diagram-error');
+node.innerHTML=`<strong>Diagram could not be rendered</strong><pre></pre><small></small>`;
+node.querySelector('pre').textContent=rawSource;
+node.querySelector('small').textContent=String(e.message||e);
+}finally{
+delete node.__mdvuRendering;
+}
+};
+const isElementInViewport=(el,margin=1200)=>{
+const rect=el.getBoundingClientRect(),vh=window.innerHeight||document.documentElement.clientHeight||800;
+return rect.top<=vh+margin&&rect.bottom>=-margin;
+};
+const finishQueuedDiagram=node=>{node.__mdvuResolve?.();delete node.__mdvuResolve;delete node.__mdvuRenderPromise;node.__mdvuQueued=false};
+const processQueue=async()=>{
+if(isProcessingQueue)return;
+isProcessingQueue=true;
+try{
+while(diagramQueue.length>0){
+while(performance.now()-lastReadingInput<120)await new Promise(r=>setTimeout(r,32));
+if(!diagramQueue.length)break;
+const visibleIdx=diagramQueue.length>1?diagramQueue.findIndex(n=>n.isConnected&&isElementInViewport(n,200)):0;
+const node=visibleIdx!==-1?diagramQueue.splice(visibleIdx,1)[0]:diagramQueue.shift();
+try{if(node?.isConnected&&node.classList.contains('diagram-pending'))await renderSingleDiagram(node)}
+finally{finishQueuedDiagram(node)}
+await new Promise(r=>setTimeout(r,0));
+}
+}finally{isProcessingQueue=false}
+};
+const enqueueDiagram=node=>{
+if(!node.isConnected||!node.classList.contains('diagram-pending'))return Promise.resolve();
+if(node.__mdvuRenderPromise)return node.__mdvuRenderPromise;
+node.__mdvuQueued=true;
+const promise=node.__mdvuRenderPromise=new Promise(resolve=>node.__mdvuResolve=resolve);
+diagramQueue.push(node);
+processQueue();
+return promise;
+};
+const initDiagramObserver=()=>{
+if(!('IntersectionObserver'in window))return null;
+if(diagramObserver)return diagramObserver;
+diagramObserver=new IntersectionObserver((entries)=>{
+entries.forEach(entry=>{
+if(entry.isIntersecting){
+diagramObserver.unobserve(entry.target);
+enqueueDiagram(entry.target);
+}
+});
+},{rootMargin:'1200px 0px'});
+return diagramObserver;
+};
+const isRendererReady=r=>(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
+const renderDiagrams=async(options)=>{
+const forceAll=options===true||options?.all===true;
+if(window.__mdvuMermaidReady&&document.querySelector('.diagram-pending[data-renderer="mermaid"]'))await window.__mdvuMermaidReady;
+const pendingNodes=[...document.querySelectorAll('.diagram-pending')].filter(n=>isRendererReady(n.dataset.renderer));
+if(!pendingNodes.length)return;
+const observer=initDiagramObserver();
+if(forceAll||!observer){
+for(const node of pendingNodes){
+if(observer)observer.unobserve(node);
+await enqueueDiagram(node);
+}
+return;
+}
+const initialBatch=[];
+pendingNodes.forEach(node=>{
+if(isElementInViewport(node,1200)){
+initialBatch.push(node);
+}else{
+observer.observe(node);
+}
+});
+for(const node of initialBatch){
+await enqueueDiagram(node);
+}
+};
+window.__mdvuRestoreScroll=()=>{if(window.__mdvuRestore)requestAnimationFrame(()=>scrollTo(0,document.documentElement.scrollHeight*window.__mdvuRestore.ratio))};
+window.__mdvuRenderDiagrams=renderDiagrams;
+const renderMath=()=>{
+if(typeof katex==='undefined'||!katex.render)return;
+const mathNodes=document.querySelectorAll('.math-inline:not(.math-rendered), .math-display:not(.math-rendered)');
+mathNodes.forEach(node=>{
+const isDisplay=node.classList.contains('math-display');
+const tex=node.textContent;
+try{
+katex.render(tex,node,{output:'mathml',displayMode:isDisplay,throwOnError:false});
+node.classList.add('math-rendered');
+}catch(e){
+node.classList.add('katex-error');
+node.textContent=tex;
+}
+});
+};
+window.__mdvuRenderMath=renderMath;
+let readingAnchor=null,readingAnchorSeq=0;
+window.__mdvuCaptureReadingAnchor=()=>{
+const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
+const rect=scroller===document.scrollingElement?{left:0,top:0,width:innerWidth,height:innerHeight}:scroller.getBoundingClientRect();
+let el=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+el=el?.closest('p,h1,h2,h3,h4,h5,h6,li,pre,tr,blockquote,table,img,figure');
+const token=++readingAnchorSeq;
+readingAnchor={token,scroller,el,viewportWidth:innerWidth,offset:el?(el.getBoundingClientRect().top-rect.top)/rect.height:0,ratio:scroller.scrollTop/Math.max(1,scroller.scrollHeight-scroller.clientHeight)};
+return token;
+};
+window.__mdvuRestoreReadingAnchor=(token,viewportScale=1)=>{
+let frames=0,stable=0;
+const restore=()=>{
+if(readingAnchor?.token!==token)return;
+const {scroller,el,offset,ratio,viewportWidth}=readingAnchor;
+if(Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){requestAnimationFrame(restore);return}
+const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect();
+const delta=el?.isConnected?el.getBoundingClientRect().top-rect.top-offset*rect.height:ratio*Math.max(1,scroller.scrollHeight-scroller.clientHeight)-scroller.scrollTop;
+if(Math.abs(delta)>.5){scroller.scrollBy({top:delta,behavior:'instant'});stable=0}else stable++;
+if(++frames<12&&stable<2)requestAnimationFrame(restore);
+else{readingAnchor=null;window.__mdvuReadingAnchorSettled=token}
+};
+requestAnimationFrame(restore);
+};
+window.__mdvuPreserveReadingAnchor=mutate=>{const token=window.__mdvuCaptureReadingAnchor();mutate();window.__mdvuRestoreReadingAnchor(token)};
+window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}target.scrollIntoView({block:'start'});if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
+document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
+let allMatches=[];let currentIndex=-1;
+const clearFind=()=>{
+if(!allMatches.length)return;
+const parents=new Set;
+allMatches.forEach(m=>{parents.add(m.parentNode);m.replaceWith(...m.childNodes)});
+parents.forEach(p=>p?.normalize());
+allMatches=[];currentIndex=-1;
+};
+const searchFind=q=>{
+clearFind();
+if(!q||!q.trim())return{count:0,current:0};
+const article=document.querySelector('article')||document.body;
+const nodes=[];
+const collect=root=>{
+const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);let node;
+while(node=walker.nextNode()){
+if(node.nodeType===Node.ELEMENT_NODE){if(node.shadowRoot)collect(node.shadowRoot);continue}
+const p=node.parentElement;
+if(p&&!p.closest('script,style,.find-match,.heading-anchor,.diagram-pending,.diagram-error'))nodes.push(node);
+}
+};
+collect(article);
+const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu'),created=[];
+for(const node of nodes){
+const text=node.textContent;
+pattern.lastIndex=0;
+let match=pattern.exec(text);
+if(!match)continue;
+const frag=document.createDocumentFragment();
+let last=0;
+while(match){
+const idx=match.index,len=match[0].length;
+if(idx>last)frag.appendChild(document.createTextNode(text.slice(last,idx)));
+const mark=node.parentElement.namespaceURI==='http://www.w3.org/2000/svg'?document.createElementNS('http://www.w3.org/2000/svg','tspan'):document.createElement('mark');
+mark.setAttribute('class','find-match');
+mark.textContent=text.slice(idx,idx+len);
+frag.appendChild(mark);
+created.push(mark);
+last=idx+len;
+match=pattern.exec(text);
+}
+if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
+node.replaceWith(frag);
+}
+allMatches=created;
+if(allMatches.length){
+currentIndex=0;
+allMatches[0].classList.add('find-current');
+allMatches[0].scrollIntoView({block:'center',behavior:'smooth'});
+}
+return{count:allMatches.length,current:allMatches.length?1:0};
+};
+const stepFind=delta=>{
+if(!allMatches.length)return{count:0,current:0};
+allMatches[currentIndex].classList.remove('find-current');
+currentIndex=(currentIndex+delta+allMatches.length)%allMatches.length;
+allMatches[currentIndex].classList.add('find-current');
+allMatches[currentIndex].scrollIntoView({block:'center',behavior:'smooth'});
+return{count:allMatches.length,current:currentIndex+1};
+};
+window.__mdvuFind={search:searchFind,next:()=>stepFind(1),previous:()=>stepFind(-1),clear:clearFind};
+window.__mdvuToggleTOC=()=>{
+let panel=document.getElementById('mdvu-toc-panel');
+if(panel){panel.classList.toggle('visible');return}
+const headings=document.querySelectorAll('h1,h2,h3,h4,h5,h6');
+if(!headings.length)return;
+panel=document.createElement('nav');
+panel.id='mdvu-toc-panel';
+panel.className='visible';
+let html='<div class="toc-header"><strong>Table of Contents</strong><button id="mdvu-toc-close" type="button" title="Close (Esc)">&times;</button></div><ul class="toc-list">';
+headings.forEach(h=>{
+const lvl=h.tagName.slice(1);
+const title=h.textContent.replace(/^#\s*/,'').trim();
+html+=`<li class="toc-item toc-lvl-${lvl}"><a href="#${encodeURIComponent(h.id)}">${esc(title)}</a></li>`;
+});
+html+='</ul>';
+panel.innerHTML=html;
+document.body.appendChild(panel);
+panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
+panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
+};
+window.__mdvuDisposeArticle=()=>{readingAnchor=null;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
+window.addEventListener('keydown',e=>{
+if(e.key==='Escape')document.getElementById('mdvu-toc-panel')?.classList.remove('visible');
+if(e.defaultPrevented||e.shiftKey||e.altKey||e.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;
+const end=e.key==='End'||(e.metaKey&&e.key==='ArrowDown'),home=e.key==='Home'||(e.metaKey&&e.key==='ArrowUp');
+if(!end&&!home)return;
+e.preventDefault();
+const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
+scroller.scrollTo({top:end?scroller.scrollHeight:0,behavior:'instant'});
+});
+document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{window.__mdvuInitArticle()})});
+})();
