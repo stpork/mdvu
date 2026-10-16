@@ -68,7 +68,7 @@ pub unsafe fn apply_window_icon(hwnd: HWND) {
     let hinstance = GetWindowLongPtrW(hwnd, GWLP_HINSTANCE) as *mut core::ffi::c_void;
     let big_icon = LoadImageW(
         hinstance,
-        1 as *const u16,
+        std::ptr::without_provenance(1), // MAKEINTRESOURCEW(1), not a memory address.
         IMAGE_ICON,
         GetSystemMetrics(SM_CXICON),
         GetSystemMetrics(SM_CYICON),
@@ -79,7 +79,7 @@ pub unsafe fn apply_window_icon(hwnd: HWND) {
     }
     let small_icon = LoadImageW(
         hinstance,
-        1 as *const u16,
+        std::ptr::without_provenance(1), // MAKEINTRESOURCEW(1), not a memory address.
         IMAGE_ICON,
         GetSystemMetrics(SM_CXSMICON),
         GetSystemMetrics(SM_CYSMICON),
@@ -104,6 +104,7 @@ pub unsafe fn apply_dark_mode(hwnd: HWND, theme: &str) {
     );
 }
 
+#[allow(clippy::too_many_arguments)] // Explicit native menu state; no duplicated host model.
 pub unsafe fn create_main_menu(
     hwnd: HWND,
     dialect: MarkdownDialect,
@@ -312,6 +313,7 @@ pub unsafe fn create_main_menu(
     );
 }
 
+#[allow(clippy::too_many_arguments)] // Explicit native menu state; no duplicated host model.
 pub unsafe fn update_menu_state(
     hwnd: HWND,
     dialect: MarkdownDialect,
@@ -425,7 +427,7 @@ pub unsafe extern "system" fn menu_subclass_proc(
     ref_data: usize,
 ) -> LRESULT {
     if msg == WM_COMMAND {
-        let cmd_id = (wparam & 0xFFFF) as usize;
+        let cmd_id = wparam & 0xFFFF;
         let proxy = &*(ref_data as *const EventLoopProxy<UserEvent>);
         match cmd_id {
             // File

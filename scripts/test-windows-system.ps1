@@ -151,8 +151,8 @@ public static class MdvuCapture {
                     Start-Sleep -Milliseconds 500
                 } while ($Clock.Elapsed.TotalSeconds -lt $SampleSeconds -or (-not (Test-Path $UIResult) -and $Clock.Elapsed.TotalSeconds -lt 100))
                 $Samples | Export-Csv (Join-Path $Output ($Fixture.BaseName+'-process-tree.csv')) -NoTypeInformation
-                $Ready = if (Test-Path $Telemetry) { Get-Content $Telemetry -Raw | ConvertFrom-Json } else { $null }
-                $UI = if (Test-Path $UIResult) { Get-Content $UIResult -Raw | ConvertFrom-Json } else { $null }
+                $Ready = if (Test-Path $Telemetry) { Get-Content $Telemetry -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
+                $UI = if (Test-Path $UIResult) { Get-Content $UIResult -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
                 Assert-Test "UI checks $($Fixture.Name)" ($null -ne $UI -and $UI.passed)
                 $Results.metrics += [ordered]@{fixture=$Fixture.FullName.Substring((Resolve-Path 'tests/fixtures').Path.Length+1); ui=$UI; firstWindowMs=$FirstWindowMs; documentReady=$Ready; samples=$Samples; note='Working sets sum shared pages; private bytes are the better total. First window is not first content.'}
                 [void][MdvuCapture]::SetForegroundWindow($Process.MainWindowHandle)
