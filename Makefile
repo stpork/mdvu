@@ -34,7 +34,9 @@ release:
 	done
 test:
 	cd "$(PROJECT_ROOT)" && swift test $(TEST_FLAGS)
-benchmark: release
+DYLIB ?= $(PROJECT_ROOT)/target/release/libmdvu_core.dylib
+
+benchmark: rust-release release
 	"$(PROJECT_ROOT)/scripts/benchmark.sh"
 update-snapshot: all
 	"$(PROJECT_ROOT)/scripts/update-snapshot.sh"
@@ -49,8 +51,11 @@ package:
 	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
 	test ! -f "$(PROJECT_ROOT)/packaging/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/mdvu.icns" "$(APP)/Contents/Resources/"
 	cp "$(PROJECT_ROOT)/packaging/Info.plist" "$(APP)/Contents/Info.plist"
-	if [ -f "$(PROJECT_ROOT)/target/release/libmdvu_core.dylib" ]; then \
-		cp "$(PROJECT_ROOT)/target/release/libmdvu_core.dylib" "$(APP)/Contents/Frameworks/"; \
+	if [ -f "$(DYLIB)" ]; then \
+		cp "$(DYLIB)" "$(APP)/Contents/Frameworks/libmdvu_core.dylib"; \
+		strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib" 2>/dev/null || true; \
+		rm -f "$(APP)/Contents/Resources/mdvu_mdvu.bundle/Contents/Resources"/*.lzma \
+		      "$(APP)/Contents/Resources/mdvu_mdvu.bundle"/*.lzma; \
 	fi
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"

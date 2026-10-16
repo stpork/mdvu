@@ -56,7 +56,7 @@ final class DiagramCache: @unchecked Sendable {
 
     init() {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        let dir = base.appendingPathComponent("com.mdvu.viewer/diagrams", isDirectory: true)
+        let dir = base.appendingPathComponent("mdvu/diagrams", isDirectory: true)
         directory = dir
         directoryPath = dir.path
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -102,6 +102,7 @@ final class DiagramCache: @unchecked Sendable {
     func write(key: String, svg: String) {
         guard key.utf8.count == 64 && key.allSatisfy({ $0.isHexDigit }), svg.hasPrefix("<svg"), svg.utf8.count < 10_000_000 else { return }
         memoryCache.setObject(svg as NSString, forKey: key as NSString, cost: svg.utf8.count)
+        MdvuCoreBridge.shared.writeDiagramCache(key: key, svg: svg)
         let filePath = directoryPath + "/" + key + ".svg"
         try? svg.write(toFile: filePath, atomically: true, encoding: .utf8)
     }

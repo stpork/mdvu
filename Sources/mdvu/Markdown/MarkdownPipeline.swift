@@ -82,16 +82,24 @@ struct MarkdownPipeline {
     }
 
     func render(_ source: String, diagramTheme: String = "light") -> RenderedDocument {
-        let effectiveDialect = isDialectExplicit ? dialect : (MarkdownDocumentDirective.extractDialect(from: source) ?? dialect)
-        if !diagrams.renderers.isEmpty && (ProcessInfo.processInfo.environment["MDVU_ENGINE"] == "rust" || ProcessInfo.processInfo.arguments.contains("--engine=rust")) && MdvuCoreBridge.shared.isAvailable {
-            if let result = MdvuCoreBridge.shared.render(
-                source: source,
-                dialect: effectiveDialect.rawValue,
-                theme: diagramTheme
-            ) {
-                return RenderedDocument(body: result.body, title: result.title, dialect: effectiveDialect)
+        let forceSwift = ProcessInfo.processInfo.environment["MDVU_ENGINE"] == "swift"
+            || ProcessInfo.processInfo.arguments.contains("--engine=swift")
+        if !forceSwift, MdvuCoreBridge.shared.isAvailable,
+           let result = MdvuCoreBridge.shared.renderBody(
+               source: source,
+               dialect: dialect.rawValue,
+               isDialectExplicit: isDialectExplicit,
+               theme: diagramTheme,
+               enableDiagrams: !diagrams.renderers.isEmpty
+           ) {
+            let resolvedDialect: MarkdownDialect = switch result.dialect {
+            case "obsidian": .obsidian
+            case "gfm", "github": .github
+            default: .generic
             }
+            return RenderedDocument(body: result.body, title: result.title, dialect: resolvedDialect)
         }
+        let effectiveDialect = isDialectExplicit ? dialect : (MarkdownDocumentDirective.extractDialect(from: source) ?? dialect)
         let prepared = extensions.reduce(source) { $1.preprocess($0, dialect: effectiveDialect) }
         let rendered = MarkdownParser(diagrams: diagrams, cache: cache, diagramTheme: diagramTheme).render(prepared)
         return RenderedDocument(body: rendered.body, title: rendered.title, dialect: effectiveDialect)
@@ -531,9 +539,10 @@ private struct CriticMarkupExtension: MarkdownExtension {
 }
 
 private struct SubSuperscriptExtension: MarkdownExtension {
-    private static let underRegex = try! NSRegularExpression(pattern: #"\^\^([^\^\n\r]+)\^\^"#)
-    private static let supRegex = try! NSRegularExpression(pattern: #"(?<!\^)\^([^\^\s\n\r]+)\^(?!\^)"#)
-    private static let subRegex = try! NSRegularExpression(pattern: #"(?<!~)~([^~\s\n\r]+)~(?!~)"#)
+    private static let underRegex = try! NSRegularExpression(pattern: #"\^\^([^\^\n\r<>`]+)\^\^"#)
+    private static let supRegex = try! NSRegularExpression(pattern: #"(?<!\^)\^([^\^\s\n\r<>`]+)\^(?!\^)"#)
+    private static let subRegex = try! NSRegularExpression(pattern: #"(?<!~)~([^~\s\n\r<>`]+)~(?!~)"#)
+    private static let protectedSpanRegex = try! NSRegularExpression(pattern: #"(`+[^`]*`+|<span class="math-inline">[\s\S]*?</span>|<div class="math-display">[\s\S]*?</div>|<[^>]+>)"#)
 
     func preprocess(_ source: String, dialect: MarkdownDialect) -> String {
         guard FastScan.count(source, ascii: UInt8(ascii: "~"), atLeast: 2) || FastScan.count(source, ascii: UInt8(ascii: "^"), atLeast: 2) else {
@@ -541,18 +550,41 @@ private struct SubSuperscriptExtension: MarkdownExtension {
         }
         return CodeFenceScanner.process(source) { chunk in
             guard FastScan.count(chunk, ascii: UInt8(ascii: "~"), atLeast: 2) || FastScan.count(chunk, ascii: UInt8(ascii: "^"), atLeast: 2) else { return chunk }
-            var text = chunk
-            if FastScan.count(text, ascii: UInt8(ascii: "^"), atLeast: 2) {
-                if FastScan.contains(text, token: "^^") {
-                    text = Self.underRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<u>$1</u>")
+            let ns = chunk as NSString
+            let matches = Self.protectedSpanRegex.matches(in: chunk, range: NSRange(location: 0, length: ns.length))
+            if matches.isEmpty {
+                return Self.replaceDelimiters(in: chunk)
+            }
+            var out = ""
+            out.reserveCapacity(chunk.utf8.count)
+            var cursor = 0
+            for m in matches {
+                if m.range.location > cursor {
+                    let plain = ns.substring(with: NSRange(location: cursor, length: m.range.location - cursor))
+                    out += Self.replaceDelimiters(in: plain)
                 }
-                text = Self.supRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sup>$1</sup>")
+                out += ns.substring(with: m.range)
+                cursor = m.range.location + m.range.length
             }
-            if FastScan.count(text, ascii: UInt8(ascii: "~"), atLeast: 2) {
-                text = Self.subRegex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "<sub>$1</sub>")
+            if cursor < ns.length {
+                out += Self.replaceDelimiters(in: ns.substring(from: cursor))
             }
-            return text
+            return out
         }
+    }
+
+    private static func replaceDelimiters(in text: String) -> String {
+        var out = text
+        if FastScan.count(out, ascii: UInt8(ascii: "^"), atLeast: 2) {
+            if FastScan.contains(out, token: "^^") {
+                out = underRegex.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out), withTemplate: "<u>$1</u>")
+            }
+            out = supRegex.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out), withTemplate: "<sup>$1</sup>")
+        }
+        if FastScan.count(out, ascii: UInt8(ascii: "~"), atLeast: 2) {
+            out = subRegex.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out), withTemplate: "<sub>$1</sub>")
+        }
+        return out
     }
 }
 

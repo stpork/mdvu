@@ -79,6 +79,7 @@ mermaid.initialize({startOnLoad:false,securityLevel:'loose',maxTextSize:1000000,
 mermaidInitialized=true;
 currentMermaidTheme=targetTheme;
 };
+const postDiagramCache=(key,svg)=>{if(!key||!svg)return;if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.diagramCache.postMessage({key,svg});if(window.ipc?.postMessage)window.ipc.postMessage('cache_diagram:'+JSON.stringify({key,svg}))};
 const renderSingleDiagram=async(node)=>{
 if(!node.classList.contains('diagram-pending')||node.__mdvuRendering)return;
 node.__mdvuRendering=true;
@@ -93,7 +94,8 @@ const diagId=`mdvu-diagram-${++diagramSeq}`;
 const result=await mermaid.render(diagId,source);
 node.innerHTML=result.svg;
 node.classList.remove('diagram-pending');
-if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.diagramCache.postMessage({key,svg:result.svg});
+node.classList.add('diagram-rendered');
+postDiagramCache(key,result.svg);
 }else if(renderer==='plantuml'){
 if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 const selected=document.documentElement.dataset.theme;
@@ -106,7 +108,8 @@ PlantUML.renderToString(lines,svg=>{
 if(!svg){reject(new Error('PlantUML returned empty output'));return}
 node.innerHTML=svg;
 node.classList.remove('diagram-pending');
-if(window.webkit?.messageHandlers?.diagramCache)window.webkit.messageHandlers.diagramCache.postMessage({key,svg});
+node.classList.add('diagram-rendered');
+postDiagramCache(key,svg);
 resolve();
 },err=>reject(new Error(err)));
 });
@@ -156,9 +159,10 @@ enqueueDiagram(entry.target);
 },{rootMargin:'1200px 0px'});
 return diagramObserver;
 };
+const isRendererReady=r=>(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
 const renderDiagrams=async(options)=>{
 const forceAll=options===true||options?.all===true;
-const pendingNodes=[...document.querySelectorAll('.diagram-pending')];
+const pendingNodes=[...document.querySelectorAll('.diagram-pending')].filter(n=>isRendererReady(n.dataset.renderer));
 if(!pendingNodes.length)return;
 const observer=initDiagramObserver();
 if(forceAll||!observer){
@@ -283,6 +287,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
+window.__mdvuInitArticle=()=>{decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 window.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('mdvu-toc-panel')?.classList.remove('visible')}});
-document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{decorateHeadings();wrapTables();scheduleHighlight()})});
+document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{window.__mdvuInitArticle()})});
 })();

@@ -1,5 +1,20 @@
 use crate::navigator::VaultItem;
-use mdvu_core::TocEntry;
+use mdvu_core::{TocEntry, ZoomPolicy};
+
+fn escape_html(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for c in input.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
 
 pub fn build_gui_html(
     document_html: &str,
@@ -16,10 +31,16 @@ pub fn build_gui_html(
 ) -> String {
     let toc_json = serde_json::to_string(toc).unwrap_or_else(|_| "[]".to_string());
     let vault_json = serde_json::to_string(vault_items).unwrap_or_else(|_| "[]".to_string());
-    let current_path_json = serde_json::to_string(&current_file_path.unwrap_or("")).unwrap_or_else(|_| "\"\"".to_string());
-    let zoom_pct = (zoom_level * 100.0).round() as i32;
+    let current_path_json =
+        serde_json::to_string(&current_file_path.unwrap_or("")).unwrap_or_else(|_| "\"\"".to_string());
+    let zoom_label = ZoomPolicy::format_percentage(zoom_level);
+    let safe_vault_name = escape_html(vault_name);
 
     let shell_css = r#"
+:root {
+  --toc-width: 270px;
+  --nav-width: 270px;
+}
 #mdvu-app {
   display: flex;
   flex-direction: column;
@@ -162,13 +183,16 @@ pub fn build_gui_html(
 .zoom-val {
   border: 0;
   background: transparent;
-  width: 44px;
+  width: 48px;
   text-align: center;
   font-size: 11px;
   font-family: ui-monospace, monospace;
   color: var(--fg);
   outline: none;
-  cursor: pointer;
+  cursor: text;
+}
+.zoom-val:focus {
+  background: var(--soft);
 }
 #mdvu-split-container {
   display: flex;
@@ -177,29 +201,49 @@ pub fn build_gui_html(
   position: relative;
 }
 .mdvu-sidebar {
-  width: 270px;
-  min-width: 270px;
-  max-width: 270px;
   background: color-mix(in srgb, var(--bg) 95%, var(--soft));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: margin 0.16s ease;
   user-select: none;
   z-index: 500;
   box-sizing: border-box;
+  position: relative;
 }
 .mdvu-sidebar-left {
+  width: var(--toc-width);
+  min-width: var(--toc-width);
+  max-width: var(--toc-width);
   border-right: 1px solid var(--line);
 }
 .mdvu-sidebar-left.hidden {
-  margin-left: -271px;
+  display: none;
 }
 .mdvu-sidebar-right {
+  width: var(--nav-width);
+  min-width: var(--nav-width);
+  max-width: var(--nav-width);
   border-left: 1px solid var(--line);
 }
 .mdvu-sidebar-right.hidden {
-  margin-right: -271px;
+  display: none;
+}
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 600;
+}
+.sidebar-resizer:hover, .sidebar-resizer.dragging {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.sidebar-resizer-left {
+  right: 0;
+}
+.sidebar-resizer-right {
+  left: 0;
 }
 .sidebar-header {
   height: 34px;
@@ -208,6 +252,7 @@ pub fn build_gui_html(
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
   font-weight: 600;
@@ -222,6 +267,27 @@ pub fn build_gui_html(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+.nav-mode-group {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.nav-mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.nav-mode-btn.active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  color: var(--accent);
 }
 .sidebar-close {
   background: none;
@@ -278,7 +344,7 @@ pub fn build_gui_html(
 .toc-lvl-3 { padding-left: 28px; font-size: 11.5px; opacity: 0.9; }
 .toc-lvl-4, .toc-lvl-5, .toc-lvl-6 { padding-left: 38px; font-size: 11px; opacity: 0.8; }
 
-/* Navigator Tree Items */
+/* Navigator Tree & List Items */
 .nav-item {
   display: flex;
   align-items: center;
@@ -301,6 +367,13 @@ pub fn build_gui_html(
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
   font-weight: 600;
+}
+.nav-subpath {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: 0.75;
+  padding-left: 6px;
 }
 .nav-folder-content {
   padding-left: 12px;
@@ -352,7 +425,7 @@ pub fn build_gui_html(
     <div class="toolbar-group">
       <div class="zoom-group">
         <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out (Ctrl+-)">−</button>
-        <input id="mdvu-zoom-val" class="zoom-val" value="{zoom_pct}%" title="Zoom level (Ctrl+0 to reset)" readonly />
+        <input id="mdvu-zoom-val" class="zoom-val" value="{zoom_label}" title="Enter zoom % (10%–500%), double-click or Ctrl+0 to reset" />
         <button id="btn-zoom-in" class="zoom-btn" title="Zoom In (Ctrl++)">+</button>
       </div>
     </div>
@@ -376,19 +449,25 @@ pub fn build_gui_html(
         <button id="btn-toc-close" class="sidebar-close" title="Hide Table of Contents (Ctrl+Shift+S)">×</button>
       </div>
       <nav id="mdvu-toc-tree" class="sidebar-content"></nav>
+      <div id="mdvu-toc-resizer" class="sidebar-resizer sidebar-resizer-left"></div>
     </aside>
 
     <!-- Center Main Content -->
     <main id="mdvu-main-content">
-      <div id="mdvu-article-wrap">
+      <div id="mdvu-article-wrap" style="zoom: {zoom_level}">
         __MDVU_ARTICLE_CONTENT__
       </div>
     </main>
 
     <!-- Right Sidebar: File Navigator -->
     <aside id="mdvu-navigator-sidebar" class="mdvu-sidebar mdvu-sidebar-right {nav_hidden}">
+      <div id="mdvu-nav-resizer" class="sidebar-resizer sidebar-resizer-right"></div>
       <div class="sidebar-header">
-        <span class="sidebar-title">📁 <span id="nav-vault-name">{vault_name}</span></span>
+        <span class="sidebar-title">📁 <span id="nav-vault-name">{safe_vault_name}</span></span>
+        <div class="nav-mode-group" title="Switch between folder tree and flat file list">
+          <button id="btn-nav-mode-tree" class="nav-mode-btn active" type="button">Tree</button>
+          <button id="btn-nav-mode-list" class="nav-mode-btn" type="button">List</button>
+        </div>
         <button id="btn-nav-close" class="sidebar-close" title="Hide File Navigator (Ctrl+Shift+D)">×</button>
       </div>
       <div id="mdvu-nav-tree" class="sidebar-content"></div>
@@ -398,9 +477,11 @@ pub fn build_gui_html(
 
 <script>
 (()=>{{
+  const escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   window.__mdvuInitialTOC = {toc_json};
   window.__mdvuInitialVault = {vault_json};
   window.__mdvuCurrentPath = {current_path_json};
+  window.__mdvuNavMode = 'tree';
 
   // Setup TOC sidebar
   function renderTOC(entries) {{
@@ -412,8 +493,10 @@ pub fn build_gui_html(
     }}
     let html = '';
     entries.forEach(e => {{
-      const lvl = Math.min(Math.max(e.level, 1), 6);
-      html += `<a class="toc-entry toc-lvl-${{lvl}}" href="#${{encodeURIComponent(e.id)}}" data-id="${{e.id}}">${{e.title}}</a>`;
+      const lvl = Math.min(Math.max(Number(e.level) || 1, 1), 6);
+      const safeId = escHtml(e.id);
+      const safeTitle = escHtml(e.title);
+      html += `<a class="toc-entry toc-lvl-${{lvl}}" href="#${{encodeURIComponent(e.id)}}" data-id="${{safeId}}">${{safeTitle}}</a>`;
     }});
     container.innerHTML = html;
 
@@ -433,6 +516,17 @@ pub fn build_gui_html(
     }});
   }}
 
+  function flattenVault(list, out = []) {{
+    (list || []).forEach(item => {{
+      if (item.is_dir) {{
+        if (item.children) flattenVault(item.children, out);
+      }} else {{
+        out.push(item);
+      }}
+    }});
+    return out;
+  }}
+
   // Setup Vault / File Navigator sidebar
   function renderVault(items, currentPath) {{
     const container = document.getElementById('mdvu-nav-tree');
@@ -441,40 +535,55 @@ pub fn build_gui_html(
       container.innerHTML = '<div style="color:var(--muted);padding:16px 10px;text-align:center;font-size:12px;">No markdown files</div>';
       return;
     }}
-    function buildTree(list) {{
-      let h = '';
-      list.forEach(item => {{
-        if (item.is_dir) {{
-          h += `<div class="nav-folder">
-            <div class="nav-item nav-folder-header">
-              <span class="nav-arrow expanded">▶</span> 📁 <span>${{item.name}}</span>
-            </div>
-            <div class="nav-folder-content">
-              ${{item.children ? buildTree(item.children) : ''}}
-            </div>
-          </div>`;
-        }} else {{
-          const isAct = currentPath && (item.path === currentPath || currentPath.endsWith(item.path) || item.path.endsWith(currentPath));
-          h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{item.path}}">
-            📄 <span>${{item.name}}</span>
-          </div>`;
-        }}
-      }});
-      return h;
-    }}
-    container.innerHTML = buildTree(items);
+    const isMatch = (itemPath) => currentPath && (itemPath === currentPath || currentPath.endsWith('/' + itemPath) || itemPath.endsWith('/' + currentPath));
 
-    container.querySelectorAll('.nav-folder-header').forEach(hdr => {{
-      hdr.addEventListener('click', () => {{
-        const content = hdr.nextElementSibling;
-        const arrow = hdr.querySelector('.nav-arrow');
-        if (content) {{
-          const isHidden = content.style.display === 'none';
-          content.style.display = isHidden ? 'block' : 'none';
-          if (arrow) arrow.classList.toggle('expanded', isHidden);
-        }}
+    if (window.__mdvuNavMode === 'list') {{
+      const flat = flattenVault(items).sort((a, b) => a.name.localeCompare(b.name, undefined, {{ sensitivity: 'base' }}));
+      let h = '';
+      flat.forEach(item => {{
+        const isAct = isMatch(item.path);
+        const sub = item.rel_path && item.rel_path !== item.name ? `<span class="nav-subpath">${{escHtml(item.rel_path)}}</span>` : '';
+        h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}" title="${{escHtml(item.rel_path || item.name)}}">
+          📄 <span>${{escHtml(item.name)}}</span>${{sub}}
+        </div>`;
       }});
-    }});
+      container.innerHTML = h;
+    }} else {{
+      function buildTree(list) {{
+        let h = '';
+        list.forEach(item => {{
+          if (item.is_dir) {{
+            h += `<div class="nav-folder">
+              <div class="nav-item nav-folder-header">
+                <span class="nav-arrow expanded">▶</span> 📁 <span>${{escHtml(item.name)}}</span>
+              </div>
+              <div class="nav-folder-content">
+                ${{item.children ? buildTree(item.children) : ''}}
+              </div>
+            </div>`;
+          }} else {{
+            const isAct = isMatch(item.path);
+            h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}">
+              📄 <span>${{escHtml(item.name)}}</span>
+            </div>`;
+          }}
+        }});
+        return h;
+      }}
+      container.innerHTML = buildTree(items);
+
+      container.querySelectorAll('.nav-folder-header').forEach(hdr => {{
+        hdr.addEventListener('click', () => {{
+          const content = hdr.nextElementSibling;
+          const arrow = hdr.querySelector('.nav-arrow');
+          if (content) {{
+            const isHidden = content.style.display === 'none';
+            content.style.display = isHidden ? 'block' : 'none';
+            if (arrow) arrow.classList.toggle('expanded', isHidden);
+          }}
+        }});
+      }});
+    }}
 
     container.querySelectorAll('.nav-file').forEach(fileEl => {{
       fileEl.addEventListener('click', () => {{
@@ -488,6 +597,47 @@ pub fn build_gui_html(
 
   renderTOC(window.__mdvuInitialTOC);
   renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
+
+  // Tree | List switcher
+  const btnModeTree = document.getElementById('btn-nav-mode-tree');
+  const btnModeList = document.getElementById('btn-nav-mode-list');
+  btnModeTree?.addEventListener('click', () => {{
+    window.__mdvuNavMode = 'tree';
+    btnModeTree.classList.add('active');
+    btnModeList?.classList.remove('active');
+    renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
+  }});
+  btnModeList?.addEventListener('click', () => {{
+    window.__mdvuNavMode = 'list';
+    btnModeList.classList.add('active');
+    btnModeTree?.classList.remove('active');
+    renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
+  }});
+
+  // Sidebar drag resizers
+  function setupResizer(resizerId, cssVar, isLeft) {{
+    const resizer = document.getElementById(resizerId);
+    if (!resizer) return;
+    resizer.addEventListener('mousedown', (e) => {{
+      e.preventDefault();
+      resizer.classList.add('dragging');
+      const onMove = (ev) => {{
+        const maxW = Math.floor(window.innerWidth * 0.48);
+        const w = isLeft ? ev.clientX : (window.innerWidth - ev.clientX);
+        const clamped = Math.max(180, Math.min(maxW, w));
+        document.documentElement.style.setProperty(cssVar, clamped + 'px');
+      }};
+      const onUp = () => {{
+        resizer.classList.remove('dragging');
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }};
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    }});
+  }}
+  setupResizer('mdvu-toc-resizer', '--toc-width', true);
+  setupResizer('mdvu-nav-resizer', '--nav-width', false);
 
   window.__mdvuToggleTOCSidebar = (force) => {{
     const aside = document.getElementById('mdvu-toc-sidebar');
@@ -515,11 +665,16 @@ pub fn build_gui_html(
     if (btn) btn.classList.toggle('active', isFw);
   }};
 
-  window.__mdvuSetZoom = (pct) => {{
+  window.__mdvuSetTheme = (theme) => {{
+    document.documentElement.dataset.theme = theme;
+    window.__mdvuRenderDiagrams?.({{ all: true }});
+  }};
+
+  window.__mdvuSetZoom = (zoomFactor, formattedLabel) => {{
     const val = document.getElementById('mdvu-zoom-val');
-    if (val) val.value = pct + '%';
+    if (val) val.value = formattedLabel || (Math.round(zoomFactor * 100) + '%');
     const wrap = document.getElementById('mdvu-article-wrap') || document.querySelector('article');
-    if (wrap) wrap.style.zoom = (pct / 100.0);
+    if (wrap) wrap.style.zoom = zoomFactor;
   }};
 
   window.__mdvuUpdateHistory = (canBack, canFwd) => {{
@@ -535,32 +690,131 @@ pub fn build_gui_html(
     }}
   }};
 
+  // Fast in-place document update (preserves shell, sidebars, and loaded JS runtimes)
+  window.__mdvuUpdateDocument = (payload) => {{
+    const mainEl = document.getElementById('mdvu-main-content');
+    const prevRatio = (payload.preserveScroll && mainEl)
+      ? (mainEl.scrollTop / (mainEl.scrollHeight || 1))
+      : 0;
+
+    if (payload.baseUrl !== undefined) {{
+      let baseEl = document.querySelector('head base');
+      if (payload.baseUrl) {{
+        if (!baseEl) {{
+          baseEl = document.createElement('base');
+          document.head.prepend(baseEl);
+        }}
+        baseEl.setAttribute('href', payload.baseUrl);
+      }} else if (baseEl) {{
+        baseEl.remove();
+      }}
+    }}
+
+    const article = document.querySelector('#mdvu-article-wrap article') || document.querySelector('article');
+    if (article && payload.bodyHtml !== undefined) {{
+      article.innerHTML = payload.bodyHtml;
+    }}
+
+    if (payload.toc) {{
+      window.__mdvuInitialTOC = payload.toc;
+      renderTOC(payload.toc);
+    }}
+    if (payload.vaultName) {{
+      const vn = document.getElementById('nav-vault-name');
+      if (vn) vn.textContent = payload.vaultName;
+    }}
+    if (payload.vaultItems) {{
+      window.__mdvuInitialVault = payload.vaultItems;
+    }}
+    if (payload.currentPath !== undefined) {{
+      window.__mdvuCurrentPath = payload.currentPath;
+    }}
+    renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
+
+    if (payload.canBack !== undefined && payload.canFwd !== undefined) {{
+      window.__mdvuUpdateHistory(payload.canBack, payload.canFwd);
+    }}
+
+    window.__mdvuInitArticle?.();
+
+    requestAnimationFrame(() => {{
+      if (mainEl) {{
+        mainEl.scrollTop = payload.preserveScroll ? (mainEl.scrollHeight * prevRatio) : 0;
+      }}
+    }});
+  }};
+
+  // Intercept article link clicks (external links -> system browser, relative .md -> open_path)
+  document.getElementById('mdvu-main-content')?.addEventListener('click', (evt) => {{
+    const anchor = evt.target.closest?.('a[href]');
+    if (!anchor) return;
+    const rawHref = anchor.getAttribute('href')?.trim();
+    if (!rawHref || rawHref.startsWith('#')) return;
+    const lower = rawHref.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:')) {{
+      evt.preventDefault();
+      return;
+    }}
+    if (lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('mailto:')) {{
+      evt.preventDefault();
+      window.ipc?.postMessage('open_external:' + rawHref);
+      return;
+    }}
+    const pathPart = rawHref.split('#')[0].split('?')[0];
+    if (/\.(md|markdown|mdown|mkd|txt)$/i.test(pathPart)) {{
+      evt.preventDefault();
+      let decoded = pathPart;
+      try {{ decoded = decodeURIComponent(pathPart); }} catch {{}}
+      window.ipc?.postMessage('open_rel_path:' + decoded);
+    }}
+  }});
+
   // Wire Toolbar buttons
   document.getElementById('btn-back')?.addEventListener('click', () => window.ipc?.postMessage('go_back'));
   document.getElementById('btn-forward')?.addEventListener('click', () => window.ipc?.postMessage('go_forward'));
   document.getElementById('btn-toc')?.addEventListener('click', () => {{
-    window.__mdvuToggleTOCSidebar();
     window.ipc?.postMessage('toggle_toc');
   }});
   document.getElementById('btn-toc-close')?.addEventListener('click', () => {{
-    window.__mdvuToggleTOCSidebar(false);
     window.ipc?.postMessage('toggle_toc');
   }});
   document.getElementById('btn-navigator')?.addEventListener('click', () => {{
-    window.__mdvuToggleNavSidebar();
     window.ipc?.postMessage('toggle_nav');
   }});
   document.getElementById('btn-nav-close')?.addEventListener('click', () => {{
-    window.__mdvuToggleNavSidebar(false);
     window.ipc?.postMessage('toggle_nav');
   }});
   document.getElementById('btn-full-width')?.addEventListener('click', () => {{
-    window.__mdvuToggleFullWidth();
     window.ipc?.postMessage('toggle_full_width');
   }});
   document.getElementById('btn-zoom-in')?.addEventListener('click', () => window.ipc?.postMessage('zoom_in'));
   document.getElementById('btn-zoom-out')?.addEventListener('click', () => window.ipc?.postMessage('zoom_out'));
-  document.getElementById('mdvu-zoom-val')?.addEventListener('dblclick', () => window.ipc?.postMessage('zoom_reset'));
+
+  const zoomInput = document.getElementById('mdvu-zoom-val');
+  zoomInput?.addEventListener('focus', () => zoomInput.select());
+  zoomInput?.addEventListener('dblclick', () => window.ipc?.postMessage('zoom_reset'));
+  zoomInput?.addEventListener('keydown', (e) => {{
+    if (e.key === 'Enter') {{
+      e.preventDefault();
+      window.ipc?.postMessage('set_zoom:' + zoomInput.value);
+      zoomInput.blur();
+    }} else if (e.key === 'Escape') {{
+      e.preventDefault();
+      zoomInput.blur();
+    }}
+  }});
+  zoomInput?.addEventListener('change', () => {{
+    window.ipc?.postMessage('set_zoom:' + zoomInput.value);
+  }});
+
+  // Ctrl + Mouse Wheel smooth zoom
+  window.addEventListener('wheel', (e) => {{
+    if (e.ctrlKey || e.metaKey) {{
+      e.preventDefault();
+      if (e.deltaY < 0) window.ipc?.postMessage('zoom_in');
+      else if (e.deltaY > 0) window.ipc?.postMessage('zoom_out');
+    }}
+  }}, {{ passive: false }});
 
   // Wire Find / Search Box
   const findInput = document.getElementById('mdvu-find-input');
@@ -625,7 +879,7 @@ pub fn build_gui_html(
   // Keyboard shortcut listener in webview
   window.addEventListener('keydown', (e) => {{
     const ctrl = e.ctrlKey || e.metaKey;
-    if (ctrl && e.key === 'f') {{
+    if (ctrl && (e.key === 'f' || e.key === 'F')) {{
       e.preventDefault();
       findInput?.focus();
       findInput?.select();
@@ -645,7 +899,7 @@ pub fn build_gui_html(
     }} else if (ctrl && e.shiftKey && (e.key === 's' || e.key === 'S')) {{
       e.preventDefault();
       window.ipc?.postMessage('toggle_toc');
-    }} else if (ctrl && (e.key === 'b' || e.key === 'B')) {{
+    }} else if (ctrl && !e.shiftKey && (e.key === 'b' || e.key === 'B')) {{
       e.preventDefault();
       window.ipc?.postMessage('toggle_toc');
     }} else if (ctrl && e.shiftKey && (e.key === 'd' || e.key === 'D')) {{
@@ -663,10 +917,10 @@ pub fn build_gui_html(
     }} else if (ctrl && (e.key === '0')) {{
       e.preventDefault();
       window.ipc?.postMessage('zoom_reset');
-    }} else if (e.altKey && e.key === 'ArrowLeft') {{
+    }} else if ((e.altKey && e.key === 'ArrowLeft') || (ctrl && e.key === '[')) {{
       e.preventDefault();
       window.ipc?.postMessage('go_back');
-    }} else if (e.altKey && e.key === 'ArrowRight') {{
+    }} else if ((e.altKey && e.key === 'ArrowRight') || (ctrl && e.key === ']')) {{
       e.preventDefault();
       window.ipc?.postMessage('go_forward');
     }} else if (e.key === 'F11') {{
@@ -693,7 +947,6 @@ pub fn build_gui_html(
         fw_active = if is_full_width { "active" } else { "" },
     );
 
-    // Inject shell_css into <head> and replace <article>...</article> with shell_html
     let with_css = if let Some(pos) = document_html.find("</head>") {
         let (head, rest) = document_html.split_at(pos);
         format!("{head}<style>{shell_css}</style>{rest}")
@@ -701,7 +954,9 @@ pub fn build_gui_html(
         format!("<style>{shell_css}</style>{document_html}")
     };
 
-    if let (Some(art_start), Some(art_end)) = (with_css.find("<article>"), with_css.find("</article>")) {
+    if let (Some(art_start), Some(art_end)) =
+        (with_css.find("<article>"), with_css.rfind("</article>"))
+    {
         let before_article = &with_css[..art_start];
         let article_content = &with_css[art_start..art_end + "</article>".len()];
         let after_article = &with_css[art_end + "</article>".len()..];

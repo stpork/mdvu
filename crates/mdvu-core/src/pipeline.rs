@@ -1,4 +1,5 @@
 use regex::{Captures, Regex};
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -17,7 +18,7 @@ impl MarkdownDialect {
     pub fn from_str_name(s: &str) -> Option<Self> {
         let clean = s.trim().to_ascii_lowercase().replace(['-', '_'], "");
         match clean.as_str() {
-            "generic" | "default" | "auto" => Some(Self::Generic),
+            "generic" | "default" | "auto" | "automatic" => Some(Self::Generic),
             "commonmark" | "cm" => Some(Self::Commonmark),
             "gfm" | "github" => Some(Self::Gfm),
             "obsidian" => Some(Self::Obsidian),
@@ -75,9 +76,9 @@ impl FastScan {
 
 pub struct MarkdownDocumentDirective;
 
-static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)<!--([\s\S]*?)-->").unwrap());
+static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)<!--(.*?)-->").unwrap());
 static DIRECTIVE_IN_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+)["'`]?([a-zA-Z_-]+)["'`]?|\bin\s+["'`]?([a-zA-Z_-]+)["'`]?\s+dialect\b"#).unwrap()
+    Regex::new(r#"(?:(?i-u:dialect|markdown[-_]dialect)[ \t]*[:=][ \t]*|--(?i-u:dialect)[ \t]+)["'`]?([a-zA-Z_-]+)["'`]?|(?:^|[^a-zA-Z0-9_])(?i-u:in)[ \t]+["'`]?([a-zA-Z_-]+)["'`]?[ \t]+(?i-u:dialect)(?:$|[^a-zA-Z0-9_])"#).unwrap()
 });
 
 impl MarkdownDocumentDirective {
@@ -87,7 +88,11 @@ impl MarkdownDocumentDirective {
         }
 
         let prefix = if source.len() > 4096 {
-            &source[..4096]
+            let mut end = 4096;
+            while end > 0 && !source.is_char_boundary(end) {
+                end -= 1;
+            }
+            &source[..end]
         } else {
             source
         };
@@ -146,11 +151,19 @@ impl CodeFenceScanner {
     where
         F: FnMut(&str) -> String,
     {
+        Self::process_cow(source, |chunk| Cow::Owned(transform(chunk))).into_owned()
+    }
+
+    pub fn process_cow<'a, F>(source: &'a str, mut transform: F) -> Cow<'a, str>
+    where
+        F: FnMut(&'a str) -> Cow<'a, str>,
+    {
         if !FastScan::contains_token(source, "```") && !FastScan::contains_token(source, "~~~") {
             return transform(source);
         }
 
         let mut result = String::with_capacity(source.len());
+        let mut modified = false;
         let mut active_fence_char: Option<char> = None;
         let mut active_fence_len = 0;
         let mut non_fence_start = 0;
@@ -211,7 +224,11 @@ impl CodeFenceScanner {
                     if count >= 3 {
                         if non_fence_start < line_start {
                             let chunk = &source[non_fence_start..line_start];
-                            result.push_str(&transform(chunk));
+                            let transformed = transform(chunk);
+                            if matches!(transformed, Cow::Owned(_)) {
+                                modified = true;
+                            }
+                            result.push_str(&transformed);
                         }
                         active_fence_char = Some(first_char);
                         active_fence_len = count;
@@ -231,10 +248,18 @@ impl CodeFenceScanner {
             result.push_str(&source[fence_start..]);
         } else if non_fence_start < source.len() {
             let chunk = &source[non_fence_start..];
-            result.push_str(&transform(chunk));
+            let transformed = transform(chunk);
+            if matches!(transformed, Cow::Owned(_)) {
+                modified = true;
+            }
+            result.push_str(&transformed);
         }
 
-        result
+        if modified {
+            Cow::Owned(result)
+        } else {
+            Cow::Borrowed(source)
+        }
     }
 }
 
@@ -253,7 +278,7 @@ static OBSIDIAN_WIKILINK_RE: LazyLock<Regex> =
 static GITLAB_TOC_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?m)^[ \t]*(?:\[\[_TOC_\]\]|\[TOC\])[ \t]*$"#).unwrap());
 static MKDOCS_START_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"^([ \t]*)(\!{3}|\?{3}\+|\?{3})\s+([a-zA-Z]+)(?:\s+"([^"\n\r]*)")?[ \t]*$"#)
+    Regex::new(r#"^([ \t]*)(\!{3}|\?{3}\+|\?{3})[ \t]+([a-zA-Z]+)(?:[ \t]+"([^"\n\r]*)")?[ \t]*$"#)
         .unwrap()
 });
 static COLON_START_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -263,18 +288,15 @@ static COLON_END_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"^[ \t]*:{3,4}[ \t]*$"#).unwrap());
 
 static CRITIC_SUB_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\{\~\~([\s\S]*?)\~>([\s\S]*?)\~\~\}"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?s)\{\~\~(.*?)\~>(.*?)\~\~\}"#).unwrap());
 static CRITIC_ADD_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\{\+\+([\s\S]*?)\+\+\}"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?s)\{\+\+(.*?)\+\+\}"#).unwrap());
 static CRITIC_DEL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\{--([\s\S]*?)--\}"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?s)\{--(.*?)--\}"#).unwrap());
 static CRITIC_MARK_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\{==([\s\S]*?)==\}"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?s)\{==(.*?)==\}"#).unwrap());
 static CRITIC_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\{>>([\s\S]*?)<<\}"#).unwrap());
-
-static UNDERLINE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"\^\^([^\^\n\r]+)\^\^"#).unwrap());
+    LazyLock::new(|| Regex::new(r#"(?s)\{>>(.*?)<<\}"#).unwrap());
 
 fn escape_html(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
@@ -308,30 +330,53 @@ impl MarkdownPipeline {
     }
 
     pub fn preprocess(&self, source: &str) -> (String, MarkdownDialect) {
+        let (cow, dialect) = self.preprocess_cow(source);
+        (cow.into_owned(), dialect)
+    }
+
+    pub fn preprocess_cow<'a>(&self, source: &'a str) -> (Cow<'a, str>, MarkdownDialect) {
         let dialect = self.effective_dialect(source);
 
         let s1 = Self::preprocess_frontmatter(source);
-        let s2 = Self::preprocess_gitlab_toc(&s1);
-        let s3 = Self::preprocess_admonitions(&s2);
-        let s4 = Self::preprocess_obsidian(&s3, dialect);
-        let s5 = Self::preprocess_math(&s4);
-        let s6 = Self::preprocess_critic_markup(&s5);
-        let s7 = Self::preprocess_sub_superscript(&s6);
+        let s2 = match s1 {
+            Cow::Borrowed(b) => Self::preprocess_gitlab_toc(b),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_gitlab_toc(&o).into_owned()),
+        };
+        let s3 = match s2 {
+            Cow::Borrowed(b) => Self::preprocess_admonitions(b),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_admonitions(&o).into_owned()),
+        };
+        let s4 = match s3 {
+            Cow::Borrowed(b) => Self::preprocess_obsidian(b, dialect),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_obsidian(&o, dialect).into_owned()),
+        };
+        let s5 = match s4 {
+            Cow::Borrowed(b) => Self::preprocess_math(b),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_math(&o).into_owned()),
+        };
+        let s6 = match s5 {
+            Cow::Borrowed(b) => Self::preprocess_critic_markup(b),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_critic_markup(&o).into_owned()),
+        };
+        let s7 = match s6 {
+            Cow::Borrowed(b) => Self::preprocess_sub_superscript(b),
+            Cow::Owned(o) => Cow::Owned(Self::preprocess_sub_superscript(&o).into_owned()),
+        };
 
         (s7, dialect)
     }
 
-    fn preprocess_frontmatter(source: &str) -> String {
+    fn preprocess_frontmatter(source: &str) -> Cow<'_, str> {
         let is_lf = source.starts_with("---\n");
         let is_crlf = source.starts_with("---\r\n");
         if !is_lf && !is_crlf {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
         let header_len = if is_crlf { 5 } else { 4 };
         let separator = if is_crlf { "\r\n---\r\n" } else { "\n---\n" };
         let Some(end_idx) = source[header_len..].find(separator) else {
-            return source.to_string();
+            return Cow::Borrowed(source);
         };
 
         let yaml = &source[header_len..header_len + end_idx];
@@ -344,36 +389,34 @@ impl MarkdownPipeline {
 
         let rest = &source[header_len + end_idx + separator.len()..];
         if rows.is_empty() {
-            rest.to_string()
+            Cow::Borrowed(rest)
         } else {
-            format!(
+            Cow::Owned(format!(
                 "**Document metadata**\n\n| Field | Value |\n|---|---|\n{}\n\n{}",
                 rows.join("\n"),
                 rest
-            )
+            ))
         }
     }
 
-    fn preprocess_gitlab_toc(source: &str) -> String {
+    fn preprocess_gitlab_toc(source: &str) -> Cow<'_, str> {
         if !FastScan::contains_token(source, "[[_TOC_]]") && !FastScan::contains_token(source, "[TOC]") {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
-        CodeFenceScanner::process(source, |chunk| {
-            GITLAB_TOC_RE
-                .replace_all(
-                    chunk,
-                    "<p class=\"toc-placeholder\"><a href=\"#table-of-contents\">Table of Contents</a></p>",
-                )
-                .into_owned()
+        CodeFenceScanner::process_cow(source, |chunk| {
+            GITLAB_TOC_RE.replace_all(
+                chunk,
+                "<p class=\"toc-placeholder\"><a href=\"#table-of-contents\">Table of Contents</a></p>",
+            )
         })
     }
 
-    fn preprocess_admonitions(source: &str) -> String {
+    fn preprocess_admonitions(source: &str) -> Cow<'_, str> {
         if !FastScan::contains_token(source, "!!!")
             && !FastScan::contains_token(source, "???")
             && !FastScan::contains_token(source, ":::")
         {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
         let mut output = Vec::new();
@@ -404,21 +447,10 @@ impl MarkdownPipeline {
                 if trimmed.starts_with(fence) {
                     active_fence = None;
                 }
-                output.push(line.to_string());
-            } else if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
-                let fence_char = trimmed.chars().next().unwrap();
-                let count = trimmed.chars().take_while(|&c| c == fence_char).count();
-                end_mkdocs!();
-                active_fence = Some(fence_char.to_string().repeat(count));
-                output.push(line.to_string());
-            } else if in_colon_admonition {
-                if COLON_END_RE.is_match(line) {
-                    in_colon_admonition = false;
-                    output.push(String::new());
-                    output.push("<!-- -->".to_string());
-                    output.push(String::new());
-                } else {
+                if in_colon_admonition {
                     output.push(format!("> {line}"));
+                } else {
+                    output.push(line.to_string());
                 }
             } else if in_mkdocs && (line.starts_with("    ") || line.starts_with('\t')) {
                 while mkdocs_pending_blank_lines > 0 {
@@ -433,6 +465,25 @@ impl MarkdownPipeline {
                 output.push(format!("> {stripped}"));
             } else if in_mkdocs && trimmed.is_empty() {
                 mkdocs_pending_blank_lines += 1;
+            } else if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+                let fence_char = trimmed.chars().next().unwrap();
+                let count = trimmed.chars().take_while(|&c| c == fence_char).count();
+                active_fence = Some(fence_char.to_string().repeat(count));
+                if in_colon_admonition {
+                    output.push(format!("> {line}"));
+                } else {
+                    end_mkdocs!();
+                    output.push(line.to_string());
+                }
+            } else if in_colon_admonition {
+                if COLON_END_RE.is_match(line) {
+                    in_colon_admonition = false;
+                    output.push(String::new());
+                    output.push("<!-- -->".to_string());
+                    output.push(String::new());
+                } else {
+                    output.push(format!("> {line}"));
+                }
             } else {
                 if in_mkdocs {
                     end_mkdocs!();
@@ -477,197 +528,291 @@ impl MarkdownPipeline {
             }
         }
 
-        output.join("\n")
+        Cow::Owned(output.join("\n"))
     }
 
-    fn preprocess_obsidian(source: &str, dialect: MarkdownDialect) -> String {
+    fn preprocess_obsidian(source: &str, dialect: MarkdownDialect) -> Cow<'_, str> {
         let has_callout = FastScan::contains_token(source, "[!");
         let has_wiki = dialect == MarkdownDialect::Obsidian && FastScan::contains_token(source, "[[");
         if !has_callout && !has_wiki {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
-        CodeFenceScanner::process(source, |chunk| {
-            let mut text = chunk.to_string();
+        CodeFenceScanner::process_cow(source, |chunk| {
+            let mut text: Cow<'_, str> = Cow::Borrowed(chunk);
             if has_callout && FastScan::contains_token(&text, "[!") {
-                text = OBSIDIAN_CALLOUT_RE
-                    .replace_all(&text, |caps: &Captures| {
-                        let indent = &caps[1];
-                        let callout_type = caps[2].to_ascii_uppercase();
-                        let title = &caps[3];
-                        format!("{indent}**MDVU-CALLOUT-{callout_type}** {title}\n{indent}")
-                    })
-                    .into_owned();
+                if let Cow::Owned(replaced) = OBSIDIAN_CALLOUT_RE.replace_all(&text, |caps: &Captures| {
+                    let indent = &caps[1];
+                    let callout_type = caps[2].to_ascii_uppercase();
+                    let title = &caps[3];
+                    format!("{indent}**MDVU-CALLOUT-{callout_type}** {title}\n{indent}")
+                }) {
+                    text = Cow::Owned(replaced);
+                }
             }
             if has_wiki && FastScan::contains_token(&text, "![[") {
-                text = OBSIDIAN_EMBED_RE
-                    .replace_all(&text, "![$1]($1)")
-                    .into_owned();
+                if let Cow::Owned(replaced) = OBSIDIAN_EMBED_RE.replace_all(&text, "![$1]($1)") {
+                    text = Cow::Owned(replaced);
+                }
             }
             if has_wiki && FastScan::contains_token(&text, "[[") {
-                text = OBSIDIAN_WIKILINK_RE
-                    .replace_all(&text, |caps: &Captures| {
-                        let target_base = &caps[1];
-                        let anchor = caps.get(2).map(|m| m.as_str()).unwrap_or("");
-                        let label = caps
-                            .get(3)
-                            .map(|m| m.as_str())
-                            .filter(|s| !s.is_empty())
-                            .unwrap_or(target_base);
-                        let target = if target_base.to_ascii_lowercase().ends_with(".md") {
-                            target_base.to_string()
-                        } else {
-                            format!("{target_base}.md")
-                        };
-                        format!("[{label}]({target}{anchor})")
-                    })
-                    .into_owned();
+                if let Cow::Owned(replaced) = OBSIDIAN_WIKILINK_RE.replace_all(&text, |caps: &Captures| {
+                    let target_base = &caps[1];
+                    let anchor = caps.get(2).map(|m| m.as_str()).unwrap_or("");
+                    let label = caps
+                        .get(3)
+                        .map(|m| m.as_str())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or(target_base);
+                    let target = if target_base.to_ascii_lowercase().ends_with(".md") {
+                        target_base.to_string()
+                    } else {
+                        format!("{target_base}.md")
+                    };
+                    format!("[{label}]({target}{anchor})")
+                }) {
+                    text = Cow::Owned(replaced);
+                }
             }
             text
         })
     }
 
-    fn preprocess_critic_markup(source: &str) -> String {
+    fn preprocess_critic_markup(source: &str) -> Cow<'_, str> {
         if !FastScan::contains_token(source, "{+")
             && !FastScan::contains_token(source, "{-")
             && !FastScan::contains_token(source, "{~")
             && !FastScan::contains_token(source, "{=")
             && !FastScan::contains_token(source, "{>")
         {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
-        CodeFenceScanner::process(source, |chunk| {
-            let mut text = chunk.to_string();
+        CodeFenceScanner::process_cow(source, |chunk| {
+            let mut text: Cow<'_, str> = Cow::Borrowed(chunk);
             if FastScan::contains_token(&text, "{~") {
-                text = CRITIC_SUB_RE
-                    .replace_all(&text, "<del class=\"critic-del\">$1</del><ins class=\"critic-add\">$2</ins>")
-                    .into_owned();
+                if let Cow::Owned(replaced) = CRITIC_SUB_RE.replace_all(
+                    &text,
+                    "<del class=\"critic-del\">$1</del><ins class=\"critic-add\">$2</ins>",
+                ) {
+                    text = Cow::Owned(replaced);
+                }
             }
             if FastScan::contains_token(&text, "{+") {
-                text = CRITIC_ADD_RE
-                    .replace_all(&text, "<ins class=\"critic-add\">$1</ins>")
-                    .into_owned();
+                if let Cow::Owned(replaced) =
+                    CRITIC_ADD_RE.replace_all(&text, "<ins class=\"critic-add\">$1</ins>")
+                {
+                    text = Cow::Owned(replaced);
+                }
             }
             if FastScan::contains_token(&text, "{-") {
-                text = CRITIC_DEL_RE
-                    .replace_all(&text, "<del class=\"critic-del\">$1</del>")
-                    .into_owned();
+                if let Cow::Owned(replaced) =
+                    CRITIC_DEL_RE.replace_all(&text, "<del class=\"critic-del\">$1</del>")
+                {
+                    text = Cow::Owned(replaced);
+                }
             }
             if FastScan::contains_token(&text, "{=") {
-                text = CRITIC_MARK_RE
-                    .replace_all(&text, "<mark class=\"critic-mark\">$1</mark>")
-                    .into_owned();
+                if let Cow::Owned(replaced) =
+                    CRITIC_MARK_RE.replace_all(&text, "<mark class=\"critic-mark\">$1</mark>")
+                {
+                    text = Cow::Owned(replaced);
+                }
             }
             if FastScan::contains_token(&text, "{>") {
-                text = CRITIC_COMMENT_RE
-                    .replace_all(&text, |caps: &Captures| {
-                        let comment = &caps[1];
-                        let safe_title = escape_html(comment);
-                        format!("<span class=\"critic-comment\" title=\"{safe_title}\">💬 {comment}</span>")
-                    })
-                    .into_owned();
+                if let Cow::Owned(replaced) = CRITIC_COMMENT_RE.replace_all(&text, |caps: &Captures| {
+                    let comment = &caps[1];
+                    let safe_title = escape_html(comment);
+                    format!("<span class=\"critic-comment\" title=\"{safe_title}\">💬 {comment}</span>")
+                }) {
+                    text = Cow::Owned(replaced);
+                }
             }
             text
         })
     }
 
-    fn preprocess_sub_superscript(source: &str) -> String {
+    fn preprocess_sub_superscript(source: &str) -> Cow<'_, str> {
         if !FastScan::count_ascii(source, b'~', 2) && !FastScan::count_ascii(source, b'^', 2) {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
-        CodeFenceScanner::process(source, |chunk| {
-            let mut text = chunk.to_string();
-            if FastScan::contains_token(&text, "^^") {
-                text = UNDERLINE_RE.replace_all(&text, "<u>$1</u>").into_owned();
+        CodeFenceScanner::process_cow(source, |chunk| {
+            if !FastScan::count_ascii(chunk, b'~', 2) && !FastScan::count_ascii(chunk, b'^', 2) {
+                return Cow::Borrowed(chunk);
             }
-            if FastScan::count_ascii(&text, b'^', 2) {
-                text = Self::scan_single_delimiter(&text, '^', "sup");
-            }
-            if FastScan::count_ascii(&text, b'~', 2) {
-                text = Self::scan_single_delimiter(&text, '~', "sub");
-            }
-            text
+            Self::scan_sub_sup_underline(chunk)
         })
     }
 
-    fn scan_single_delimiter(input: &str, delim: char, tag: &str) -> String {
+    /// Single-pass scanner for `^^underline^^`, `^sup^`, and `~sub~` that safely skips:
+    /// - Inline backticks `` `...` ``
+    /// - Rendered math blocks `<span class="math-inline">...</span>` and `<div class="math-display">...</div>`
+    /// - HTML tags `<...>` (e.g. URLs with `~user`)
+    fn scan_sub_sup_underline(input: &str) -> Cow<'_, str> {
         let bytes = input.as_bytes();
-        let delim_byte = delim as u8;
         let len = bytes.len();
-        let mut result = String::with_capacity(len);
+        let mut result: Option<String> = None;
         let mut i = 0;
         let mut last_copied = 0;
 
         while i < len {
             let b = bytes[i];
-            if b == delim_byte {
-                // Must be a single delimiter: not preceded by delim, and not followed by delim
-                let prev_is_delim = i > 0 && bytes[i - 1] == delim_byte;
-                let next_is_delim = i + 1 < len && bytes[i + 1] == delim_byte;
 
+            // 1. Skip inline code spans: `...`
+            if b == b'`' {
+                let mut scan = i;
+                while scan < len && bytes[scan] == b'`' {
+                    scan += 1;
+                }
+                let tick_count = scan - i;
+                let mut search = scan;
+                let mut found_close = None;
+                while search + tick_count <= len {
+                    if bytes[search..search + tick_count].iter().all(|&c| c == b'`') {
+                        if search + tick_count == len || bytes[search + tick_count] != b'`' {
+                            found_close = Some(search + tick_count);
+                            break;
+                        }
+                    }
+                    search += 1;
+                }
+                i = found_close.unwrap_or(scan);
+                continue;
+            }
+
+            // 2. Skip math spans/divs and HTML tags
+            if b == b'<' {
+                let rem = &input[i..];
+                if rem.starts_with("<span class=\"math-inline\">") {
+                    if let Some(end_rel) = rem.find("</span>") {
+                        i += end_rel + 7;
+                        continue;
+                    }
+                } else if rem.starts_with("<div class=\"math-display\">") {
+                    if let Some(end_rel) = rem.find("</div>") {
+                        i += end_rel + 6;
+                        continue;
+                    }
+                }
+                // Skip up to closing '>' of HTML tag on the same line
+                let mut tag_end = i + 1;
+                while tag_end < len && bytes[tag_end] != b'>' && bytes[tag_end] != b'\n' {
+                    tag_end += 1;
+                }
+                if tag_end < len && bytes[tag_end] == b'>' {
+                    i = tag_end + 1;
+                    continue;
+                }
+            }
+
+            // 3. Skip escaped character
+            if b == b'\\' {
+                i += 2;
+                continue;
+            }
+
+            // 4. Check for ^^underline^^
+            if b == b'^' && i + 1 < len && bytes[i + 1] == b'^' {
+                let content_start = i + 2;
+                let mut j = content_start;
+                let mut found_close = None;
+                while j + 1 < len {
+                    let bj = bytes[j];
+                    if bj == b'\n' || bj == b'\r' {
+                        break;
+                    }
+                    if bj == b'^' && bytes[j + 1] == b'^' && j > content_start {
+                        found_close = Some(j);
+                        break;
+                    }
+                    j += 1;
+                }
+                if let Some(close_idx) = found_close {
+                    let out = result.get_or_insert_with(|| String::with_capacity(len + 32));
+                    out.push_str(&input[last_copied..i]);
+                    out.push_str("<u>");
+                    out.push_str(&input[content_start..close_idx]);
+                    out.push_str("</u>");
+                    i = close_idx + 2;
+                    last_copied = i;
+                    continue;
+                } else {
+                    i += 2;
+                    continue;
+                }
+            }
+
+            // 5. Check for single ^sup^ or ~sub~ (no internal whitespace)
+            if b == b'^' || b == b'~' {
+                let prev_is_delim = i > 0 && bytes[i - 1] == b;
+                let next_is_delim = i + 1 < len && bytes[i + 1] == b;
                 if !prev_is_delim && !next_is_delim {
-                    // Look for closing delimiter
                     let mut j = i + 1;
                     let mut found_close = None;
                     while j < len {
                         let bj = bytes[j];
-                        if bj == b'\n' || bj == b'\r' || (bj.is_ascii_whitespace() && j == i + 1) {
+                        if bj.is_ascii_whitespace() || bj == b'<' || bj == b'`' {
                             break;
                         }
-                        if bj == delim_byte {
-                            let next_next = j + 1 < len && bytes[j + 1] == delim_byte;
-                            if !next_next && !bytes[j - 1].is_ascii_whitespace() {
+                        if bj == b {
+                            let next_next = j + 1 < len && bytes[j + 1] == b;
+                            if !next_next && j > i + 1 {
                                 found_close = Some(j);
-                                break;
                             }
+                            break;
                         }
                         j += 1;
                     }
-
                     if let Some(close_idx) = found_close {
-                        result.push_str(&input[last_copied..i]);
-                        result.push('<');
-                        result.push_str(tag);
-                        result.push('>');
-                        result.push_str(&input[i + 1..close_idx]);
-                        result.push_str("</");
-                        result.push_str(tag);
-                        result.push('>');
+                        let tag = if b == b'^' { "sup" } else { "sub" };
+                        let out = result.get_or_insert_with(|| String::with_capacity(len + 32));
+                        out.push_str(&input[last_copied..i]);
+                        out.push('<');
+                        out.push_str(tag);
+                        out.push('>');
+                        out.push_str(&input[i + 1..close_idx]);
+                        out.push_str("</");
+                        out.push_str(tag);
+                        out.push('>');
                         i = close_idx + 1;
                         last_copied = i;
                         continue;
                     }
                 }
             }
+
             i += 1;
         }
 
-        if last_copied < len {
-            result.push_str(&input[last_copied..]);
+        match result {
+            Some(mut out) => {
+                if last_copied < len {
+                    out.push_str(&input[last_copied..]);
+                }
+                Cow::Owned(out)
+            }
+            None => Cow::Borrowed(input),
         }
-
-        result
     }
 
-    fn preprocess_math(source: &str) -> String {
+    fn preprocess_math(source: &str) -> Cow<'_, str> {
         if !FastScan::count_ascii(source, b'$', 2) {
-            return source.to_string();
+            return Cow::Borrowed(source);
         }
 
-        CodeFenceScanner::process(source, |chunk| {
+        CodeFenceScanner::process_cow(source, |chunk| {
             if !FastScan::count_ascii(chunk, b'$', 2) {
-                return chunk.to_string();
+                return Cow::Borrowed(chunk);
             }
             Self::scan_math_in_chunk(chunk)
         })
     }
 
-    fn scan_math_in_chunk(chunk: &str) -> String {
+    fn scan_math_in_chunk(chunk: &str) -> Cow<'_, str> {
         let bytes = chunk.as_bytes();
         let len = bytes.len();
-        let mut result = String::with_capacity(len);
+        let mut result: Option<String> = None;
         let mut cursor = 0;
         let mut chunk_start = 0;
 
@@ -723,12 +868,13 @@ impl MarkdownPipeline {
                 }
 
                 if let Some(close_idx) = found_close {
-                    result.push_str(&chunk[chunk_start..cursor]);
+                    let out = result.get_or_insert_with(|| String::with_capacity(len + 64));
+                    out.push_str(&chunk[chunk_start..cursor]);
                     let tex = &chunk[math_start..close_idx];
                     let escaped = escape_html(tex.trim());
-                    result.push_str("<div class=\"math-display\">");
-                    result.push_str(&escaped);
-                    result.push_str("</div>");
+                    out.push_str("<div class=\"math-display\">");
+                    out.push_str(&escaped);
+                    out.push_str("</div>");
                     cursor = close_idx + 2;
                     chunk_start = cursor;
                     continue;
@@ -761,12 +907,13 @@ impl MarkdownPipeline {
                     }
 
                     if let Some(close_idx) = found_close {
-                        result.push_str(&chunk[chunk_start..cursor]);
+                        let out = result.get_or_insert_with(|| String::with_capacity(len + 64));
+                        out.push_str(&chunk[chunk_start..cursor]);
                         let tex = &chunk[math_start..close_idx];
                         let escaped = escape_html(tex);
-                        result.push_str("<span class=\"math-inline\">");
-                        result.push_str(&escaped);
-                        result.push_str("</span>");
+                        out.push_str("<span class=\"math-inline\">");
+                        out.push_str(&escaped);
+                        out.push_str("</span>");
                         cursor = close_idx + 1;
                         chunk_start = cursor;
                         continue;
@@ -777,10 +924,14 @@ impl MarkdownPipeline {
             cursor += 1;
         }
 
-        if chunk_start < len {
-            result.push_str(&chunk[chunk_start..len]);
+        match result {
+            Some(mut out) => {
+                if chunk_start < len {
+                    out.push_str(&chunk[chunk_start..len]);
+                }
+                Cow::Owned(out)
+            }
+            None => Cow::Borrowed(chunk),
         }
-
-        result
     }
 }

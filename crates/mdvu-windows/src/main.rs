@@ -7,12 +7,16 @@ mod navigator;
 mod win32;
 
 use clap::Parser as ClapParser;
-use mdvu_core::{render_markdown, MarkdownDialect, RenderedDocument};
+use mdvu_core::{
+    get_katex_js, get_mermaid_js, get_plantuml_js, render_markdown, render_markdown_with_options,
+    DiagramCache, MarkdownDialect, NavigationHistory, RenderedDocument, ZoomPolicy,
+};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use serde::Deserialize;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -53,8 +57,8 @@ struct Args {
     #[arg(long)]
     title: Option<String>,
 
-    /// Markdown dialect: generic, obsidian, mkdocs, docusaurus, gfm, commonmark
-    #[arg(short, long, default_value = "generic")]
+    /// Markdown dialect: auto, generic, obsidian, mkdocs, docusaurus, gfm, commonmark
+    #[arg(short, long, default_value = "auto")]
     dialect: String,
 
     /// Color theme: light, dark, system
@@ -125,6 +129,21 @@ fn attach_console() {
 #[cfg(not(windows))]
 fn attach_console() {}
 
+fn open_external_url(url: &str) {
+    #[cfg(windows)]
+    unsafe {
+        win32::open_url_in_browser(url);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(url).spawn();
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    }
+}
+
 fn get_base_url_for_file(file_path: &Path) -> Option<String> {
     let abs_path = dunce::canonicalize(file_path).unwrap_or_else(|_| {
         if file_path.is_absolute() {
@@ -165,6 +184,8 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    let clean_dialect = args.dialect.trim().to_ascii_lowercase();
+    let is_explicit = clean_dialect != "auto" && clean_dialect != "automatic";
     let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
 
     if args.benchmark {
@@ -172,7 +193,15 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let size_mb = size_bytes as f64 / 1_048_576.0;
 
         // Warmup run
-        let _ = render_markdown(&content, None, dialect, &args.theme, args.full_width, base_url.as_deref(), false);
+        let _ = render_markdown(
+            &content,
+            None,
+            dialect,
+            &args.theme,
+            args.full_width,
+            base_url.as_deref(),
+            false,
+        );
 
         let runs = std::env::var("MDVU_BENCHMARK_RUNS")
             .ok()
@@ -183,7 +212,15 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let mut samples = Vec::with_capacity(runs);
         for _ in 0..runs {
             let start = Instant::now();
-            let _ = render_markdown(&content, None, dialect, &args.theme, args.full_width, base_url.as_deref(), false);
+            let _ = render_markdown(
+                &content,
+                None,
+                dialect,
+                &args.theme,
+                args.full_width,
+                base_url.as_deref(),
+                false,
+            );
             samples.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -191,7 +228,11 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let median = samples[samples.len() / 2];
         let min = samples.first().copied().unwrap_or(0.0);
         let max = samples.last().copied().unwrap_or(0.0);
-        let throughput = if median > 0.0 { size_mb / (median / 1000.0) } else { 0.0 };
+        let throughput = if median > 0.0 {
+            size_mb / (median / 1000.0)
+        } else {
+            0.0
+        };
 
         let file_name = args
             .input
@@ -199,15 +240,18 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             .and_then(|p| p.file_name())
             .map(|f| f.to_string_lossy().to_string())
             .unwrap_or_else(|| "stdin".to_string());
-        println!("{size_mb:7.2} MB  median {median:8.2} ms (min {min:6.2} ms, max {max:6.2} ms)  {throughput:8.1} MB/s  [{file_name}]");
+        println!(
+            "{size_mb:7.2} MB  median {median:8.2} ms (min {min:6.2} ms, max {max:6.2} ms)  {throughput:8.1} MB/s  [{file_name}]"
+        );
         let _ = io::stdout().flush();
         return Ok(());
     }
 
-    let (html, rendered) = render_markdown(
+    let (html, rendered) = render_markdown_with_options(
         &content,
         args.title.as_deref(),
         dialect,
+        is_explicit,
         &args.theme,
         args.full_width,
         base_url.as_deref(),
@@ -243,16 +287,21 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 pub enum UserEvent {
     FileChanged,
     OpenFile(PathBuf),
+    OpenRelativePath(String),
     OpenFolder(PathBuf),
+    OpenExternal(String),
     TriggerOpenFile,
     TriggerOpenFolder,
     ToggleTOC,
     ToggleNav,
     ToggleFullWidth,
+    SetDialectAuto,
     SetDialect(MarkdownDialect),
+    SetTheme(String),
     ZoomIn,
     ZoomOut,
     ZoomReset,
+    SetZoom(String),
     ToggleFullscreen,
     GoBack,
     GoForward,
@@ -270,61 +319,10 @@ pub enum UserEvent {
     Exit,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct NavigationHistory {
-    pub entries: Vec<PathBuf>,
-    pub index: usize,
-}
-
-impl NavigationHistory {
-    pub fn new(initial: Option<PathBuf>) -> Self {
-        let mut entries = Vec::new();
-        if let Some(p) = initial {
-            entries.push(p);
-        }
-        Self { entries, index: 0 }
-    }
-
-    pub fn push(&mut self, path: PathBuf) {
-        if self.current() == Some(&path) {
-            return;
-        }
-        if !self.entries.is_empty() && self.index + 1 < self.entries.len() {
-            self.entries.truncate(self.index + 1);
-        }
-        self.entries.push(path);
-        self.index = self.entries.len() - 1;
-    }
-
-    pub fn can_go_back(&self) -> bool {
-        self.index > 0
-    }
-
-    pub fn can_go_forward(&self) -> bool {
-        !self.entries.is_empty() && self.index + 1 < self.entries.len()
-    }
-
-    pub fn current(&self) -> Option<&PathBuf> {
-        self.entries.get(self.index)
-    }
-
-    pub fn back(&mut self) -> Option<PathBuf> {
-        if self.can_go_back() {
-            self.index -= 1;
-            Some(self.entries[self.index].clone())
-        } else {
-            None
-        }
-    }
-
-    pub fn forward(&mut self) -> Option<PathBuf> {
-        if self.can_go_forward() {
-            self.index += 1;
-            Some(self.entries[self.index].clone())
-        } else {
-            None
-        }
-    }
+#[derive(Deserialize)]
+struct DiagramCacheMsg {
+    key: String,
+    svg: String,
 }
 
 struct AppState {
@@ -333,14 +331,18 @@ struct AppState {
     vault_items: Vec<navigator::VaultItem>,
     current_title: String,
     zoom_level: f64,
-    last_reload: Instant,
+    last_toggle: Instant,
     last_rendered: Option<RenderedDocument>,
     dialect: MarkdownDialect,
+    is_dialect_explicit: bool,
     theme: String,
     full_width: bool,
     is_toc_visible: bool,
     is_nav_visible: bool,
-    history: NavigationHistory,
+    history: NavigationHistory<PathBuf>,
+    katex_injected: bool,
+    mermaid_injected: bool,
+    plantuml_injected: bool,
 }
 
 fn watch_target(watcher: &mut RecommendedWatcher, target: &Path) {
@@ -360,29 +362,38 @@ fn unwatch_target(watcher: &mut RecommendedWatcher, target: &Path) {
     let _ = watcher.unwatch(target);
 }
 
+fn render_file_for_state(
+    path: &Path,
+    st: &AppState,
+) -> (String, String, Option<String>, RenderedDocument) {
+    let source = fs::read_to_string(path)
+        .unwrap_or_else(|e| format!("# Error Opening Document\n\nFailed to read `{}`: {e}", path.display()));
+    let base_url = get_base_url_for_file(path);
+    let (raw_html, doc) = render_markdown_with_options(
+        &source,
+        None,
+        st.dialect,
+        st.is_dialect_explicit,
+        &st.theme,
+        st.full_width,
+        base_url.as_deref(),
+        false,
+    );
+    let title = doc
+        .title
+        .clone()
+        .or_else(|| path.file_name().map(|f| f.to_string_lossy().to_string()))
+        .unwrap_or_else(|| "MDVu".to_string());
+    let window_title = format!("{title} — MDVu");
+    (raw_html, window_title, base_url, doc)
+}
+
 fn build_gui_page(
     file_path: Option<&Path>,
     st: &AppState,
 ) -> (String, String, Option<RenderedDocument>) {
     if let Some(path) = file_path {
-        let source = fs::read_to_string(path)
-            .unwrap_or_else(|e| format!("# Error Opening Document\n\nFailed to read `{}`: {e}", path.display()));
-        let base_url = get_base_url_for_file(path);
-        let (raw_html, doc) = render_markdown(
-            &source,
-            None,
-            st.dialect,
-            &st.theme,
-            st.full_width,
-            base_url.as_deref(),
-            false,
-        );
-        let title = doc
-            .title
-            .clone()
-            .or_else(|| path.file_name().map(|f| f.to_string_lossy().to_string()))
-            .unwrap_or_else(|| "MDVu".to_string());
-        let window_title = format!("{title} — MDVu");
+        let (raw_html, window_title, _base_url, doc) = render_file_for_state(path, st);
 
         let vault_name = st
             .vault_root
@@ -459,6 +470,97 @@ fn build_gui_page(
     }
 }
 
+/// Injects KaTeX, Mermaid, or PlantUML JS runtimes on demand into the active WebView
+/// only when the document requires them and they have not yet been injected.
+fn inject_needed_runtimes(webview: &wry::WebView, st: &mut AppState) {
+    let (needs_math, needs_mermaid, needs_plantuml) = match st.last_rendered {
+        Some(ref doc) => (doc.has_math, doc.has_mermaid, doc.has_plantuml),
+        None => return,
+    };
+
+    if needs_math && !st.katex_injected {
+        if let Ok(js) = get_katex_js() {
+            let _ = webview.evaluate_script(js);
+            st.katex_injected = true;
+        }
+    }
+    if needs_mermaid && !st.mermaid_injected {
+        if let Ok(js) = get_mermaid_js() {
+            let _ = webview.evaluate_script(js);
+            st.mermaid_injected = true;
+        }
+    }
+    if needs_plantuml && !st.plantuml_injected {
+        if let Ok(js) = get_plantuml_js() {
+            let _ = webview.evaluate_script(js);
+            st.plantuml_injected = true;
+        }
+    }
+
+    if needs_math || needs_mermaid || needs_plantuml {
+        let _ = webview.evaluate_script(
+            "window.__mdvuRenderMath?.(); window.__mdvuRenderDiagrams?.();",
+        );
+    }
+}
+
+/// Updates the active document inside the WebView in-place without destroying the GUI shell or reloading JS engines.
+fn update_webview_document(
+    webview: &wry::WebView,
+    window: &tao::window::Window,
+    st: &mut AppState,
+    path: &Path,
+    preserve_scroll: bool,
+) {
+    let (_raw_html, window_title, base_url, doc) = render_file_for_state(path, st);
+    window.set_title(&window_title);
+    st.current_title = window_title;
+
+    let vault_name = st
+        .vault_root
+        .as_ref()
+        .and_then(|r| r.file_name())
+        .map(|f| f.to_string_lossy().to_string())
+        .unwrap_or_else(|| "Workspace".to_string());
+    let cur_path_str = path.to_string_lossy().replace('\\', "/");
+
+    let payload = serde_json::json!({
+        "bodyHtml": doc.body,
+        "toc": doc.toc,
+        "vaultName": vault_name,
+        "vaultItems": st.vault_items,
+        "currentPath": cur_path_str,
+        "baseUrl": base_url.unwrap_or_default(),
+        "canBack": st.history.can_go_back(),
+        "canFwd": st.history.can_go_forward(),
+        "preserveScroll": preserve_scroll,
+    });
+
+    st.last_rendered = Some(doc);
+    if let Ok(json_str) = serde_json::to_string(&payload) {
+        let script = format!("window.__mdvuUpdateDocument?.({json_str});");
+        let _ = webview.evaluate_script(&script);
+    }
+    inject_needed_runtimes(webview, st);
+}
+
+#[cfg(windows)]
+fn sync_win32_menu(hwnd: windows_sys::Win32::Foundation::HWND, st: &AppState) {
+    unsafe {
+        win32::update_menu_state(
+            hwnd,
+            st.dialect,
+            st.is_dialect_explicit,
+            &st.theme,
+            st.full_width,
+            st.is_toc_visible,
+            st.is_nav_visible,
+            st.history.can_go_back(),
+            st.history.can_go_forward(),
+        );
+    }
+}
+
 #[cfg(windows)]
 fn ensure_webview2_runtime_env() {
     if std::env::var_os("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER").is_none() {
@@ -508,6 +610,8 @@ fn ensure_webview2_runtime_env() {
 fn ensure_webview2_runtime_env() {}
 
 fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    let clean_dialect = args.dialect.trim().to_ascii_lowercase();
+    let is_dialect_explicit = clean_dialect != "auto" && clean_dialect != "automatic";
     let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
     let theme = args.theme;
     let full_width = args.full_width;
@@ -529,22 +633,29 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         _ => (None, None, Vec::new(), nav_requested),
     };
 
-    let history = NavigationHistory::new(initial_file.clone());
+    let mut history = NavigationHistory::new();
+    if let Some(ref f) = initial_file {
+        history.record(f.clone());
+    }
 
     let state = Arc::new(Mutex::new(AppState {
         current_file: initial_file.clone(),
         vault_root: initial_vault_root,
         vault_items: initial_vault_items,
         current_title: "MDVu".to_string(),
-        zoom_level: 1.0,
-        last_reload: Instant::now(),
+        zoom_level: ZoomPolicy::DEFAULT_ZOOM,
+        last_toggle: Instant::now() - Duration::from_secs(1),
         last_rendered: None,
         dialect,
+        is_dialect_explicit,
         theme,
         full_width,
         is_toc_visible: true,
         is_nav_visible,
         history,
+        katex_injected: false,
+        mermaid_injected: false,
+        plantuml_injected: false,
     }));
 
     let (initial_html, initial_title, _initial_rendered) = {
@@ -577,6 +688,8 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             win32::create_main_menu(
                 h,
                 st.dialect,
+                st.is_dialect_explicit,
+                &st.theme,
                 st.full_width,
                 st.is_toc_visible,
                 st.is_nav_visible,
@@ -592,8 +705,32 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let proxy_ipc = proxy.clone();
+    let proxy_nav = proxy.clone();
     let webview = match WebViewBuilder::new()
         .with_html(&initial_html)
+        .with_navigation_handler(move |uri: String| {
+            let lower = uri.to_ascii_lowercase();
+            if lower.starts_with("about:blank") || lower.starts_with("data:text/html") {
+                return true;
+            }
+            if lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:") {
+                let _ = proxy_nav.send_event(UserEvent::OpenExternal(uri));
+                return false;
+            }
+            if lower.starts_with("file://") {
+                let raw_path = uri
+                    .strip_prefix("file:///")
+                    .or_else(|| uri.strip_prefix("file://"))
+                    .unwrap_or(&uri);
+                let path_part = raw_path.split('#').next().unwrap_or(raw_path);
+                let p = PathBuf::from(path_part);
+                if navigator::is_markdown_file(&p) {
+                    let _ = proxy_nav.send_event(UserEvent::OpenFile(p));
+                }
+                return false;
+            }
+            false
+        })
         .with_ipc_handler(move |req| {
             let msg = req.body();
             if msg == "trigger_open_file" || msg == "open" {
@@ -603,6 +740,16 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             } else if let Some(path_str) = msg.strip_prefix("open_path:") {
                 let p = PathBuf::from(path_str);
                 let _ = proxy_ipc.send_event(UserEvent::OpenFile(p));
+            } else if let Some(rel_str) = msg.strip_prefix("open_rel_path:") {
+                let _ = proxy_ipc.send_event(UserEvent::OpenRelativePath(rel_str.to_string()));
+            } else if let Some(ext_url) = msg.strip_prefix("open_external:") {
+                let _ = proxy_ipc.send_event(UserEvent::OpenExternal(ext_url.to_string()));
+            } else if let Some(cache_json) = msg.strip_prefix("cache_diagram:") {
+                if let Ok(entry) = serde_json::from_str::<DiagramCacheMsg>(cache_json) {
+                    DiagramCache::global().write(&entry.key, &entry.svg);
+                }
+            } else if let Some(zoom_str) = msg.strip_prefix("set_zoom:") {
+                let _ = proxy_ipc.send_event(UserEvent::SetZoom(zoom_str.to_string()));
             } else if msg == "go_back" {
                 let _ = proxy_ipc.send_event(UserEvent::GoBack);
             } else if msg == "go_forward" {
@@ -652,7 +799,13 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // Setup file watcher
+    // Inject required math/diagram engines for the initial document
+    {
+        let mut st = state.lock().unwrap();
+        inject_needed_runtimes(&webview, &mut st);
+    }
+
+    // Setup file watcher with trailing-edge debounce (150ms) so multi-step saves never drop final writes
     let watcher_state = Arc::clone(&state);
     let mut watcher: Option<RecommendedWatcher> = {
         let proxy_clone = proxy.clone();
@@ -667,17 +820,27 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 std::thread::spawn(move || {
-                    while let Ok(res) = rx.recv() {
-                        if let Ok(event) = res {
-                            match event.kind {
-                                notify::EventKind::Modify(_)
-                                | notify::EventKind::Create(_) => {
+                    let mut pending_reload = false;
+                    loop {
+                        let timeout = if pending_reload {
+                            Duration::from_millis(150)
+                        } else {
+                            Duration::from_secs(3600)
+                        };
+                        match rx.recv_timeout(timeout) {
+                            Ok(Ok(event)) => {
+                                if matches!(
+                                    event.kind,
+                                    notify::EventKind::Modify(_) | notify::EventKind::Create(_)
+                                ) {
                                     let matched = if let Ok(st) = watcher_state.lock() {
                                         if let Some(ref cur) = st.current_file {
                                             let cur_name = cur.file_name();
                                             event.paths.is_empty()
                                                 || event.paths.iter().any(|p| {
-                                                    p == cur || (cur_name.is_some() && p.file_name() == cur_name)
+                                                    p == cur
+                                                        || (cur_name.is_some()
+                                                            && p.file_name() == cur_name)
                                                 })
                                         } else {
                                             false
@@ -685,13 +848,19 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                                     } else {
                                         true
                                     };
-
                                     if matched {
-                                        let _ = proxy_clone.send_event(UserEvent::FileChanged);
+                                        pending_reload = true;
                                     }
                                 }
-                                _ => {}
                             }
+                            Ok(Err(_)) => {}
+                            Err(RecvTimeoutError::Timeout) => {
+                                if pending_reload {
+                                    pending_reload = false;
+                                    let _ = proxy_clone.send_event(UserEvent::FileChanged);
+                                }
+                            }
+                            Err(RecvTimeoutError::Disconnected) => break,
                         }
                     }
                 });
@@ -724,18 +893,38 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         let _ = proxy.send_event(UserEvent::OpenFolder(folder));
                     }
                 }
+                UserEvent::OpenExternal(url) => {
+                    open_external_url(&url);
+                }
+                UserEvent::OpenRelativePath(rel) => {
+                    let resolved = {
+                        let st = state.lock().unwrap();
+                        st.current_file
+                            .as_ref()
+                            .and_then(|cur| cur.parent())
+                            .map(|dir| dir.join(&rel))
+                            .or_else(|| st.vault_root.as_ref().map(|root| root.join(&rel)))
+                    };
+                    if let Some(p) = resolved {
+                        let _ = proxy.send_event(UserEvent::OpenFile(p));
+                    }
+                }
                 UserEvent::OpenFolder(folder) => {
                     let mut st = state.lock().unwrap();
                     let canonical = dunce::canonicalize(&folder).unwrap_or(folder);
                     st.vault_items = navigator::scan_directory_tree(&canonical, 6);
                     st.vault_root = Some(canonical.clone());
                     st.is_nav_visible = true;
+                    let _ = webview.evaluate_script("window.__mdvuToggleNavSidebar?.(true);");
 
                     if let Some(first_md) = navigator::find_first_markdown(&canonical) {
                         drop(st);
                         let _ = proxy.send_event(UserEvent::OpenFile(first_md));
                     } else {
                         st.current_file = None;
+                        st.katex_injected = false;
+                        st.mermaid_injected = false;
+                        st.plantuml_injected = false;
                         let (new_html, title, doc) = build_gui_page(None, &st);
                         window.set_title(&title);
                         st.current_title = title;
@@ -743,48 +932,13 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         let _ = webview.load_html(&new_html);
 
                         #[cfg(windows)]
-                        unsafe {
-                            win32::update_menu_state(
-                                hwnd,
-                                st.dialect,
-                                st.full_width,
-                                st.is_toc_visible,
-                                st.is_nav_visible,
-                                st.history.can_go_back(),
-                                st.history.can_go_forward(),
-                            );
-                        }
+                        sync_win32_menu(hwnd, &st);
                     }
                 }
                 UserEvent::FileChanged => {
                     let mut st = state.lock().unwrap();
-                    if st.last_reload.elapsed() < Duration::from_millis(150) {
-                        return;
-                    }
-                    st.last_reload = Instant::now();
-
-                    if let Some(ref path) = st.current_file.clone() {
-                        let (new_html, title, doc) = build_gui_page(Some(path), &st);
-                        window.set_title(&title);
-                        st.current_title = title;
-                        st.last_rendered = doc;
-
-                        let escaped_js_str = serde_json::to_string(&new_html).unwrap_or_default();
-                        let script = format!(
-                            r#"(function() {{
-                                const prevMain = document.getElementById('mdvu-main-content');
-                                const prevRatio = prevMain ? prevMain.scrollTop / (prevMain.scrollHeight || 1) : window.scrollY / (document.documentElement.scrollHeight || 1);
-                                document.open();
-                                document.write({escaped_js_str});
-                                document.close();
-                                requestAnimationFrame(() => {{
-                                    const newMain = document.getElementById('mdvu-main-content');
-                                    if (newMain) newMain.scrollTop = newMain.scrollHeight * prevRatio;
-                                    else window.scrollTo(0, document.documentElement.scrollHeight * prevRatio);
-                                }});
-                            }})()"#
-                        );
-                        let _ = webview.evaluate_script(&script);
+                    if let Some(path) = st.current_file.clone() {
+                        update_webview_document(&webview, &window, &mut st, &path, true);
                     }
                 }
                 UserEvent::OpenFile(new_path) => {
@@ -798,7 +952,6 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         watch_target(w, &canonical);
                     }
 
-                    // If outside current vault root or no vault root, discover vault root
                     let needs_scan = match st.vault_root {
                         Some(ref root) => !canonical.starts_with(root),
                         None => true,
@@ -809,31 +962,30 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         st.vault_root = Some(root);
                     }
 
-                    st.history.push(canonical.clone());
+                    let had_file = st.current_file.is_some();
+                    st.history.record(canonical.clone());
                     st.current_file = Some(canonical.clone());
 
-                    let (new_html, title, doc) = build_gui_page(Some(&canonical), &st);
-                    window.set_title(&title);
-                    st.current_title = title;
-                    st.last_rendered = doc;
-                    let _ = webview.load_html(&new_html);
+                    if had_file {
+                        update_webview_document(&webview, &window, &mut st, &canonical, false);
+                    } else {
+                        st.katex_injected = false;
+                        st.mermaid_injected = false;
+                        st.plantuml_injected = false;
+                        let (new_html, title, doc) = build_gui_page(Some(&canonical), &st);
+                        window.set_title(&title);
+                        st.current_title = title;
+                        st.last_rendered = doc;
+                        let _ = webview.load_html(&new_html);
+                        inject_needed_runtimes(&webview, &mut st);
+                    }
 
                     #[cfg(windows)]
-                    unsafe {
-                        win32::update_menu_state(
-                            hwnd,
-                            st.dialect,
-                            st.full_width,
-                            st.is_toc_visible,
-                            st.is_nav_visible,
-                            st.history.can_go_back(),
-                            st.history.can_go_forward(),
-                        );
-                    }
+                    sync_win32_menu(hwnd, &st);
                 }
                 UserEvent::GoBack => {
                     let mut st = state.lock().unwrap();
-                    if let Some(prev) = st.history.back() {
+                    if let Some(prev) = st.history.go_back().cloned() {
                         if let Some(ref mut w) = watcher {
                             if let Some(ref old_path) = st.current_file {
                                 unwatch_target(w, old_path);
@@ -841,34 +993,15 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             watch_target(w, &prev);
                         }
                         st.current_file = Some(prev.clone());
-                        let (new_html, title, doc) = build_gui_page(Some(&prev), &st);
-                        window.set_title(&title);
-                        st.current_title = title;
-                        st.last_rendered = doc;
-                        let _ = webview.load_html(&new_html);
+                        update_webview_document(&webview, &window, &mut st, &prev, false);
 
                         #[cfg(windows)]
-                        unsafe {
-                            win32::update_menu_state(
-                                hwnd,
-                                st.dialect,
-                                st.full_width,
-                                st.is_toc_visible,
-                                st.is_nav_visible,
-                                st.history.can_go_back(),
-                                st.history.can_go_forward(),
-                            );
-                        }
-                        let _ = webview.evaluate_script(&format!(
-                            "window.__mdvuUpdateHistory?.({}, {});",
-                            st.history.can_go_back(),
-                            st.history.can_go_forward()
-                        ));
+                        sync_win32_menu(hwnd, &st);
                     }
                 }
                 UserEvent::GoForward => {
                     let mut st = state.lock().unwrap();
-                    if let Some(next) = st.history.forward() {
+                    if let Some(next) = st.history.go_forward().cloned() {
                         if let Some(ref mut w) = watcher {
                             if let Some(ref old_path) = st.current_file {
                                 unwatch_target(w, old_path);
@@ -876,123 +1009,109 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             watch_target(w, &next);
                         }
                         st.current_file = Some(next.clone());
-                        let (new_html, title, doc) = build_gui_page(Some(&next), &st);
-                        window.set_title(&title);
-                        st.current_title = title;
-                        st.last_rendered = doc;
-                        let _ = webview.load_html(&new_html);
+                        update_webview_document(&webview, &window, &mut st, &next, false);
 
                         #[cfg(windows)]
-                        unsafe {
-                            win32::update_menu_state(
-                                hwnd,
-                                st.dialect,
-                                st.full_width,
-                                st.is_toc_visible,
-                                st.is_nav_visible,
-                                st.history.can_go_back(),
-                                st.history.can_go_forward(),
-                            );
-                        }
-                        let _ = webview.evaluate_script(&format!(
-                            "window.__mdvuUpdateHistory?.({}, {});",
-                            st.history.can_go_back(),
-                            st.history.can_go_forward()
-                        ));
+                        sync_win32_menu(hwnd, &st);
                     }
                 }
                 UserEvent::ToggleTOC => {
                     let mut st = state.lock().unwrap();
+                    if st.last_toggle.elapsed() < Duration::from_millis(60) {
+                        return;
+                    }
+                    st.last_toggle = Instant::now();
                     st.is_toc_visible = !st.is_toc_visible;
                     let vis = st.is_toc_visible;
                     let _ = webview.evaluate_script(&format!("window.__mdvuToggleTOCSidebar?.({vis});"));
                     #[cfg(windows)]
-                    unsafe {
-                        win32::update_menu_state(
-                            hwnd,
-                            st.dialect,
-                            st.full_width,
-                            st.is_toc_visible,
-                            st.is_nav_visible,
-                            st.history.can_go_back(),
-                            st.history.can_go_forward(),
-                        );
-                    }
+                    sync_win32_menu(hwnd, &st);
                 }
                 UserEvent::ToggleNav => {
                     let mut st = state.lock().unwrap();
+                    if st.last_toggle.elapsed() < Duration::from_millis(60) {
+                        return;
+                    }
+                    st.last_toggle = Instant::now();
                     st.is_nav_visible = !st.is_nav_visible;
                     let vis = st.is_nav_visible;
                     let _ = webview.evaluate_script(&format!("window.__mdvuToggleNavSidebar?.({vis});"));
                     #[cfg(windows)]
-                    unsafe {
-                        win32::update_menu_state(
-                            hwnd,
-                            st.dialect,
-                            st.full_width,
-                            st.is_toc_visible,
-                            st.is_nav_visible,
-                            st.history.can_go_back(),
-                            st.history.can_go_forward(),
-                        );
-                    }
+                    sync_win32_menu(hwnd, &st);
                 }
                 UserEvent::ToggleFullWidth => {
                     let mut st = state.lock().unwrap();
+                    if st.last_toggle.elapsed() < Duration::from_millis(60) {
+                        return;
+                    }
+                    st.last_toggle = Instant::now();
                     st.full_width = !st.full_width;
                     let fw = st.full_width;
                     let _ = webview.evaluate_script(&format!("window.__mdvuToggleFullWidth?.({fw});"));
                     #[cfg(windows)]
-                    unsafe {
-                        win32::update_menu_state(
-                            hwnd,
-                            st.dialect,
-                            st.full_width,
-                            st.is_toc_visible,
-                            st.is_nav_visible,
-                            st.history.can_go_back(),
-                            st.history.can_go_forward(),
-                        );
+                    sync_win32_menu(hwnd, &st);
+                }
+                UserEvent::SetDialectAuto => {
+                    let mut st = state.lock().unwrap();
+                    st.dialect = MarkdownDialect::Generic;
+                    st.is_dialect_explicit = false;
+                    if let Some(path) = st.current_file.clone() {
+                        update_webview_document(&webview, &window, &mut st, &path, true);
                     }
+                    #[cfg(windows)]
+                    sync_win32_menu(hwnd, &st);
                 }
                 UserEvent::SetDialect(dialect) => {
                     let mut st = state.lock().unwrap();
                     st.dialect = dialect;
+                    st.is_dialect_explicit = true;
+                    if let Some(path) = st.current_file.clone() {
+                        update_webview_document(&webview, &window, &mut st, &path, true);
+                    }
                     #[cfg(windows)]
-                    unsafe {
-                        win32::update_menu_state(
-                            hwnd,
-                            st.dialect,
-                            st.full_width,
-                            st.is_toc_visible,
-                            st.is_nav_visible,
-                            st.history.can_go_back(),
-                            st.history.can_go_forward(),
-                        );
+                    sync_win32_menu(hwnd, &st);
+                }
+                UserEvent::SetTheme(theme) => {
+                    let mut st = state.lock().unwrap();
+                    st.theme = theme.clone();
+                    let _ = webview.evaluate_script(&format!("window.__mdvuSetTheme?.({theme:?});"));
+                    if let Some(path) = st.current_file.clone() {
+                        update_webview_document(&webview, &window, &mut st, &path, true);
                     }
-                    if let Some(ref path) = st.current_file.clone() {
-                        let (new_html, title, doc) = build_gui_page(Some(path), &st);
-                        st.current_title = title;
-                        st.last_rendered = doc;
-                        let _ = webview.load_html(&new_html);
-                    }
+                    #[cfg(windows)]
+                    sync_win32_menu(hwnd, &st);
                 }
                 UserEvent::ZoomIn => {
                     let mut st = state.lock().unwrap();
-                    st.zoom_level = (st.zoom_level + 0.10).clamp(0.2, 5.0);
-                    let pct = (st.zoom_level * 100.0).round() as i32;
-                    let _ = webview.evaluate_script(&format!("window.__mdvuSetZoom?.({pct});"));
+                    st.zoom_level = ZoomPolicy::next_step(st.zoom_level);
+                    let label = ZoomPolicy::format_percentage(st.zoom_level);
+                    let _ = webview.evaluate_script(&format!(
+                        "window.__mdvuSetZoom?.({}, {label:?});",
+                        st.zoom_level
+                    ));
                 }
                 UserEvent::ZoomOut => {
                     let mut st = state.lock().unwrap();
-                    st.zoom_level = (st.zoom_level - 0.10).clamp(0.2, 5.0);
-                    let pct = (st.zoom_level * 100.0).round() as i32;
-                    let _ = webview.evaluate_script(&format!("window.__mdvuSetZoom?.({pct});"));
+                    st.zoom_level = ZoomPolicy::previous_step(st.zoom_level);
+                    let label = ZoomPolicy::format_percentage(st.zoom_level);
+                    let _ = webview.evaluate_script(&format!(
+                        "window.__mdvuSetZoom?.({}, {label:?});",
+                        st.zoom_level
+                    ));
                 }
                 UserEvent::ZoomReset => {
                     let mut st = state.lock().unwrap();
-                    st.zoom_level = 1.0;
-                    let _ = webview.evaluate_script("window.__mdvuSetZoom?.(100);");
+                    st.zoom_level = ZoomPolicy::DEFAULT_ZOOM;
+                    let _ = webview.evaluate_script("window.__mdvuSetZoom?.(1.0, '100%');");
+                }
+                UserEvent::SetZoom(raw_input) => {
+                    let mut st = state.lock().unwrap();
+                    st.zoom_level = ZoomPolicy::parse_manual_input(&raw_input, st.zoom_level);
+                    let label = ZoomPolicy::format_percentage(st.zoom_level);
+                    let _ = webview.evaluate_script(&format!(
+                        "window.__mdvuSetZoom?.({}, {label:?});",
+                        st.zoom_level
+                    ));
                 }
                 UserEvent::Find => {
                     let _ = webview.evaluate_script("window.__mdvuFocusFind?.();");
@@ -1036,10 +1155,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 UserEvent::OpenRepo => {
-                    #[cfg(windows)]
-                    unsafe {
-                        win32::open_url_in_browser("https://github.com/stpork/mdvu");
-                    }
+                    open_external_url("https://github.com/stpork/mdvu");
                 }
                 UserEvent::Exit => {
                     *control_flow = ControlFlow::Exit;
@@ -1093,7 +1209,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             KeyCode::KeyF if is_ctrl => {
                                 let _ = proxy.send_event(UserEvent::Find);
                             }
-                            KeyCode::KeyB if is_ctrl => {
+                            KeyCode::KeyB if is_ctrl && !is_shift => {
                                 let _ = proxy.send_event(UserEvent::ToggleTOC);
                             }
                             KeyCode::KeyS if is_ctrl && is_shift => {

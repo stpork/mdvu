@@ -31,11 +31,11 @@ enum ResourceLoader {
         return Bundle.module
     }()
 
-    static let markdownCSS = text("markdown", "css")
-    static let appJavaScript = text("app", "js")
-    static let mermaidJavaScript = compressedText("mermaid")
-    static let plantumlJavaScript = compressedText("plantuml")
-    static let katexJavaScript = compressedText("katex")
+    static let markdownCSS: String = MdvuCoreBridge.shared.markdownCSS ?? text("markdown", "css")
+    static let appJavaScript: String = MdvuCoreBridge.shared.appJavaScript ?? text("app", "js")
+    static let mermaidJavaScript: String = MdvuCoreBridge.shared.mermaidJavaScript ?? compressedText("mermaid")
+    static let plantumlJavaScript: String = MdvuCoreBridge.shared.plantumlJavaScript ?? compressedText("plantuml")
+    static let katexJavaScript: String = MdvuCoreBridge.shared.katexJavaScript ?? compressedText("katex")
 
     private static func compressedText(_ name: String) -> String {
         // Keep only the reusable String; promptly drain temporary NSData buffers.

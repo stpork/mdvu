@@ -32,12 +32,17 @@ pub const IDM_VIEW_RELOAD: usize = 2001;
 pub const IDM_VIEW_TOGGLE_TOC: usize = 2002;
 pub const IDM_VIEW_TOGGLE_NAV: usize = 2003;
 pub const IDM_VIEW_FULL_WIDTH: usize = 2004;
+pub const IDM_DIALECT_AUTO: usize = 2100;
 pub const IDM_DIALECT_GENERIC: usize = 2101;
 pub const IDM_DIALECT_GFM: usize = 2102;
 pub const IDM_DIALECT_OBSIDIAN: usize = 2103;
 pub const IDM_DIALECT_MKDOCS: usize = 2104;
 pub const IDM_DIALECT_DOCUSAURUS: usize = 2105;
 pub const IDM_DIALECT_COMMONMARK: usize = 2106;
+
+pub const IDM_THEME_SYSTEM: usize = 2150;
+pub const IDM_THEME_LIGHT: usize = 2151;
+pub const IDM_THEME_DARK: usize = 2152;
 
 pub const IDM_VIEW_ZOOM_IN: usize = 2201;
 pub const IDM_VIEW_ZOOM_OUT: usize = 2202;
@@ -70,6 +75,8 @@ pub unsafe fn apply_dark_mode(hwnd: HWND) {
 pub unsafe fn create_main_menu(
     hwnd: HWND,
     dialect: MarkdownDialect,
+    is_dialect_explicit: bool,
+    theme: &str,
     is_full_width: bool,
     is_toc: bool,
     is_nav: bool,
@@ -81,6 +88,7 @@ pub unsafe fn create_main_menu(
     let edit_menu = CreatePopupMenu();
     let view_menu = CreatePopupMenu();
     let dialect_menu = CreatePopupMenu();
+    let theme_menu = CreatePopupMenu();
     let go_menu = CreatePopupMenu();
     let help_menu = CreatePopupMenu();
 
@@ -121,13 +129,16 @@ pub unsafe fn create_main_menu(
     AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_FIND_PREV, find_prev_text.as_ptr());
 
     // --- Dialect Submenu ---
-    let d_generic = to_wide_null("&Generic / Auto");
-    let d_gfm = to_wide_null("&GitHub Flavored (GFM)");
+    let d_auto = to_wide_null("&Automatic");
+    let d_generic = to_wide_null("&Generic (CommonMark)");
+    let d_gfm = to_wide_null("Git&Hub (GFM)");
     let d_obsidian = to_wide_null("&Obsidian");
     let d_mkdocs = to_wide_null("&MkDocs");
     let d_docusaurus = to_wide_null("&Docusaurus");
     let d_commonmark = to_wide_null("&CommonMark");
 
+    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_AUTO, d_auto.as_ptr());
+    AppendMenuW(dialect_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_GENERIC, d_generic.as_ptr());
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_GFM, d_gfm.as_ptr());
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_OBSIDIAN, d_obsidian.as_ptr());
@@ -135,15 +146,25 @@ pub unsafe fn create_main_menu(
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_DOCUSAURUS, d_docusaurus.as_ptr());
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_COMMONMARK, d_commonmark.as_ptr());
 
+    // --- Theme Submenu ---
+    let t_system = to_wide_null("&System");
+    let t_light = to_wide_null("&Light");
+    let t_dark = to_wide_null("&Dark");
+
+    AppendMenuW(theme_menu, MF_STRING, IDM_THEME_SYSTEM, t_system.as_ptr());
+    AppendMenuW(theme_menu, MF_STRING, IDM_THEME_LIGHT, t_light.as_ptr());
+    AppendMenuW(theme_menu, MF_STRING, IDM_THEME_DARK, t_dark.as_ptr());
+
     // --- View Menu ---
     let v_reload = to_wide_null("&Reload\tCtrl+R");
     let v_toc = to_wide_null("Table of &Contents\tCtrl+Shift+S");
     let v_nav = to_wide_null("File &Navigator\tCtrl+Shift+D");
     let v_fw = to_wide_null("Full &Width\tCtrl+Shift+W");
     let v_dialect = to_wide_null("&Dialect");
+    let v_theme = to_wide_null("&Theme");
     let v_zoom_in = to_wide_null("Zoom &In\tCtrl++");
     let v_zoom_out = to_wide_null("Zoom &Out\tCtrl+-");
-    let v_zoom_reset = to_wide_null("&Reset Zoom (100%)\tCtrl+0");
+    let v_zoom_reset = to_wide_null("&Actual Size (100%)\tCtrl+0");
     let v_fs = to_wide_null("Toggle &Fullscreen\tF11");
 
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_RELOAD, v_reload.as_ptr());
@@ -153,6 +174,7 @@ pub unsafe fn create_main_menu(
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_FULL_WIDTH, v_fw.as_ptr());
     AppendMenuW(view_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(view_menu, MF_POPUP, dialect_menu as usize, v_dialect.as_ptr());
+    AppendMenuW(view_menu, MF_POPUP, theme_menu as usize, v_theme.as_ptr());
     AppendMenuW(view_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_ZOOM_IN, v_zoom_in.as_ptr());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_ZOOM_OUT, v_zoom_out.as_ptr());
@@ -188,12 +210,24 @@ pub unsafe fn create_main_menu(
     SetMenu(hwnd, menu);
 
     // Apply initial checked / enabled state
-    update_menu_state(hwnd, dialect, is_full_width, is_toc, is_nav, can_back, can_fwd);
+    update_menu_state(
+        hwnd,
+        dialect,
+        is_dialect_explicit,
+        theme,
+        is_full_width,
+        is_toc,
+        is_nav,
+        can_back,
+        can_fwd,
+    );
 }
 
 pub unsafe fn update_menu_state(
     hwnd: HWND,
     dialect: MarkdownDialect,
+    is_dialect_explicit: bool,
+    theme: &str,
     is_full_width: bool,
     is_toc: bool,
     is_nav: bool,
@@ -204,6 +238,16 @@ pub unsafe fn update_menu_state(
     if menu.is_null() {
         return;
     }
+
+    CheckMenuItem(
+        menu,
+        IDM_DIALECT_AUTO as u32,
+        if !is_dialect_explicit {
+            MF_CHECKED
+        } else {
+            MF_UNCHECKED
+        },
+    );
 
     // Dialect radio check
     let dialect_id = match dialect {
@@ -220,6 +264,20 @@ pub unsafe fn update_menu_state(
         IDM_DIALECT_GENERIC as u32,
         IDM_DIALECT_COMMONMARK as u32,
         dialect_id as u32,
+        MF_BYCOMMAND,
+    );
+
+    // Theme radio check
+    let theme_id = match theme.to_ascii_lowercase().as_str() {
+        "light" => IDM_THEME_LIGHT,
+        "dark" => IDM_THEME_DARK,
+        _ => IDM_THEME_SYSTEM,
+    };
+    CheckMenuRadioItem(
+        menu,
+        IDM_THEME_SYSTEM as u32,
+        IDM_THEME_DARK as u32,
+        theme_id as u32,
         MF_BYCOMMAND,
     );
 
@@ -348,6 +406,10 @@ pub unsafe extern "system" fn menu_subclass_proc(
             }
 
             // Dialects
+            IDM_DIALECT_AUTO => {
+                let _ = proxy.send_event(UserEvent::SetDialectAuto);
+                return 0;
+            }
             IDM_DIALECT_GENERIC => {
                 let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Generic));
                 return 0;
@@ -370,6 +432,20 @@ pub unsafe extern "system" fn menu_subclass_proc(
             }
             IDM_DIALECT_COMMONMARK => {
                 let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Commonmark));
+                return 0;
+            }
+
+            // Themes
+            IDM_THEME_SYSTEM => {
+                let _ = proxy.send_event(UserEvent::SetTheme("system".to_string()));
+                return 0;
+            }
+            IDM_THEME_LIGHT => {
+                let _ = proxy.send_event(UserEvent::SetTheme("light".to_string()));
+                return 0;
+            }
+            IDM_THEME_DARK => {
+                let _ = proxy.send_event(UserEvent::SetTheme("dark".to_string()));
                 return 0;
             }
 
@@ -434,10 +510,10 @@ pub fn prompt_open_folder() -> Option<PathBuf> {
 }
 
 pub unsafe fn show_about_box(hwnd: HWND) {
-    let title = to_wide_null("About MDVu");
+    let title = to_wide_null("About mdvu");
     let version = env!("CARGO_PKG_VERSION");
     let msg = format!(
-        "MDVu v{version}\nUltra-fast native Markdown viewer\nSingle-binary, zero bloat, offline diagrams & math.\n\nhttps://github.com/stpork/mdvu"
+        "mdvu\nMarkdown and Mermaid Viewer\nVersion: {version}\n\nCopyright © 2026 Finn de Bear\nhttps://github.com/stpork/mdvu"
     );
     let text = to_wide_null(&msg);
     MessageBoxW(hwnd, text.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);

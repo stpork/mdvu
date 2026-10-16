@@ -210,7 +210,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
                let str = plist["CFBundleShortVersionString"] as? String {
                 return str
             }
-            return "0.4.1"
+            return MdvuCoreBridge.shared.version ?? "0.5.0"
         }()
 
         let mas = Self.makeAttributedString(version: version)

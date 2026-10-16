@@ -1,6 +1,9 @@
-use pulldown_cmark::{html, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+use crate::navigator::{compute_diagram_cache_key, DiagramCache};
+use crate::pipeline::FastScan;
+use pulldown_cmark::{html, CodeBlockKind, CowStr, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,9 +23,6 @@ pub struct RenderedDocument {
     pub has_math: bool,
 }
 
-use std::collections::{HashMap, HashSet};
-use std::hash::{DefaultHasher, Hash, Hasher};
-
 fn escape_html(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     for c in input.chars() {
@@ -33,6 +33,38 @@ fn escape_html(input: &str) -> String {
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&#39;"),
             _ => out.push(c),
+        }
+    }
+    out
+}
+
+fn unescape_html(input: &str) -> String {
+    if !FastScan::contains_ascii(input, b'&') {
+        return input.to_string();
+    }
+    input
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+}
+
+fn strip_html_tags(input: &str) -> String {
+    if !FastScan::contains_ascii(input, b'<') {
+        return input.to_string();
+    }
+    let mut out = String::with_capacity(input.len());
+    let mut in_tag = false;
+    for c in input.chars() {
+        if c == '<' {
+            in_tag = true;
+        } else if c == '>' && in_tag {
+            in_tag = false;
+        } else if !in_tag {
+            out.push(c);
         }
     }
     out
@@ -64,42 +96,47 @@ fn base_slug(title: &str) -> String {
     }
 }
 
-fn compute_diagram_cache_key(renderer: &str, theme: &str, source: &str) -> String {
-    let mut hasher = DefaultHasher::new();
-    renderer.hash(&mut hasher);
-    theme.hash(&mut hasher);
-    source.hash(&mut hasher);
-    format!("{renderer}-{:016x}", hasher.finish())
-}
-
 // GFM Security Tagfilter: disarm script, iframe, textarea, title, xmp, noembed, noframes, plaintext
 // Note: <style> is explicitly preserved per MDVu spec.
 static DISALLOWED_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?is)<(/?)((?:script|iframe|textarea|title|xmp|noembed|noframes|plaintext))([/\s][^>]*|)>"#).unwrap()
+    Regex::new(r#"(?s)<(/?)((?i-u:script|iframe|textarea|title|xmp|noembed|noframes|plaintext))([/ \t\r\n][^>]*|)>"#).unwrap()
 });
 
-fn apply_tagfilter(raw_html: &str) -> String {
-    if !raw_html.contains('<') {
-        return raw_html.to_string();
+static RAW_H1_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?s)<(?i-u:h1)(?:[ \t\r\n][^>]*)?>(.*?)</(?i-u:h1)>"#).unwrap());
+
+fn apply_tagfilter<'a>(raw_html: CowStr<'a>) -> CowStr<'a> {
+    if !FastScan::contains_ascii(&raw_html, b'<') {
+        return raw_html;
     }
-    DISALLOWED_TAG_RE
-        .replace_all(raw_html, |caps: &regex::Captures| {
-            let slash = &caps[1];
-            let tag_name = &caps[2];
-            let rest = &caps[3];
-            format!("&lt;{slash}{tag_name}{rest}>")
-        })
-        .into_owned()
+    match DISALLOWED_TAG_RE.replace_all(&raw_html, |caps: &regex::Captures| {
+        let slash = &caps[1];
+        let tag_name = &caps[2];
+        let rest = &caps[3];
+        format!("&lt;{slash}{tag_name}{rest}>")
+    }) {
+        std::borrow::Cow::Borrowed(_) => raw_html,
+        std::borrow::Cow::Owned(s) => CowStr::Boxed(s.into_boxed_str()),
+    }
 }
 
 pub struct MarkdownParser {
     pub diagram_theme: String,
+    pub enable_diagrams: bool,
 }
 
 impl MarkdownParser {
     pub fn new(diagram_theme: &str) -> Self {
         Self {
             diagram_theme: diagram_theme.to_string(),
+            enable_diagrams: true,
+        }
+    }
+
+    pub fn with_options(diagram_theme: &str, enable_diagrams: bool) -> Self {
+        Self {
+            diagram_theme: diagram_theme.to_string(),
+            enable_diagrams,
         }
     }
 
@@ -113,7 +150,6 @@ impl MarkdownParser {
 
         let parser = Parser::new_ext(source, options);
 
-        let mut custom_events = Vec::new();
         let mut inside_code_block: Option<String> = None;
         let mut code_buffer = String::new();
 
@@ -126,129 +162,156 @@ impl MarkdownParser {
 
         let mut has_mermaid = false;
         let mut has_plantuml = false;
-        let mut has_math = source.contains("math-inline") || source.contains("math-display");
+        let mut has_math =
+            FastScan::contains_token(source, "math-inline") || FastScan::contains_token(source, "math-display");
 
-        for event in parser {
-            match event {
-                Event::Html(raw) => {
-                    let filtered = apply_tagfilter(&raw);
-                    custom_events.push(Event::Html(filtered.into()));
-                }
-                Event::InlineHtml(raw) => {
-                    let filtered = apply_tagfilter(&raw);
-                    custom_events.push(Event::InlineHtml(filtered.into()));
-                }
-                Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
-                    inside_code_block = Some(lang.to_string());
-                    code_buffer.clear();
-                }
-                Event::Start(Tag::CodeBlock(CodeBlockKind::Indented)) => {
-                    inside_code_block = Some(String::new());
-                    code_buffer.clear();
-                }
-                Event::End(TagEnd::CodeBlock) => {
-                    if let Some(lang) = inside_code_block.take() {
-                        let clean_lang = lang.trim().to_lowercase();
-                        let trimmed_code = code_buffer.trim_matches(|c| c == '\n' || c == '\r');
+        let diagram_theme = &self.diagram_theme;
+        let enable_diagrams = self.enable_diagrams;
 
-                        if clean_lang == "mermaid" {
-                            has_mermaid = true;
-                            let key = compute_diagram_cache_key("mermaid", &self.diagram_theme, trimmed_code);
-                            let html = format!(
-                                "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
-                                escape_html(trimmed_code)
-                            );
-                            custom_events.push(Event::Html(html.into()));
-                        } else if clean_lang == "plantuml" || clean_lang == "puml" {
-                            has_plantuml = true;
-                            let key = compute_diagram_cache_key("plantuml", &self.diagram_theme, trimmed_code);
-                            let html = format!(
-                                "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
-                                escape_html(trimmed_code)
-                            );
-                            custom_events.push(Event::Html(html.into()));
-                        } else if clean_lang == "math" || clean_lang == "latex" || clean_lang == "katex" {
-                            has_math = true;
-                            let html = format!(
-                                "<div class=\"math-display\">{}</div>",
-                                escape_html(trimmed_code)
-                            );
-                            custom_events.push(Event::Html(html.into()));
-                        } else {
-                            let class_attr = if clean_lang.is_empty() {
-                                String::new()
-                            } else {
-                                format!(" class=\"language-{clean_lang}\"")
-                            };
-                            let html = format!(
-                                "<pre><code{class_attr}>{}</code></pre>",
-                                escape_html(trimmed_code)
-                            );
-                            custom_events.push(Event::Html(html.into()));
-                        }
+        let stream = parser.filter_map(|event| match event {
+            Event::Html(raw) => Some(Event::Html(apply_tagfilter(raw))),
+            Event::InlineHtml(raw) => Some(Event::InlineHtml(apply_tagfilter(raw))),
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
+                inside_code_block = Some(lang.to_string());
+                code_buffer.clear();
+                None
+            }
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Indented)) => {
+                inside_code_block = Some(String::new());
+                code_buffer.clear();
+                None
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                let lang = inside_code_block.take()?;
+                let clean_lang = lang.trim().to_ascii_lowercase();
+                let trimmed_code = code_buffer.trim_matches(|c| c == '\n' || c == '\r');
+
+                if enable_diagrams && clean_lang == "mermaid" {
+                    has_mermaid = true;
+                    let key = compute_diagram_cache_key("mermaid", diagram_theme, trimmed_code);
+                    let html = if let Some(svg) = DiagramCache::global().read(&key) {
+                        format!(
+                            "<figure class=\"diagram diagram-rendered\" data-renderer=\"mermaid\" data-cache-key=\"{key}\">{svg}</figure>"
+                        )
+                    } else {
+                        format!(
+                            "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
+                            escape_html(trimmed_code)
+                        )
+                    };
+                    Some(Event::Html(html.into()))
+                } else if enable_diagrams && (clean_lang == "plantuml" || clean_lang == "puml") {
+                    has_plantuml = true;
+                    let key = compute_diagram_cache_key("plantuml", diagram_theme, trimmed_code);
+                    let html = if let Some(svg) = DiagramCache::global().read(&key) {
+                        format!(
+                            "<figure class=\"diagram diagram-rendered\" data-renderer=\"plantuml\" data-cache-key=\"{key}\">{svg}</figure>"
+                        )
+                    } else {
+                        format!(
+                            "<figure class=\"diagram diagram-pending\" data-renderer=\"plantuml\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
+                            escape_html(trimmed_code)
+                        )
+                    };
+                    Some(Event::Html(html.into()))
+                } else if clean_lang == "math" || clean_lang == "latex" || clean_lang == "katex" {
+                    has_math = true;
+                    let html = format!(
+                        "<div class=\"math-display\">{}</div>",
+                        escape_html(trimmed_code)
+                    );
+                    Some(Event::Html(html.into()))
+                } else {
+                    let class_attr = if clean_lang.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" class=\"language-{clean_lang}\"")
+                    };
+                    let html = format!(
+                        "<pre><code{class_attr}>{}</code></pre>",
+                        escape_html(trimmed_code)
+                    );
+                    Some(Event::Html(html.into()))
+                }
+            }
+            Event::Text(ref text) if inside_code_block.is_some() => {
+                code_buffer.push_str(text);
+                None
+            }
+            Event::Start(Tag::Heading { level, .. }) => {
+                current_heading_level = Some(level);
+                current_heading_text.clear();
+                Some(event)
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some(level) = current_heading_level.take() {
+                    let title = current_heading_text.trim().to_string();
+                    let base = base_slug(&title);
+                    let mut count = *slug_counts.get(&base).unwrap_or(&0);
+                    let mut id = if count == 0 {
+                        base.clone()
+                    } else {
+                        format!("{base}-{count}")
+                    };
+                    while used_slug_ids.contains(&id) {
+                        count += 1;
+                        id = format!("{base}-{count}");
                     }
-                }
-                Event::Text(ref text) if inside_code_block.is_some() => {
-                    code_buffer.push_str(text);
-                }
-                Event::Start(Tag::Heading { level, .. }) => {
-                    current_heading_level = Some(level);
-                    current_heading_text.clear();
-                    custom_events.push(event);
-                }
-                Event::End(TagEnd::Heading(_)) => {
-                    if let Some(level) = current_heading_level.take() {
-                        let title = current_heading_text.trim().to_string();
-                        let base = base_slug(&title);
-                        let mut count = *slug_counts.get(&base).unwrap_or(&0);
-                        let mut id = if count == 0 {
-                            base.clone()
-                        } else {
-                            format!("{base}-{count}")
-                        };
-                        while used_slug_ids.contains(&id) {
-                            count += 1;
-                            id = format!("{base}-{count}");
-                        }
-                        slug_counts.insert(base, count + 1);
-                        used_slug_ids.insert(id.clone());
+                    slug_counts.insert(base, count + 1);
+                    used_slug_ids.insert(id.clone());
 
-                        let lvl_num = match level {
-                            HeadingLevel::H1 => 1,
-                            HeadingLevel::H2 => 2,
-                            HeadingLevel::H3 => 3,
-                            HeadingLevel::H4 => 4,
-                            HeadingLevel::H5 => 5,
-                            HeadingLevel::H6 => 6,
-                        };
+                    let lvl_num = match level {
+                        HeadingLevel::H1 => 1,
+                        HeadingLevel::H2 => 2,
+                        HeadingLevel::H3 => 3,
+                        HeadingLevel::H4 => 4,
+                        HeadingLevel::H5 => 5,
+                        HeadingLevel::H6 => 6,
+                    };
 
-                        if lvl_num == 1 && doc_title.is_none() && !title.is_empty() {
-                            doc_title = Some(title.clone());
-                        }
-
-                        toc.push(TocEntry {
-                            level: lvl_num,
-                            title,
-                            id,
-                        });
+                    if lvl_num == 1 && doc_title.is_none() && !title.is_empty() {
+                        doc_title = Some(title.clone());
                     }
-                    custom_events.push(event);
+
+                    toc.push(TocEntry {
+                        level: lvl_num,
+                        title,
+                        id,
+                    });
                 }
-                Event::Text(ref text) if current_heading_level.is_some() => {
-                    current_heading_text.push_str(text);
-                    custom_events.push(event);
-                }
-                _ => {
-                    custom_events.push(event);
+                Some(event)
+            }
+            Event::Text(ref text) if current_heading_level.is_some() => {
+                current_heading_text.push_str(text);
+                Some(event)
+            }
+            Event::Code(ref text) if current_heading_level.is_some() => {
+                current_heading_text.push_str(text);
+                Some(event)
+            }
+            _ => Some(event),
+        });
+
+        let mut html_out = String::with_capacity(source.len() + source.len() / 2);
+        html::push_html(&mut html_out, stream);
+
+        let final_body = Self::replace_callout_blocks(html_out);
+
+        if doc_title.is_none()
+            && (FastScan::contains_token(&final_body, "<h1")
+                || FastScan::contains_token(&final_body, "<H1"))
+        {
+            if let Some(caps) = RAW_H1_RE.captures(&final_body) {
+                if let Some(m) = caps.get(1) {
+                    let cleaned = unescape_html(&strip_html_tags(m.as_str()))
+                        .trim()
+                        .to_string();
+                    if !cleaned.is_empty() {
+                        doc_title = Some(cleaned);
+                    }
                 }
             }
         }
-
-        let mut html_out = String::with_capacity(source.len() * 2);
-        html::push_html(&mut html_out, custom_events.into_iter());
-
-        let postprocessed = Self::replace_callout_blocks(&html_out);
-        let final_body = apply_tagfilter(&postprocessed);
 
         RenderedDocument {
             body: final_body,
@@ -260,10 +323,10 @@ impl MarkdownParser {
         }
     }
 
-    fn replace_callout_blocks(input: &str) -> String {
-        let marker = "MDVU-CALLOUT-" ;
-        if !input.contains(marker) {
-            return input.to_string();
+    fn replace_callout_blocks(input: String) -> String {
+        let marker = "MDVU-CALLOUT-";
+        if !FastScan::contains_token(&input, marker) {
+            return input;
         }
 
         let mut result = String::with_capacity(input.len());
@@ -272,9 +335,12 @@ impl MarkdownParser {
         while let Some(marker_rel) = input[cursor..].find(marker) {
             let marker_pos = cursor + marker_rel;
 
-            // Search back for <blockquote>
             let search_back_start = if marker_pos > cursor + 200 {
-                marker_pos - 200
+                let mut s = marker_pos - 200;
+                while s < marker_pos && !input.is_char_boundary(s) {
+                    s += 1;
+                }
+                s
             } else {
                 cursor
             };
@@ -286,7 +352,6 @@ impl MarkdownParser {
             };
             let bq_start = search_back_start + bq_rel;
 
-            // Find matching </blockquote> taking into account nested blockquotes
             let mut scan = marker_pos + marker.len();
             let mut depth = 0;
             let mut bq_end = None;
@@ -319,7 +384,6 @@ impl MarkdownParser {
                 continue;
             };
 
-            // Extract callout type from marker up to </strong>
             let marker_end = marker_pos + marker.len();
             let Some(strong_end_rel) = input[marker_end..bq_end_pos].find("</strong>") else {
                 result.push_str(&input[cursor..marker_end]);
@@ -327,9 +391,8 @@ impl MarkdownParser {
                 continue;
             };
             let strong_end_pos = marker_end + strong_end_rel;
-            let callout_type = input[marker_end..strong_end_pos].trim().to_lowercase();
+            let callout_type = input[marker_end..strong_end_pos].trim().to_ascii_lowercase();
 
-            // Find closing </p>
             let Some(p_end_rel) = input[strong_end_pos..bq_end_pos].find("</p>") else {
                 result.push_str(&input[cursor..marker_end]);
                 cursor = marker_end;
@@ -348,8 +411,8 @@ impl MarkdownParser {
             };
 
             let body = input[p_end_pos + 4..bq_end_pos].trim_start_matches(['\n', '\r']);
-            let processed_body = if body.contains("MDVU-CALLOUT-") {
-                Self::replace_callout_blocks(body)
+            let processed_body = if FastScan::contains_token(body, "MDVU-CALLOUT-") {
+                Self::replace_callout_blocks(body.to_string())
             } else {
                 body.to_string()
             };
@@ -404,19 +467,37 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_heading_slug_generation() {
-        let md = "# Introduction\n\n## Section\n\n## Section\n\n## Section\n\n## Section 1\n";
+    fn test_duplicate_heading_slug_generation_and_inline_code() {
+        let md = "# Introduction\n\n## Section\n\n## Section\n\n## Section\n\n## Section 1\n\n## Using `mdvu`\n";
         let parser = MarkdownParser::new("light");
         let doc = parser.render(md);
         let ids: Vec<&str> = doc.toc.iter().map(|t| t.id.as_str()).collect();
-        assert_eq!(ids, vec!["introduction", "section", "section-1", "section-2", "section-1-1"]);
+        assert_eq!(
+            ids,
+            vec![
+                "introduction",
+                "section",
+                "section-1",
+                "section-2",
+                "section-1-1",
+                "using-mdvu"
+            ]
+        );
+        assert_eq!(doc.toc[5].title, "Using mdvu");
     }
 
     #[test]
     fn test_diagram_cache_key_collision_resistance() {
         let key1 = compute_diagram_cache_key("mermaid", "light", "graph TD\n  A --> B");
         let key2 = compute_diagram_cache_key("mermaid", "light", "graph TD\n  C --> D");
-        assert_eq!(key1.len(), "mermaid-".len() + 16);
+        assert_eq!(key1.len(), 64);
         assert_ne!(key1, key2);
+    }
+
+    #[test]
+    fn test_raw_html_h1_title_extraction() {
+        let parser = MarkdownParser::new("light");
+        let doc = parser.render("<h1><img src=\"icon.png\" alt=\"icon\"/> Document &lt;Special&gt;</h1>");
+        assert_eq!(doc.title.as_deref(), Some("Document <Special>"));
     }
 }

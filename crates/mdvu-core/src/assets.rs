@@ -9,17 +9,31 @@ pub static MERMAID_LZMA: &[u8] = include_bytes!("../../../Sources/mdvu/Resources
 pub static PLANTUML_LZMA: &[u8] = include_bytes!("../../../Sources/mdvu/Resources/plantuml.lzma");
 pub static KATEX_LZMA: &[u8] = include_bytes!("../../../Sources/mdvu/Resources/katex.lzma");
 
+static MARKDOWN_CSS_C: OnceLock<Option<CString>> = OnceLock::new();
+static APP_JS_C: OnceLock<Option<CString>> = OnceLock::new();
 static MERMAID_JS: OnceLock<Option<CString>> = OnceLock::new();
 static PLANTUML_JS: OnceLock<Option<CString>> = OnceLock::new();
 static KATEX_JS: OnceLock<Option<CString>> = OnceLock::new();
 
 fn decompress_lzma(bytes: &[u8]) -> Option<CString> {
     let mut reader = Cursor::new(bytes);
-    let mut output = Vec::new();
+    let mut output = Vec::with_capacity(bytes.len() * 4);
     if lzma_rs::lzma_decompress(&mut reader, &mut output).is_err() {
         return None;
     }
     CString::new(output).ok()
+}
+
+pub fn get_markdown_css_c_str() -> Option<&'static CStr> {
+    MARKDOWN_CSS_C
+        .get_or_init(|| CString::new(MARKDOWN_CSS).ok())
+        .as_deref()
+}
+
+pub fn get_app_js_c_str() -> Option<&'static CStr> {
+    APP_JS_C
+        .get_or_init(|| CString::new(APP_JS).ok())
+        .as_deref()
 }
 
 pub fn get_mermaid_c_str() -> Option<&'static CStr> {
