@@ -17,6 +17,7 @@ pub const IDM_FILE_OPEN: usize = 1001;
 pub const IDM_FILE_OPEN_FOLDER: usize = 1002;
 pub const IDM_FILE_RELOAD: usize = 1003;
 pub const IDM_FILE_EXIT: usize = 1004;
+pub const IDM_FILE_CLOSE: usize = 1005;
 
 pub const IDM_EDIT_UNDO: usize = 1101;
 pub const IDM_EDIT_REDO: usize = 1102;
@@ -61,8 +62,37 @@ pub fn to_wide_null(s: &str) -> Vec<u16> {
     OsStr::new(s).encode_wide().chain(Some(0)).collect()
 }
 
-pub unsafe fn apply_dark_mode(hwnd: HWND) {
-    let use_dark_mode: i32 = 1;
+pub unsafe fn apply_window_icon(hwnd: HWND) {
+    let hinstance = GetWindowLongPtrW(hwnd, GWLP_HINSTANCE) as *mut core::ffi::c_void;
+    let big_icon = LoadImageW(
+        hinstance,
+        1 as *const u16,
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXICON),
+        GetSystemMetrics(SM_CYICON),
+        LR_DEFAULTCOLOR | LR_SHARED,
+    );
+    if !big_icon.is_null() {
+        SendMessageW(hwnd, WM_SETICON, ICON_BIG as usize, big_icon as isize);
+    }
+    let small_icon = LoadImageW(
+        hinstance,
+        1 as *const u16,
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        LR_DEFAULTCOLOR | LR_SHARED,
+    );
+    if !small_icon.is_null() {
+        SendMessageW(hwnd, WM_SETICON, ICON_SMALL as usize, small_icon as isize);
+    }
+}
+
+pub unsafe fn apply_dark_mode(hwnd: HWND, theme: &str) {
+    let use_dark_mode: i32 = match theme.trim().to_ascii_lowercase().as_str() {
+        "light" => 0,
+        _ => 1,
+    };
     // DWMWA_USE_IMMERSIVE_DARK_MODE = 20
     DwmSetWindowAttribute(
         hwnd,
@@ -96,6 +126,7 @@ pub unsafe fn create_main_menu(
     let open_file = to_wide_null("&Open File...\tCtrl+O");
     let open_folder = to_wide_null("Open &Folder / Vault...\tCtrl+Shift+O");
     let reload_text = to_wide_null("&Reload\tCtrl+R");
+    let close_text = to_wide_null("&Close\tCtrl+W");
     let exit_text = to_wide_null("E&xit\tAlt+F4");
 
     AppendMenuW(file_menu, MF_STRING, IDM_FILE_OPEN, open_file.as_ptr());
@@ -103,6 +134,7 @@ pub unsafe fn create_main_menu(
     AppendMenuW(file_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(file_menu, MF_STRING, IDM_FILE_RELOAD, reload_text.as_ptr());
     AppendMenuW(file_menu, MF_SEPARATOR, 0, std::ptr::null());
+    AppendMenuW(file_menu, MF_STRING, IDM_FILE_CLOSE, close_text.as_ptr());
     AppendMenuW(file_menu, MF_STRING, IDM_FILE_EXIT, exit_text.as_ptr());
 
     // --- Edit Menu ---
@@ -348,7 +380,7 @@ pub unsafe extern "system" fn menu_subclass_proc(
                 let _ = proxy.send_event(UserEvent::FileChanged);
                 return 0;
             }
-            IDM_FILE_EXIT => {
+            IDM_FILE_EXIT | IDM_FILE_CLOSE => {
                 let _ = proxy.send_event(UserEvent::Exit);
                 return 0;
             }
@@ -507,16 +539,6 @@ pub fn prompt_open_folder() -> Option<PathBuf> {
     rfd::FileDialog::new()
         .set_title("Open Markdown Folder / Vault - MDVu")
         .pick_folder()
-}
-
-pub unsafe fn show_about_box(hwnd: HWND) {
-    let title = to_wide_null("About mdvu");
-    let version = env!("CARGO_PKG_VERSION");
-    let msg = format!(
-        "mdvu\nMarkdown and Mermaid Viewer\nVersion: {version}\n\nCopyright © 2026 Finn de Bear\nhttps://github.com/stpork/mdvu"
-    );
-    let text = to_wide_null(&msg);
-    MessageBoxW(hwnd, text.as_ptr(), title.as_ptr(), MB_OK | MB_ICONINFORMATION);
 }
 
 pub unsafe fn open_url_in_browser(url: &str) {

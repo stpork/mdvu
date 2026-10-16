@@ -1,0 +1,13 @@
+$ErrorActionPreference = 'Stop'
+
+$packageArgs = @{
+  packageName    = $env:ChocolateyPackageName
+  fileType       = 'MSI'
+  url64bit       = 'https://github.com/stpork/mdvu/releases/download/vVERSION_PLACEHOLDER/mdvu-VERSION_PLACEHOLDER-windows-x86_64.msi'
+  checksum64     = 'MSI_SHA256_PLACEHOLDER'
+  checksumType64 = 'sha256'
+  silentArgs     = '/qn /norestart'
+  validExitCodes = @(0, 3010, 1641)
+}
+
+Install-ChocolateyPackage @packageArgs

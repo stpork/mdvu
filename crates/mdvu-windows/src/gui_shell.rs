@@ -1,20 +1,4 @@
-use crate::navigator::VaultItem;
-use mdvu_core::{TocEntry, ZoomPolicy};
-
-fn escape_html(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-    for c in input.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#39;"),
-            _ => out.push(c),
-        }
-    }
-    out
-}
+use mdvu_core::{escape_html, TocEntry, VaultItem, ZoomPolicy, VERSION};
 
 pub fn build_gui_html(
     document_html: &str,
@@ -35,11 +19,12 @@ pub fn build_gui_html(
         serde_json::to_string(&current_file_path.unwrap_or("")).unwrap_or_else(|_| "\"\"".to_string());
     let zoom_label = ZoomPolicy::format_percentage(zoom_level);
     let safe_vault_name = escape_html(vault_name);
+    let safe_version = escape_html(VERSION);
 
     let shell_css = r#"
 :root {
-  --toc-width: 270px;
-  --nav-width: 270px;
+  --toc-width: 260px;
+  --nav-width: 250px;
 }
 #mdvu-app {
   display: flex;
@@ -51,15 +36,15 @@ pub fn build_gui_html(
   color: var(--fg);
 }
 #mdvu-toolbar {
-  height: 40px;
-  min-height: 40px;
-  max-height: 40px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
   display: flex;
   align-items: center;
   padding: 0 10px;
   gap: 6px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 90%, var(--soft));
+  background: color-mix(in srgb, var(--bg) 92%, var(--soft));
   user-select: none;
   z-index: 1000;
   box-sizing: border-box;
@@ -106,8 +91,8 @@ pub fn build_gui_html(
   display: inline-flex;
   align-items: center;
   height: 26px;
-  width: 270px;
-  max-width: 32vw;
+  width: 280px;
+  max-width: 34vw;
   border: 1px solid var(--line);
   border-radius: 5px;
   background: var(--bg);
@@ -138,7 +123,11 @@ pub fn build_gui_html(
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.find-count.no-match {
+  color: #e53935;
 }
 .find-nav-btn {
   background: none;
@@ -177,8 +166,12 @@ pub fn build_gui_html(
   cursor: pointer;
   height: 100%;
 }
-.zoom-btn:hover {
+.zoom-btn:hover:not(:disabled) {
   background: var(--soft);
+}
+.zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .zoom-val {
   border: 0;
@@ -186,7 +179,8 @@ pub fn build_gui_html(
   width: 48px;
   text-align: center;
   font-size: 11px;
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
   color: var(--fg);
   outline: none;
   cursor: text;
@@ -201,7 +195,7 @@ pub fn build_gui_html(
   position: relative;
 }
 .mdvu-sidebar {
-  background: color-mix(in srgb, var(--bg) 95%, var(--soft));
+  background: color-mix(in srgb, var(--bg) 96%, var(--soft));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -246,8 +240,8 @@ pub fn build_gui_html(
   left: 0;
 }
 .sidebar-header {
-  height: 34px;
-  min-height: 34px;
+  height: 36px;
+  min-height: 36px;
   padding: 0 10px;
   display: flex;
   align-items: center;
@@ -257,7 +251,7 @@ pub fn build_gui_html(
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-  background: var(--soft);
+  background: color-mix(in srgb, var(--bg) 90%, var(--soft));
   box-sizing: border-box;
 }
 .sidebar-title {
@@ -269,21 +263,36 @@ pub fn build_gui_html(
   white-space: nowrap;
   flex: 1;
 }
+.sidebar-title svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.nav-mode-bar {
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
 .nav-mode-group {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
   background: var(--bg);
 }
 .nav-mode-btn {
+  flex: 1;
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 3px 8px;
   cursor: pointer;
+  transition: all 0.1s ease;
+}
+.nav-mode-btn:hover:not(.active) {
+  background: var(--soft);
+  color: var(--fg);
 }
 .nav-mode-btn.active {
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
@@ -293,11 +302,14 @@ pub fn build_gui_html(
   background: none;
   border: 0;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .sidebar-close:hover {
   background: var(--line);
@@ -313,7 +325,6 @@ pub fn build_gui_html(
   overflow-y: auto;
   height: 100%;
   position: relative;
-  scroll-behavior: smooth;
 }
 /* TOC Items */
 .toc-entry {
@@ -340,9 +351,9 @@ pub fn build_gui_html(
   font-weight: 600;
 }
 .toc-lvl-1 { font-weight: 600; }
-.toc-lvl-2 { padding-left: 16px; }
-.toc-lvl-3 { padding-left: 28px; font-size: 11.5px; opacity: 0.9; }
-.toc-lvl-4, .toc-lvl-5, .toc-lvl-6 { padding-left: 38px; font-size: 11px; opacity: 0.8; }
+.toc-lvl-2 { padding-left: 18px; }
+.toc-lvl-3 { padding-left: 30px; font-size: 12px; opacity: 0.92; }
+.toc-lvl-4, .toc-lvl-5, .toc-lvl-6 { padding-left: 42px; font-size: 11.5px; opacity: 0.85; }
 
 /* Navigator Tree & List Items */
 .nav-item {
@@ -352,13 +363,17 @@ pub fn build_gui_html(
   padding: 4px 6px;
   margin: 1px 0;
   border-radius: 4px;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--fg);
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.nav-item svg {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 .nav-item:hover {
   background: var(--soft);
@@ -368,25 +383,106 @@ pub fn build_gui_html(
   color: var(--accent);
   font-weight: 600;
 }
-.nav-subpath {
-  margin-left: auto;
-  font-size: 10.5px;
-  color: var(--muted);
-  opacity: 0.75;
-  padding-left: 6px;
+.nav-item.active svg {
+  color: var(--accent);
+}
+.nav-item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nav-folder-content {
-  padding-left: 12px;
+  padding-left: 14px;
 }
 .nav-arrow {
-  display: inline-block;
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 12px;
+  height: 12px;
   color: var(--muted);
   transition: transform 0.12s ease;
+  flex-shrink: 0;
 }
 .nav-arrow.expanded {
   transform: rotate(90deg);
+}
+
+/* About Modal (matching macOS AboutPanel.swift) */
+#mdvu-about-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(2px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+  user-select: none;
+}
+#mdvu-about-backdrop.visible {
+  display: flex;
+}
+.about-card {
+  width: 340px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  padding: 26px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+.about-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.about-close:hover {
+  background: var(--soft);
+  color: var(--fg);
+}
+.about-title {
+  font-size: 25px;
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.about-title:hover {
+  color: var(--accent);
+}
+.about-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.about-version {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.about-version a, .about-copy a {
+  color: var(--accent);
+  text-decoration: underline;
+  font-weight: 500;
+}
+.about-copy {
+  font-size: 12px;
+  color: var(--muted);
 }
     "#;
 
@@ -403,7 +499,7 @@ pub fn build_gui_html(
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
       <button id="btn-toc" class="toolbar-btn {toc_active}" title="Toggle Table of Contents (Ctrl+Shift+S / Ctrl+B)">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="14" y1="8" x2="18" y2="8"></line><line x1="14" y1="12" x2="18" y2="12"></line><line x1="14" y1="16" x2="18" y2="16"></line></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="13" y1="8" x2="18" y2="8"></line><line x1="13" y1="12" x2="18" y2="12"></line><line x1="13" y1="16" x2="18" y2="16"></line></svg>
       </button>
     </div>
 
@@ -414,10 +510,10 @@ pub fn build_gui_html(
         <span class="search-icon">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input id="mdvu-find-input" type="search" placeholder="Find in document... (Ctrl+F)" autocomplete="off" spellcheck="false" />
+        <input id="mdvu-find-input" type="search" placeholder="Find (Ctrl+F)" autocomplete="off" spellcheck="false" />
         <span id="mdvu-find-count" class="find-count"></span>
-        <button id="btn-find-prev" class="find-nav-btn" title="Previous match (Shift+Enter / Shift+F3)">▲</button>
-        <button id="btn-find-next" class="find-nav-btn" title="Next match (Enter / F3)">▼</button>
+        <button id="btn-find-prev" class="find-nav-btn" title="Previous match (Shift+Enter / Ctrl+Shift+G / Shift+F3)">▲</button>
+        <button id="btn-find-next" class="find-nav-btn" title="Next match (Enter / Ctrl+G / F3)">▼</button>
         <button id="btn-find-close" class="find-nav-btn" title="Clear search (Esc)">×</button>
       </div>
     </div>
@@ -425,7 +521,7 @@ pub fn build_gui_html(
     <div class="toolbar-group">
       <div class="zoom-group">
         <button id="btn-zoom-out" class="zoom-btn" title="Zoom Out (Ctrl+-)">−</button>
-        <input id="mdvu-zoom-val" class="zoom-val" value="{zoom_label}" title="Enter zoom % (10%–500%), double-click or Ctrl+0 to reset" />
+        <input id="mdvu-zoom-val" class="zoom-val" value="{zoom_label}" title="Zoom level (10%–500%). Click to edit, double-click to reset (Ctrl+0)" />
         <button id="btn-zoom-in" class="zoom-btn" title="Zoom In (Ctrl++)">+</button>
       </div>
     </div>
@@ -435,7 +531,7 @@ pub fn build_gui_html(
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
       </button>
       <button id="btn-navigator" class="toolbar-btn {nav_active}" title="Toggle File Navigator (Ctrl+Shift+D)">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
       </button>
     </div>
   </header>
@@ -445,7 +541,10 @@ pub fn build_gui_html(
     <!-- Left Sidebar: Table of Contents -->
     <aside id="mdvu-toc-sidebar" class="mdvu-sidebar mdvu-sidebar-left {toc_hidden}">
       <div class="sidebar-header">
-        <span class="sidebar-title">📑 Table of Contents</span>
+        <span class="sidebar-title">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          <span>Table of Contents</span>
+        </span>
         <button id="btn-toc-close" class="sidebar-close" title="Hide Table of Contents (Ctrl+Shift+S)">×</button>
       </div>
       <nav id="mdvu-toc-tree" class="sidebar-content"></nav>
@@ -463,25 +562,97 @@ pub fn build_gui_html(
     <aside id="mdvu-navigator-sidebar" class="mdvu-sidebar mdvu-sidebar-right {nav_hidden}">
       <div id="mdvu-nav-resizer" class="sidebar-resizer sidebar-resizer-right"></div>
       <div class="sidebar-header">
-        <span class="sidebar-title">📁 <span id="nav-vault-name">{safe_vault_name}</span></span>
+        <span class="sidebar-title" title="{safe_vault_name}">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span id="nav-vault-name">{safe_vault_name}</span>
+        </span>
+        <button id="btn-nav-close" class="sidebar-close" title="Hide File Navigator (Ctrl+Shift+D)">×</button>
+      </div>
+      <div class="nav-mode-bar">
         <div class="nav-mode-group" title="Switch between folder tree and flat file list">
           <button id="btn-nav-mode-tree" class="nav-mode-btn active" type="button">Tree</button>
           <button id="btn-nav-mode-list" class="nav-mode-btn" type="button">List</button>
         </div>
-        <button id="btn-nav-close" class="sidebar-close" title="Hide File Navigator (Ctrl+Shift+D)">×</button>
       </div>
       <div id="mdvu-nav-tree" class="sidebar-content"></div>
     </aside>
+  </div>
+
+  <!-- Interactive About Modal (matching macOS AboutPanel.swift) -->
+  <div id="mdvu-about-backdrop" role="dialog" aria-modal="true" aria-label="About mdvu">
+    <div class="about-card">
+      <button id="btn-about-close" class="about-close" title="Close (Esc)">×</button>
+      <svg width="112" height="112" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="16" y="16" width="224" height="224" rx="48" fill="#F6F8FB" stroke="#DCE3EE" stroke-width="4"/>
+        <path d="M176 16L240 80H196C184.954 80 176 71.0457 176 60V16Z" fill="#007AFF"/>
+        <text x="38" y="122" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="82" font-weight="800" fill="#102542">MD</text>
+        <rect x="40" y="142" width="128" height="10" rx="5" fill="#B8C5D6"/>
+        <rect x="40" y="162" width="112" height="10" rx="5" fill="#B8C5D6"/>
+        <rect x="40" y="182" width="96" height="10" rx="5" fill="#B8C5D6"/>
+        <rect x="40" y="202" width="68" height="10" rx="5" fill="#0088FF"/>
+        <circle cx="196" cy="196" r="34" fill="#1B3B6F"/>
+        <path d="M170 196C176 183 185 178 196 178C207 178 216 183 222 196C216 209 207 214 196 214C185 214 176 209 170 196Z" fill="#FFFFFF"/>
+        <circle cx="196" cy="196" r="10" fill="#0088FF"/>
+        <circle cx="196" cy="196" r="5" fill="#102542"/>
+        <circle cx="199" cy="193" r="2" fill="#FFFFFF"/>
+      </svg>
+      <a class="about-title" href="https://github.com/stpork/mdvu" data-external="https://github.com/stpork/mdvu" title="https://github.com/stpork/mdvu">mdvu</a>
+      <div class="about-subtitle">Markdown and Mermaid Viewer</div>
+      <div class="about-version">
+        Version: <a href="https://github.com/stpork/mdvu/releases/tag/v{safe_version}" data-external="https://github.com/stpork/mdvu/releases/tag/v{safe_version}" title="https://github.com/stpork/mdvu/releases/tag/v{safe_version}">{safe_version}</a>
+      </div>
+      <div class="about-copy">
+        Copyright © 2026 <a href="mailto:finndebear@gmail.com" data-external="mailto:finndebear@gmail.com" title="mailto:finndebear@gmail.com">Finn de Bear</a>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 (()=>{{
   const escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const ICON_FOLDER = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+  const ICON_DOC = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`;
+  const ICON_ARROW = `<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+
   window.__mdvuInitialTOC = {toc_json};
   window.__mdvuInitialVault = {vault_json};
   window.__mdvuCurrentPath = {current_path_json};
   window.__mdvuNavMode = 'tree';
+
+  // Preserve reading anchor across layout / zoom changes (matches macOS DocumentWindowController.swift)
+  function preserveReadingAnchor(mutateLayout) {{
+    const mainEl = document.getElementById('mdvu-main-content');
+    if (!mainEl) {{
+      mutateLayout();
+      return;
+    }}
+    const rect = mainEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let el = document.elementFromPoint(cx, cy);
+    while (el && el !== document.body && el !== document.documentElement && el !== mainEl) {{
+      if (['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'PRE', 'TR', 'BLOCKQUOTE', 'TABLE', 'IMG'].includes(el.tagName)) {{
+        break;
+      }}
+      el = el.parentElement;
+    }}
+    const prevTop = (el && el !== document.body && el !== mainEl) ? el.getBoundingClientRect().top : null;
+    const maxScroll = Math.max(1, mainEl.scrollHeight - mainEl.clientHeight);
+    const prevRatio = mainEl.scrollTop / maxScroll;
+
+    mutateLayout();
+
+    requestAnimationFrame(() => {{
+      if (prevTop !== null && el && el.isConnected) {{
+        const delta = el.getBoundingClientRect().top - prevTop;
+        mainEl.scrollTop += delta;
+      }} else {{
+        const newMax = Math.max(1, mainEl.scrollHeight - mainEl.clientHeight);
+        mainEl.scrollTop = newMax * prevRatio;
+      }}
+    }});
+  }}
 
   // Setup TOC sidebar
   function renderTOC(entries) {{
@@ -496,13 +667,14 @@ pub fn build_gui_html(
       const lvl = Math.min(Math.max(Number(e.level) || 1, 1), 6);
       const safeId = escHtml(e.id);
       const safeTitle = escHtml(e.title);
-      html += `<a class="toc-entry toc-lvl-${{lvl}}" href="#${{encodeURIComponent(e.id)}}" data-id="${{safeId}}">${{safeTitle}}</a>`;
+      html += `<a class="toc-entry toc-lvl-${{lvl}}" href="#${{encodeURIComponent(e.id)}}" data-id="${{safeId}}" title="${{safeTitle}}">${{safeTitle}}</a>`;
     }});
     container.innerHTML = html;
 
     container.querySelectorAll('a').forEach(a => {{
       a.addEventListener('click', (evt) => {{
         evt.preventDefault();
+        evt.stopPropagation();
         const id = a.getAttribute('data-id');
         if (window.__mdvuScrollToFragment) {{
           window.__mdvuScrollToFragment(id);
@@ -535,42 +707,56 @@ pub fn build_gui_html(
       container.innerHTML = '<div style="color:var(--muted);padding:16px 10px;text-align:center;font-size:12px;">No markdown files</div>';
       return;
     }}
-    const isMatch = (itemPath) => currentPath && (itemPath === currentPath || currentPath.endsWith('/' + itemPath) || itemPath.endsWith('/' + currentPath));
+    const normCur = (currentPath || '').replace(/\\/g, '/');
+    const isMatch = (itemPath) => {{
+      if (!normCur || !itemPath) return false;
+      const normItem = itemPath.replace(/\\/g, '/');
+      return normItem === normCur || normCur.endsWith('/' + normItem) || normItem.endsWith('/' + normCur);
+    }};
+    const containsActive = (item) => {{
+      if (!item.is_dir) return isMatch(item.path);
+      return (item.children || []).some(containsActive);
+    }};
 
     if (window.__mdvuNavMode === 'list') {{
-      const flat = flattenVault(items).sort((a, b) => a.name.localeCompare(b.name, undefined, {{ sensitivity: 'base' }}));
+      const flat = flattenVault(items).sort((a, b) => {{
+        const la = a.rel_path || a.name;
+        const lb = b.rel_path || b.name;
+        return la.localeCompare(lb, undefined, {{ numeric: true, sensitivity: 'base' }});
+      }});
       let h = '';
       flat.forEach(item => {{
         const isAct = isMatch(item.path);
-        const sub = item.rel_path && item.rel_path !== item.name ? `<span class="nav-subpath">${{escHtml(item.rel_path)}}</span>` : '';
-        h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}" title="${{escHtml(item.rel_path || item.name)}}">
-          📄 <span>${{escHtml(item.name)}}</span>${{sub}}
+        const displayLabel = item.rel_path || item.name;
+        h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}" title="${{escHtml(item.path)}}">
+          ${{ICON_DOC}} <span class="nav-item-label">${{escHtml(displayLabel)}}</span>
         </div>`;
       }});
       container.innerHTML = h;
     }} else {{
-      function buildTree(list) {{
+      function buildTree(list, depth = 0) {{
         let h = '';
         list.forEach(item => {{
           if (item.is_dir) {{
+            const expanded = depth === 0 || containsActive(item);
             h += `<div class="nav-folder">
-              <div class="nav-item nav-folder-header">
-                <span class="nav-arrow expanded">▶</span> 📁 <span>${{escHtml(item.name)}}</span>
+              <div class="nav-item nav-folder-header" title="${{escHtml(item.path)}}">
+                <span class="nav-arrow ${{expanded ? 'expanded' : ''}}">${{ICON_ARROW}}</span> ${{ICON_FOLDER}} <span class="nav-item-label">${{escHtml(item.name)}}</span>
               </div>
-              <div class="nav-folder-content">
-                ${{item.children ? buildTree(item.children) : ''}}
+              <div class="nav-folder-content" style="display:${{expanded ? 'block' : 'none'}}">
+                ${{item.children ? buildTree(item.children, depth + 1) : ''}}
               </div>
             </div>`;
           }} else {{
             const isAct = isMatch(item.path);
-            h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}">
-              📄 <span>${{escHtml(item.name)}}</span>
+            h += `<div class="nav-item nav-file ${{isAct ? 'active' : ''}}" data-path="${{escHtml(item.path)}}" title="${{escHtml(item.path)}}">
+              <span style="width:12px;flex-shrink:0;"></span> ${{ICON_DOC}} <span class="nav-item-label">${{escHtml(item.name)}}</span>
             </div>`;
           }}
         }});
         return h;
       }}
-      container.innerHTML = buildTree(items);
+      container.innerHTML = buildTree(items, 0);
 
       container.querySelectorAll('.nav-folder-header').forEach(hdr => {{
         hdr.addEventListener('click', () => {{
@@ -593,6 +779,11 @@ pub fn build_gui_html(
         }}
       }});
     }});
+
+    const activeEl = container.querySelector('.nav-item.active');
+    if (activeEl) {{
+      activeEl.scrollIntoView({{ block: 'nearest' }});
+    }}
   }}
 
   renderTOC(window.__mdvuInitialTOC);
@@ -602,29 +793,32 @@ pub fn build_gui_html(
   const btnModeTree = document.getElementById('btn-nav-mode-tree');
   const btnModeList = document.getElementById('btn-nav-mode-list');
   btnModeTree?.addEventListener('click', () => {{
+    if (window.__mdvuNavMode === 'tree') return;
     window.__mdvuNavMode = 'tree';
     btnModeTree.classList.add('active');
     btnModeList?.classList.remove('active');
     renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
   }});
   btnModeList?.addEventListener('click', () => {{
+    if (window.__mdvuNavMode === 'list') return;
     window.__mdvuNavMode = 'list';
     btnModeList.classList.add('active');
     btnModeTree?.classList.remove('active');
     renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
   }});
 
-  // Sidebar drag resizers
+  // Sidebar drag resizers (constrained to 220px..48% for TOC and 180px..45% for Navigator, matching macOS)
   function setupResizer(resizerId, cssVar, isLeft) {{
     const resizer = document.getElementById(resizerId);
     if (!resizer) return;
     resizer.addEventListener('mousedown', (e) => {{
       e.preventDefault();
       resizer.classList.add('dragging');
+      const minW = isLeft ? 220 : 180;
       const onMove = (ev) => {{
-        const maxW = Math.floor(window.innerWidth * 0.48);
+        const maxW = Math.floor(window.innerWidth * (isLeft ? 0.48 : 0.45));
         const w = isLeft ? ev.clientX : (window.innerWidth - ev.clientX);
-        const clamped = Math.max(180, Math.min(maxW, w));
+        const clamped = Math.max(minW, Math.min(maxW, w));
         document.documentElement.style.setProperty(cssVar, clamped + 'px');
       }};
       const onUp = () => {{
@@ -661,7 +855,9 @@ pub fn build_gui_html(
     const html = document.documentElement;
     const btn = document.getElementById('btn-full-width');
     const isFw = typeof force === 'boolean' ? force : !html.classList.contains('full-width');
-    html.classList.toggle('full-width', isFw);
+    preserveReadingAnchor(() => {{
+      html.classList.toggle('full-width', isFw);
+    }});
     if (btn) btn.classList.toggle('active', isFw);
   }};
 
@@ -673,8 +869,14 @@ pub fn build_gui_html(
   window.__mdvuSetZoom = (zoomFactor, formattedLabel) => {{
     const val = document.getElementById('mdvu-zoom-val');
     if (val) val.value = formattedLabel || (Math.round(zoomFactor * 100) + '%');
-    const wrap = document.getElementById('mdvu-article-wrap') || document.querySelector('article');
-    if (wrap) wrap.style.zoom = zoomFactor;
+    const outBtn = document.getElementById('btn-zoom-out');
+    const inBtn = document.getElementById('btn-zoom-in');
+    if (outBtn) outBtn.disabled = zoomFactor <= 0.105;
+    if (inBtn) inBtn.disabled = zoomFactor >= 4.995;
+    preserveReadingAnchor(() => {{
+      const wrap = document.getElementById('mdvu-article-wrap') || document.querySelector('article');
+      if (wrap) wrap.style.zoom = zoomFactor;
+    }});
   }};
 
   window.__mdvuUpdateHistory = (canBack, canFwd) => {{
@@ -690,11 +892,32 @@ pub fn build_gui_html(
     }}
   }};
 
+  // About Modal controller
+  const aboutBackdrop = document.getElementById('mdvu-about-backdrop');
+  window.__mdvuShowAbout = () => {{
+    aboutBackdrop?.classList.add('visible');
+  }};
+  window.__mdvuHideAbout = () => {{
+    aboutBackdrop?.classList.remove('visible');
+  }};
+  document.getElementById('btn-about-close')?.addEventListener('click', () => window.__mdvuHideAbout());
+  aboutBackdrop?.addEventListener('click', (e) => {{
+    if (e.target === aboutBackdrop) window.__mdvuHideAbout();
+  }});
+  aboutBackdrop?.querySelectorAll('a[data-external]').forEach(a => {{
+    a.addEventListener('click', (e) => {{
+      e.preventDefault();
+      const target = a.getAttribute('data-external');
+      if (target) window.ipc?.postMessage('open_external:' + target);
+    }});
+  }});
+
   // Fast in-place document update (preserves shell, sidebars, and loaded JS runtimes)
   window.__mdvuUpdateDocument = (payload) => {{
     const mainEl = document.getElementById('mdvu-main-content');
+    const maxScroll = mainEl ? Math.max(1, mainEl.scrollHeight - mainEl.clientHeight) : 1;
     const prevRatio = (payload.preserveScroll && mainEl)
-      ? (mainEl.scrollTop / (mainEl.scrollHeight || 1))
+      ? (mainEl.scrollTop / maxScroll)
       : 0;
 
     if (payload.baseUrl !== undefined) {{
@@ -737,14 +960,22 @@ pub fn build_gui_html(
 
     window.__mdvuInitArticle?.();
 
+    const findInput = document.getElementById('mdvu-find-input');
+    if (findInput && findInput.value.trim() && window.__mdvuFind) {{
+      updateFindCount(window.__mdvuFind.search(findInput.value));
+    }}
+
     requestAnimationFrame(() => {{
-      if (mainEl) {{
-        mainEl.scrollTop = payload.preserveScroll ? (mainEl.scrollHeight * prevRatio) : 0;
+      if (payload.fragment && window.__mdvuScrollToFragment) {{
+        window.__mdvuScrollToFragment(payload.fragment, false);
+      }} else if (mainEl) {{
+        const newMax = Math.max(1, mainEl.scrollHeight - mainEl.clientHeight);
+        mainEl.scrollTop = payload.preserveScroll ? (newMax * prevRatio) : 0;
       }}
     }});
   }};
 
-  // Intercept article link clicks (external links -> system browser, relative .md -> open_path)
+  // Intercept article link clicks (external links -> system browser, relative .md -> open_rel_path)
   document.getElementById('mdvu-main-content')?.addEventListener('click', (evt) => {{
     const anchor = evt.target.closest?.('a[href]');
     if (!anchor) return;
@@ -760,33 +991,28 @@ pub fn build_gui_html(
       window.ipc?.postMessage('open_external:' + rawHref);
       return;
     }}
-    const pathPart = rawHref.split('#')[0].split('?')[0];
+    const [beforeHash, hashPart] = rawHref.split('#');
+    const pathPart = beforeHash.split('?')[0];
     if (/\.(md|markdown|mdown|mkd|txt)$/i.test(pathPart)) {{
       evt.preventDefault();
       let decoded = pathPart;
       try {{ decoded = decodeURIComponent(pathPart); }} catch {{}}
-      window.ipc?.postMessage('open_rel_path:' + decoded);
+      let decodedHash = hashPart || '';
+      if (decodedHash) {{
+        try {{ decodedHash = decodeURIComponent(decodedHash); }} catch {{}}
+      }}
+      window.ipc?.postMessage('open_rel_path:' + decoded + (decodedHash ? '#' + decodedHash : ''));
     }}
   }});
 
   // Wire Toolbar buttons
   document.getElementById('btn-back')?.addEventListener('click', () => window.ipc?.postMessage('go_back'));
   document.getElementById('btn-forward')?.addEventListener('click', () => window.ipc?.postMessage('go_forward'));
-  document.getElementById('btn-toc')?.addEventListener('click', () => {{
-    window.ipc?.postMessage('toggle_toc');
-  }});
-  document.getElementById('btn-toc-close')?.addEventListener('click', () => {{
-    window.ipc?.postMessage('toggle_toc');
-  }});
-  document.getElementById('btn-navigator')?.addEventListener('click', () => {{
-    window.ipc?.postMessage('toggle_nav');
-  }});
-  document.getElementById('btn-nav-close')?.addEventListener('click', () => {{
-    window.ipc?.postMessage('toggle_nav');
-  }});
-  document.getElementById('btn-full-width')?.addEventListener('click', () => {{
-    window.ipc?.postMessage('toggle_full_width');
-  }});
+  document.getElementById('btn-toc')?.addEventListener('click', () => window.ipc?.postMessage('toggle_toc'));
+  document.getElementById('btn-toc-close')?.addEventListener('click', () => window.ipc?.postMessage('toggle_toc'));
+  document.getElementById('btn-navigator')?.addEventListener('click', () => window.ipc?.postMessage('toggle_nav'));
+  document.getElementById('btn-nav-close')?.addEventListener('click', () => window.ipc?.postMessage('toggle_nav'));
+  document.getElementById('btn-full-width')?.addEventListener('click', () => window.ipc?.postMessage('toggle_full_width'));
   document.getElementById('btn-zoom-in')?.addEventListener('click', () => window.ipc?.postMessage('zoom_in'));
   document.getElementById('btn-zoom-out')?.addEventListener('click', () => window.ipc?.postMessage('zoom_out'));
 
@@ -807,7 +1033,7 @@ pub fn build_gui_html(
     window.ipc?.postMessage('set_zoom:' + zoomInput.value);
   }});
 
-  // Ctrl + Mouse Wheel smooth zoom
+  // Ctrl + Mouse Wheel smooth zoom & Mouse Side Buttons (Back/Forward)
   window.addEventListener('wheel', (e) => {{
     if (e.ctrlKey || e.metaKey) {{
       e.preventDefault();
@@ -816,16 +1042,33 @@ pub fn build_gui_html(
     }}
   }}, {{ passive: false }});
 
-  // Wire Find / Search Box
+  window.addEventListener('mouseup', (e) => {{
+    if (e.button === 3) {{
+      e.preventDefault();
+      window.ipc?.postMessage('go_back');
+    }} else if (e.button === 4) {{
+      e.preventDefault();
+      window.ipc?.postMessage('go_forward');
+    }}
+  }});
+
+  // Wire Find / Search Box with 80ms debounce (matches macOS NSSearchField responsiveness)
   const findInput = document.getElementById('mdvu-find-input');
   const findCount = document.getElementById('mdvu-find-count');
+  let findDebounceTimer = null;
 
   function updateFindCount(res) {{
     if (!findCount) return;
-    if (!res || res.count === 0) {{
-      findCount.textContent = findInput && findInput.value.trim() ? 'No matches' : '';
+    const hasQuery = !!(findInput && findInput.value.trim());
+    if (!hasQuery) {{
+      findCount.textContent = '';
+      findCount.classList.remove('no-match');
+    }} else if (!res || res.count === 0) {{
+      findCount.textContent = '0/0';
+      findCount.classList.add('no-match');
     }} else {{
-      findCount.textContent = `${{res.current}} of ${{res.count}}`;
+      findCount.textContent = `${{res.current}}/${{res.count}}`;
+      findCount.classList.remove('no-match');
     }}
   }}
 
@@ -843,47 +1086,64 @@ pub fn build_gui_html(
   }};
 
   findInput?.addEventListener('input', () => {{
-    if (window.__mdvuFind) {{
-      const res = window.__mdvuFind.search(findInput.value);
-      updateFindCount(res);
+    if (findDebounceTimer) clearTimeout(findDebounceTimer);
+    const val = findInput.value;
+    if (!val || !val.trim()) {{
+      if (window.__mdvuFind) window.__mdvuFind.clear();
+      updateFindCount({{ count: 0, current: 0 }});
+      return;
     }}
+    findDebounceTimer = setTimeout(() => {{
+      if (window.__mdvuFind) {{
+        updateFindCount(window.__mdvuFind.search(val));
+      }}
+    }}, 80);
   }});
 
   findInput?.addEventListener('keydown', (e) => {{
     if (e.key === 'Enter') {{
       e.preventDefault();
+      if (findDebounceTimer) {{
+        clearTimeout(findDebounceTimer);
+        findDebounceTimer = null;
+        if (window.__mdvuFind) updateFindCount(window.__mdvuFind.search(findInput.value));
+        return;
+      }}
       if (window.__mdvuFind) {{
         const res = e.shiftKey ? window.__mdvuFind.previous() : window.__mdvuFind.next();
         updateFindCount(res);
       }}
     }} else if (e.key === 'Escape') {{
       e.preventDefault();
+      if (findDebounceTimer) clearTimeout(findDebounceTimer);
       if (window.__mdvuFind) window.__mdvuFind.clear();
       if (findInput) {{ findInput.value = ''; findInput.blur(); }}
-      if (findCount) findCount.textContent = '';
+      updateFindCount(null);
     }}
   }});
 
-  document.getElementById('btn-find-next')?.addEventListener('click', () => {{
-    window.__mdvuFindNext();
-  }});
-  document.getElementById('btn-find-prev')?.addEventListener('click', () => {{
-    window.__mdvuFindPrev();
-  }});
+  document.getElementById('btn-find-next')?.addEventListener('click', () => window.__mdvuFindNext());
+  document.getElementById('btn-find-prev')?.addEventListener('click', () => window.__mdvuFindPrev());
   document.getElementById('btn-find-close')?.addEventListener('click', () => {{
+    if (findDebounceTimer) clearTimeout(findDebounceTimer);
     if (window.__mdvuFind) window.__mdvuFind.clear();
     if (findInput) findInput.value = '';
-    if (findCount) findCount.textContent = '';
+    updateFindCount(null);
   }});
 
   // Keyboard shortcut listener in webview
   window.addEventListener('keydown', (e) => {{
     const ctrl = e.ctrlKey || e.metaKey;
+    if (e.key === 'Escape' && aboutBackdrop?.classList.contains('visible')) {{
+      e.preventDefault();
+      window.__mdvuHideAbout();
+      return;
+    }}
     if (ctrl && (e.key === 'f' || e.key === 'F')) {{
       e.preventDefault();
       findInput?.focus();
       findInput?.select();
-    }} else if (e.key === 'F3') {{
+    }} else if (e.key === 'F3' || (ctrl && (e.key === 'g' || e.key === 'G'))) {{
       e.preventDefault();
       if (window.__mdvuFind) updateFindCount(e.shiftKey ? window.__mdvuFind.previous() : window.__mdvuFind.next());
     }} else if (ctrl && (e.key === 'o' || e.key === 'O')) {{
@@ -908,6 +1168,13 @@ pub fn build_gui_html(
     }} else if (ctrl && e.shiftKey && (e.key === 'w' || e.key === 'W')) {{
       e.preventDefault();
       window.ipc?.postMessage('toggle_full_width');
+    }} else if (ctrl && !e.shiftKey && (e.key === 'w' || e.key === 'W')) {{
+      e.preventDefault();
+      if (aboutBackdrop?.classList.contains('visible')) {{
+        window.__mdvuHideAbout();
+      }} else {{
+        window.ipc?.postMessage('close_window');
+      }}
     }} else if (ctrl && (e.key === '=' || e.key === '+')) {{
       e.preventDefault();
       window.ipc?.postMessage('zoom_in');
@@ -928,13 +1195,21 @@ pub fn build_gui_html(
       window.ipc?.postMessage('toggle_fullscreen');
     }} else if (e.key === 'Escape') {{
       if (document.activeElement === findInput) {{
+        if (findDebounceTimer) clearTimeout(findDebounceTimer);
         if (window.__mdvuFind) window.__mdvuFind.clear();
         findInput.value = '';
-        if (findCount) findCount.textContent = '';
+        updateFindCount(null);
         findInput.blur();
       }}
     }}
   }});
+
+  // Notify host once the DOM and app.js have initialized so on-demand runtimes can be injected reliably
+  if (document.readyState === 'loading') {{
+    document.addEventListener('DOMContentLoaded', () => window.ipc?.postMessage('shell_ready'));
+  }} else {{
+    window.ipc?.postMessage('shell_ready');
+  }}
 }})();
 </script>
 "##,

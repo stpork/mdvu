@@ -81,7 +81,8 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 
 | Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
-| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Standalone package containing unified `mdvu.exe` (GUI & CLI) |
+| **`mdvu-X.Y.Z-windows-x86_64.msi`** | Windows 10 & 11 (`x86_64`) | Native Windows MSI installer (Start Menu shortcut, `PATH` CLI registration, `.md` file associations) |
+| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Portable standalone package containing single-file `mdvu.exe` (GUI & CLI) |
 | **`mdvu-X.Y.Z-macos.dmg`** | macOS Universal (`arm64` + `x86_64`) | Graphical macOS installer with Drag-to-Applications |
 | **`mdvu-X.Y.Z-macos-universal.zip`** | macOS Universal (`arm64` + `x86_64`) | Portable archive for both Apple Silicon and Intel |
 | **`mdvu-X.Y.Z-macos-arm64.zip`** | macOS Apple Silicon (`arm64`) | Ultra-compact (2.9 MB) optimized for M1/M2/M3/M4 |
@@ -91,20 +92,40 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 
 ### 3. Windows Installation & Usage
 
+#### Option A: MSI Installer (Recommended)
+1. Download **`mdvu-X.Y.Z-windows-x86_64.msi`** from [Releases](https://github.com/stpork/mdvu/releases).
+2. Double-click to install (or run silently via `msiexec /i mdvu-X.Y.Z-windows-x86_64.msi /qn`).
+   * Installs to `C:\Program Files\MDVu`
+   * Automatically adds `mdvu` to your `PATH`
+   * Creates a Start Menu shortcut (`MDVu`) and registers `.md`, `.markdown`, `.mdown`, `.mkd` in Explorer's **Open with** menu.
+
+#### Option B: Scoop / WinGet / Chocolatey
+```powershell
+# Scoop (direct manifest or bucket):
+scoop install https://github.com/stpork/mdvu/releases/latest/download/mdvu.json
+
+# WinGet:
+winget install stpork.mdvu
+
+# Chocolatey:
+choco install mdvu
+```
+
+#### Option C: Portable ZIP Archive
 1. Download **`mdvu-X.Y.Z-windows-x86_64.zip`** from [Releases](https://github.com/stpork/mdvu/releases).
 2. Extract the archive into your preferred tools folder (e.g. `C:\Tools\MDVu` or `%LOCALAPPDATA%\Programs\MDVu`).
 3. Launch `mdvu.exe` directly or run it from command line or PowerShell:
    ```cmd
    mdvu.exe document.md
    ```
-4. *(Optional)* Add the folder to your `PATH` environment variable to use `mdvu` anywhere from terminal or File Explorer.
 
-**Building from source on Windows:**
+**Building & packaging from source on Windows:**
 ```powershell
-# Using the root PowerShell driver:
-.\build.ps1
+# Build release binary, portable .zip, .msi installer, and Scoop/WinGet/Chocolatey manifests:
+.\scripts\build-windows.ps1
 
-# Or using the Command Prompt wrapper:
+# Or using the root PowerShell / CMD drivers:
+.\build.ps1
 build.cmd
 
 # Or using Cargo directly:

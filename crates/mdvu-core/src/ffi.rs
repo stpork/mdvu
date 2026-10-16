@@ -103,11 +103,13 @@ pub unsafe extern "C" fn mdvu_render_body(
 
     let theme = c_str_to_rust(theme_str).unwrap_or("light");
 
-    let pipeline = MarkdownPipeline::new(dialect, is_dialect_explicit);
-    let (preprocessed, effective_dialect) = pipeline.preprocess_cow(source_str);
-
-    let parser = MarkdownParser::with_options(theme, enable_diagrams);
-    let rendered = parser.render(&preprocessed);
+    let (rendered, effective_dialect) = crate::render_markdown_body(
+        source_str,
+        dialect,
+        is_dialect_explicit,
+        theme,
+        enable_diagrams,
+    );
 
     let has_title = rendered.title.is_some();
     let final_title = rendered.title.unwrap_or_default();

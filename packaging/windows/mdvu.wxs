@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product
+        Id="*"
+        Name="MDVu"
+        Language="1033"
+        Version="$(var.Version)"
+        Manufacturer="Finn de Bear"
+        UpgradeCode="A834D8F1-5E1B-4C72-9F0E-7C64112E5B10">
+
+        <Package
+            InstallerVersion="500"
+            Compressed="yes"
+            InstallScope="perMachine"
+            Platform="x64"
+            Description="MDVu - Fast, lightweight native Markdown and Mermaid viewer"
+            Comments="Copyright (c) 2026 Finn de Bear" />
+
+        <MajorUpgrade
+            DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+            Schedule="afterInstallInitialize" />
+
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+        <Icon Id="MdvuIcon.ico" SourceFile="packaging\windows\mdvu.ico" />
+        <Property Id="ARPPRODUCTICON" Value="MdvuIcon.ico" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/stpork/mdvu" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/stpork/mdvu" />
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLDIR" Name="MDVu" />
+            </Directory>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="MDVu" />
+            </Directory>
+        </Directory>
+
+        <DirectoryRef Id="INSTALLDIR">
+            <Component Id="MainExecutable" Guid="B491A77E-9A56-4D83-8C45-2C8B69262301" Win64="yes">
+                <File Id="MdvuExe" Name="mdvu.exe" Source="$(var.DistDir)\mdvu.exe" KeyPath="yes" />
+
+                <!-- Add INSTALLDIR to system PATH so 'mdvu' works in PowerShell / CMD -->
+                <Environment
+                    Id="PATH"
+                    Name="PATH"
+                    Value="[INSTALLDIR]"
+                    Permanent="no"
+                    Part="last"
+                    Action="set"
+                    System="yes" />
+
+                <!-- Register MDVu.MarkdownDocument ProgId and file associations -->
+                <RegistryKey Root="HKLM" Key="Software\Classes\MDVu.MarkdownDocument">
+                    <RegistryValue Type="string" Value="Markdown Document" />
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell\open\command">
+                        <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot; &quot;%1&quot;" />
+                    </RegistryKey>
+                </RegistryKey>
+
+                <RegistryKey Root="HKLM" Key="Software\Classes\.md\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKLM" Key="Software\Classes\.markdown\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKLM" Key="Software\Classes\.mdown\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKLM" Key="Software\Classes\.mkd\OpenWithProgids">
+                    <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                </RegistryKey>
+                <RegistryKey Root="HKLM" Key="Software\Classes\Applications\mdvu.exe\shell\open\command">
+                    <RegistryValue Type="string" Value="&quot;[INSTALLDIR]mdvu.exe&quot; &quot;%1&quot;" />
+                </RegistryKey>
+            </Component>
+
+            <Component Id="DocumentationFiles" Guid="C192B88F-3B67-4E94-9D56-3D9C7A373402" Win64="yes">
+                <File Id="ReadmeTxt" Name="README.txt" Source="$(var.DistDir)\README.txt" KeyPath="yes" />
+                <File Id="LicenseTxt" Name="LICENSE.txt" Source="$(var.DistDir)\LICENSE.txt" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcut" Guid="D2A3C990-4C78-4FA5-AE67-4EAD8B484503" Win64="yes">
+                <Shortcut
+                    Id="ApplicationStartMenuShortcut"
+                    Name="MDVu"
+                    Description="Markdown and Mermaid Viewer"
+                    Target="[INSTALLDIR]mdvu.exe"
+                    WorkingDirectory="INSTALLDIR"
+                    Icon="MdvuIcon.ico" />
+                <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+                <RegistryValue
+                    Root="HKCU"
+                    Key="Software\FinnDeBear\MDVu"
+                    Name="installed"
+                    Type="integer"
+                    Value="1"
+                    KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+
+        <Feature Id="ProductFeature" Title="MDVu" Level="1">
+            <ComponentRef Id="MainExecutable" />
+            <ComponentRef Id="DocumentationFiles" />
+            <ComponentRef Id="ApplicationShortcut" />
+        </Feature>
+
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <WixVariable Id="WixUILicenseRtf" Value="packaging\windows\license.rtf" />
+        <UIRef Id="WixUI_InstallDir" />
+    </Product>
+</Wix>

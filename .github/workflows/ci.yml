@@ -126,7 +126,7 @@ jobs:
         shell: pwsh
         run: ./scripts/build-windows.ps1
 
-      - name: Validate Windows Artifacts
+      - name: Validate Windows Artifacts (.exe, .zip, .msi, manifests)
         shell: pwsh
         run: |
           if (-not (Test-Path "dist/windows/mdvu.exe")) {
@@ -136,9 +136,19 @@ jobs:
           if (-not $zip) {
             throw "Release zip archive not found in dist/"
           }
-          Write-Host "Found release zip: $($zip.FullName)"
+          $msi = Get-ChildItem "dist" -Filter "mdvu-*-windows-x86_64.msi" | Select-Object -First 1
+          if (-not $msi) {
+            throw "Release MSI installer not found in dist/"
+          }
+          foreach ($manifest in @("dist/mdvu.json", "dist/stpork.mdvu.yaml", "dist/chocolatey/mdvu.nuspec")) {
+            if (-not (Test-Path $manifest)) {
+              throw "Package manager manifest $manifest was not generated"
+            }
+          }
+          Write-Host "Found release zip: $($zip.FullName) ($($zip.Length) bytes)"
+          Write-Host "Found release MSI: $($msi.FullName) ($($msi.Length) bytes)"
 
-      - name: Test Windows Headless CLI Functionality
+      - name: Test Windows Headless CLI & Benchmarks
         shell: pwsh
         run: |
           $exe = (Resolve-Path "dist/windows/mdvu.exe").Path
@@ -155,7 +165,9 @@ jobs:
           if ($toc -notmatch "why-mdvu") {
             throw "CLI TOC JSON extraction failed"
           }
-          Write-Host "Windows CLI tests passed successfully" -ForegroundColor Green
+          & $exe --benchmark Tests/Fixtures/test-complete.md | Out-Host
+          & $exe --benchmark Tests/Fixtures/test-heavy.md | Out-Host
+          Write-Host "Windows CLI and benchmark tests passed successfully" -ForegroundColor Green
 
       - name: Upload Windows Release Artifacts
         uses: actions/upload-artifact@v4
@@ -163,6 +175,10 @@ jobs:
           name: mdvu-windows-x86_64
           path: |
             dist/mdvu-*-windows-x86_64.zip
+            dist/mdvu-*-windows-x86_64.msi
             dist/*.sha256
+            dist/mdvu.json
+            dist/stpork.mdvu.yaml
+            dist/chocolatey/**
           if-no-files-found: ignore
           retention-days: 14

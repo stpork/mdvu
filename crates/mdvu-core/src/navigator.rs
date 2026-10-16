@@ -58,12 +58,55 @@ const IGNORED_DIRS: &[&str] = &[
     ".trash",
     "node_modules",
     ".build",
+    "Pods",
     "target",
     "dist",
     ".cache",
     "build",
     "vendor",
 ];
+
+/// Computes the `file://` base URL for a document's parent directory so relative assets resolve properly.
+pub fn get_base_url_for_file(file_path: &Path) -> Option<String> {
+    let abs_path = dunce::canonicalize(file_path).unwrap_or_else(|_| {
+        if file_path.is_absolute() {
+            file_path.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(file_path))
+                .unwrap_or_else(|_| file_path.to_path_buf())
+        }
+    });
+
+    let dir = abs_path.parent().unwrap_or(&abs_path);
+    let mut dir_str = dir.to_string_lossy().replace('\\', "/");
+    if let Some(stripped) = dir_str.strip_prefix("//?/") {
+        dir_str = stripped.to_string();
+    }
+    if !dir_str.ends_with('/') {
+        dir_str.push('/');
+    }
+    if dir_str.starts_with('/') {
+        Some(format!("file://{dir_str}"))
+    } else {
+        Some(format!("file:///{dir_str}"))
+    }
+}
+
+/// Splits a link target (e.g. `docs/arch.md#overview`) into `(path_part, optional_fragment)`.
+pub fn split_path_and_fragment(raw_target: &str) -> (&str, Option<&str>) {
+    match raw_target.split_once('#') {
+        Some((path, frag)) => {
+            let clean_path = path.split('?').next().unwrap_or(path);
+            let clean_frag = if frag.is_empty() { None } else { Some(frag) };
+            (clean_path, clean_frag)
+        }
+        None => {
+            let clean_path = raw_target.split('?').next().unwrap_or(raw_target);
+            (clean_path, None)
+        }
+    }
+}
 
 pub fn scan_directory_tree(dir: &Path, max_depth: usize) -> Vec<VaultItem> {
     let root_norm = dir.to_string_lossy().replace('\\', "/");
@@ -86,7 +129,7 @@ fn scan_directory_tree_inner(dir: &Path, root_norm: &str, max_depth: usize) -> V
     for entry in entries.flatten() {
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_string();
-        if name.starts_with('.') {
+        if name.starts_with('.') || name.ends_with(".app") {
             continue;
         }
         if let Ok(ft) = entry.file_type() {
@@ -468,5 +511,58 @@ mod tests {
         let key = compute_diagram_cache_key("mermaid", "light", "graph TD\nA-->B");
         assert_eq!(key.len(), 64);
         assert!(DiagramCache::is_valid_key(&key));
+    }
+
+    #[test]
+    fn test_diagram_cache_svg_safety_validation() {
+        assert!(DiagramCache::is_safe_svg("<svg viewBox=\"0 0 10 10\"><rect width=\"5\" height=\"5\"/></svg>"));
+        assert!(!DiagramCache::is_safe_svg("<div>Not an svg</div>"));
+        assert!(!DiagramCache::is_safe_svg("<svg><script>alert(1)</script></svg>"));
+        assert!(!DiagramCache::is_safe_svg("<svg onload=\"alert(1)\"></svg>"));
+        assert!(!DiagramCache::is_safe_svg("<svg><a href=\"javascript:alert(1)\">x</a></svg>"));
+    }
+
+    #[test]
+    fn test_split_path_and_fragment() {
+        assert_eq!(
+            split_path_and_fragment("docs/arch.md#overview"),
+            ("docs/arch.md", Some("overview"))
+        );
+        assert_eq!(
+            split_path_and_fragment("docs/arch.md?v=1#sec-2"),
+            ("docs/arch.md", Some("sec-2"))
+        );
+        assert_eq!(split_path_and_fragment("README.md#"), ("README.md", None));
+        assert_eq!(split_path_and_fragment("README.md"), ("README.md", None));
+    }
+
+    #[test]
+    fn test_vault_scanner_filters_ignored_dirs_and_flattens() {
+        let temp = std::env::temp_dir().join(format!("mdvu-test-vault-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp);
+        fs::create_dir_all(temp.join("Notes")).unwrap();
+        fs::create_dir_all(temp.join("node_modules")).unwrap();
+        fs::create_dir_all(temp.join(".hidden")).unwrap();
+        fs::create_dir_all(temp.join("Example.app")).unwrap();
+
+        fs::write(temp.join("root.md"), "# Root").unwrap();
+        fs::write(temp.join("Notes").join("nested.markdown"), "# Nested").unwrap();
+        fs::write(temp.join("node_modules").join("pkg.md"), "# Ignored").unwrap();
+        fs::write(temp.join(".hidden").join("sec.md"), "# Ignored").unwrap();
+        fs::write(temp.join("Example.app").join("bundle.md"), "# Ignored").unwrap();
+
+        let tree = scan_directory_tree(&temp, 4);
+        let flat = flatten_vault_tree(&tree);
+        let names: Vec<&str> = flat.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, vec!["nested.markdown", "root.md"]);
+
+        let first = find_first_markdown(&temp);
+        assert_eq!(first, Some(temp.join("root.md")));
+
+        let base_url = get_base_url_for_file(&temp.join("root.md")).unwrap();
+        assert!(base_url.starts_with("file://"));
+        assert!(base_url.ends_with('/'));
+
+        let _ = fs::remove_dir_all(&temp);
     }
 }

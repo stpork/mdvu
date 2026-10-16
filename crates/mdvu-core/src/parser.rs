@@ -23,8 +23,14 @@ pub struct RenderedDocument {
     pub has_math: bool,
 }
 
-fn escape_html(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
+pub fn escape_html(input: &str) -> String {
+    if !input
+        .bytes()
+        .any(|b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''))
+    {
+        return input.to_string();
+    }
+    let mut out = String::with_capacity(input.len() + 16);
     for c in input.chars() {
         match c {
             '&' => out.push_str("&amp;"),

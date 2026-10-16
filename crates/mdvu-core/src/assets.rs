@@ -16,9 +16,15 @@ static PLANTUML_JS: OnceLock<Option<CString>> = OnceLock::new();
 static KATEX_JS: OnceLock<Option<CString>> = OnceLock::new();
 
 fn decompress_lzma(bytes: &[u8]) -> Option<CString> {
+    const XZ_MAGIC: &[u8] = &[0xFD, b'7', b'z', b'X', b'Z', 0x00];
     let mut reader = Cursor::new(bytes);
     let mut output = Vec::with_capacity(bytes.len() * 4);
-    if lzma_rs::lzma_decompress(&mut reader, &mut output).is_err() {
+    let res = if bytes.starts_with(XZ_MAGIC) {
+        lzma_rs::xz_decompress(&mut reader, &mut output)
+    } else {
+        lzma_rs::lzma_decompress(&mut reader, &mut output)
+    };
+    if res.is_err() {
         return None;
     }
     CString::new(output).ok()

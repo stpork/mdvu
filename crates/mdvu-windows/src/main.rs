@@ -1,14 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod gui_shell;
-mod navigator;
 
 #[cfg(windows)]
 mod win32;
 
 use clap::Parser as ClapParser;
 use mdvu_core::{
-    get_katex_js, get_mermaid_js, get_plantuml_js, render_markdown, render_markdown_with_options,
+    get_base_url_for_file, get_katex_js, get_mermaid_js, get_plantuml_js, navigator,
+    render_markdown_body, render_markdown_full_options, split_path_and_fragment,
     DiagramCache, MarkdownDialect, NavigationHistory, RenderedDocument, ZoomPolicy,
 };
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 
 use tao::{
     dpi::LogicalSize,
-    event::{ElementState, Event as TaoEvent, WindowEvent},
+    event::{ElementState, Event as TaoEvent, MouseButton, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
     keyboard::{KeyCode, ModifiersState},
     window::WindowBuilder,
@@ -62,12 +62,16 @@ struct Args {
     dialect: String,
 
     /// Color theme: light, dark, system
-    #[arg(short = 'T', long, default_value = "system")]
+    #[arg(short = 't', visible_short_alias = 'T', long, default_value = "system")]
     theme: String,
 
     /// Enable full-width view (removes article max-width)
     #[arg(long)]
     full_width: bool,
+
+    /// Disable Mermaid and PlantUML diagram rendering
+    #[arg(long)]
+    no_mermaid: bool,
 
     /// Embed all offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
     #[arg(short, long)]
@@ -95,29 +99,50 @@ impl Args {
 #[cfg(windows)]
 fn attach_console() {
     use std::os::windows::io::IntoRawHandle;
-    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Foundation::{HANDLE, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::Storage::FileSystem::{GetFileType, FILE_TYPE_UNKNOWN};
     use windows_sys::Win32::System::Console::{
         AttachConsole, GetStdHandle, SetStdHandle, ATTACH_PARENT_PROCESS,
         STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
     };
+
+    unsafe fn is_valid_handle(h: HANDLE) -> bool {
+        !h.is_null() && h != INVALID_HANDLE_VALUE && GetFileType(h) != FILE_TYPE_UNKNOWN
+    }
+
     unsafe {
+        let orig_out = GetStdHandle(STD_OUTPUT_HANDLE);
+        let orig_err = GetStdHandle(STD_ERROR_HANDLE);
+        let orig_in = GetStdHandle(STD_INPUT_HANDLE);
+
+        let has_out = is_valid_handle(orig_out);
+        let has_err = is_valid_handle(orig_err);
+        let has_in = is_valid_handle(orig_in);
+
+        if has_out && has_err && has_in {
+            return;
+        }
+
         if AttachConsole(ATTACH_PARENT_PROCESS) != 0 {
-            let out_h = GetStdHandle(STD_OUTPUT_HANDLE);
-            if out_h.is_null() || out_h == INVALID_HANDLE_VALUE {
+            if has_out {
+                SetStdHandle(STD_OUTPUT_HANDLE, orig_out);
+            } else if !is_valid_handle(GetStdHandle(STD_OUTPUT_HANDLE)) {
                 if let Ok(file) = fs::OpenOptions::new().write(true).open("CONOUT$") {
                     SetStdHandle(STD_OUTPUT_HANDLE, file.into_raw_handle() as _);
                 }
             }
 
-            let err_h = GetStdHandle(STD_ERROR_HANDLE);
-            if err_h.is_null() || err_h == INVALID_HANDLE_VALUE {
+            if has_err {
+                SetStdHandle(STD_ERROR_HANDLE, orig_err);
+            } else if !is_valid_handle(GetStdHandle(STD_ERROR_HANDLE)) {
                 if let Ok(file) = fs::OpenOptions::new().write(true).open("CONOUT$") {
                     SetStdHandle(STD_ERROR_HANDLE, file.into_raw_handle() as _);
                 }
             }
 
-            let in_h = GetStdHandle(STD_INPUT_HANDLE);
-            if in_h.is_null() || in_h == INVALID_HANDLE_VALUE {
+            if has_in {
+                SetStdHandle(STD_INPUT_HANDLE, orig_in);
+            } else if !is_valid_handle(GetStdHandle(STD_INPUT_HANDLE)) {
                 if let Ok(file) = fs::File::open("CONIN$") {
                     SetStdHandle(STD_INPUT_HANDLE, file.into_raw_handle() as _);
                 }
@@ -144,32 +169,6 @@ fn open_external_url(url: &str) {
     }
 }
 
-fn get_base_url_for_file(file_path: &Path) -> Option<String> {
-    let abs_path = dunce::canonicalize(file_path).unwrap_or_else(|_| {
-        if file_path.is_absolute() {
-            file_path.to_path_buf()
-        } else {
-            std::env::current_dir()
-                .map(|cwd| cwd.join(file_path))
-                .unwrap_or_else(|_| file_path.to_path_buf())
-        }
-    });
-
-    let dir = abs_path.parent().unwrap_or(&abs_path);
-    let mut dir_str = dir.to_string_lossy().replace('\\', "/");
-    if let Some(stripped) = dir_str.strip_prefix("//?/") {
-        dir_str = stripped.to_string();
-    }
-    if !dir_str.ends_with('/') {
-        dir_str.push('/');
-    }
-    if dir_str.starts_with('/') {
-        Some(format!("file://{dir_str}"))
-    } else {
-        Some(format!("file:///{dir_str}"))
-    }
-}
-
 fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let (content, base_url) = match args.input {
         Some(ref path) if path.to_string_lossy() != "-" => {
@@ -192,16 +191,13 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let size_bytes = content.len();
         let size_mb = size_bytes as f64 / 1_048_576.0;
 
+        let enable_diagrams = !args.no_mermaid
+            && std::env::var("MDVU_BENCHMARK_MERMAID")
+                .map(|v| v != "0")
+                .unwrap_or(true);
+
         // Warmup run
-        let _ = render_markdown(
-            &content,
-            None,
-            dialect,
-            &args.theme,
-            args.full_width,
-            base_url.as_deref(),
-            false,
-        );
+        let _ = render_markdown_body(&content, dialect, is_explicit, &args.theme, enable_diagrams);
 
         let runs = std::env::var("MDVU_BENCHMARK_RUNS")
             .ok()
@@ -212,15 +208,7 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let mut samples = Vec::with_capacity(runs);
         for _ in 0..runs {
             let start = Instant::now();
-            let _ = render_markdown(
-                &content,
-                None,
-                dialect,
-                &args.theme,
-                args.full_width,
-                base_url.as_deref(),
-                false,
-            );
+            let _ = render_markdown_body(&content, dialect, is_explicit, &args.theme, enable_diagrams);
             samples.push(start.elapsed().as_secs_f64() * 1000.0);
         }
 
@@ -247,7 +235,7 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let (html, rendered) = render_markdown_with_options(
+    let (html, rendered) = render_markdown_full_options(
         &content,
         args.title.as_deref(),
         dialect,
@@ -256,6 +244,7 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         args.full_width,
         base_url.as_deref(),
         args.standalone,
+        !args.no_mermaid,
     );
 
     if args.toc {
@@ -285,8 +274,10 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Debug)]
 pub enum UserEvent {
+    ShellReady,
     FileChanged,
     OpenFile(PathBuf),
+    OpenFileWithFragment(PathBuf, Option<String>),
     OpenRelativePath(String),
     OpenFolder(PathBuf),
     OpenExternal(String),
@@ -327,6 +318,7 @@ struct DiagramCacheMsg {
 
 struct AppState {
     current_file: Option<PathBuf>,
+    pending_fragment: Option<String>,
     vault_root: Option<PathBuf>,
     vault_items: Vec<navigator::VaultItem>,
     current_title: String,
@@ -334,7 +326,9 @@ struct AppState {
     last_toggle: Instant,
     last_rendered: Option<RenderedDocument>,
     dialect: MarkdownDialect,
+    effective_dialect: MarkdownDialect,
     is_dialect_explicit: bool,
+    enable_diagrams: bool,
     theme: String,
     full_width: bool,
     is_toc_visible: bool,
@@ -362,38 +356,51 @@ fn unwatch_target(watcher: &mut RecommendedWatcher, target: &Path) {
     let _ = watcher.unwatch(target);
 }
 
-fn render_file_for_state(
+fn render_body_for_state(
     path: &Path,
     st: &AppState,
-) -> (String, String, Option<String>, RenderedDocument) {
-    let source = fs::read_to_string(path)
-        .unwrap_or_else(|e| format!("# Error Opening Document\n\nFailed to read `{}`: {e}", path.display()));
+) -> (String, Option<String>, RenderedDocument, MarkdownDialect) {
+    let source = fs::read_to_string(path).unwrap_or_else(|e| {
+        format!(
+            "# Error Opening Document\n\nFailed to read `{}`: {e}",
+            path.display()
+        )
+    });
     let base_url = get_base_url_for_file(path);
-    let (raw_html, doc) = render_markdown_with_options(
+    let (doc, effective_dialect) = render_markdown_body(
         &source,
-        None,
         st.dialect,
         st.is_dialect_explicit,
         &st.theme,
-        st.full_width,
-        base_url.as_deref(),
-        false,
+        st.enable_diagrams,
     );
     let title = doc
         .title
         .clone()
         .or_else(|| path.file_name().map(|f| f.to_string_lossy().to_string()))
-        .unwrap_or_else(|| "MDVu".to_string());
-    let window_title = format!("{title} — MDVu");
-    (raw_html, window_title, base_url, doc)
+        .unwrap_or_else(|| "mdvu".to_string());
+    let window_title = format!("{title} — mdvu");
+    (window_title, base_url, doc, effective_dialect)
 }
 
 fn build_gui_page(
     file_path: Option<&Path>,
-    st: &AppState,
+    st: &mut AppState,
 ) -> (String, String, Option<RenderedDocument>) {
     if let Some(path) = file_path {
-        let (raw_html, window_title, _base_url, doc) = render_file_for_state(path, st);
+        let (window_title, base_url, doc, effective_dialect) = render_body_for_state(path, st);
+        st.effective_dialect = effective_dialect;
+
+        let raw_html = mdvu_core::make_html_selective(
+            &doc.body,
+            &window_title,
+            &st.theme,
+            st.full_width,
+            base_url.as_deref(),
+            false,
+            false,
+            false,
+        );
 
         let vault_name = st
             .vault_root
@@ -421,13 +428,13 @@ fn build_gui_page(
         (full_gui_html, window_title, Some(doc))
     } else {
         let empty_article = r#"<article><div class="empty">
-            <h1>MDVu</h1>
-            <p style="color:var(--muted);font-size:1.15rem;margin:14px 0 24px;">Ultra-fast native Markdown viewer & offline diagram engine</p>
+            <h1>mdvu</h1>
+            <p style="color:var(--muted);font-size:1.12rem;margin:12px 0 24px;">Ultra-fast native Markdown &amp; Mermaid viewer</p>
             <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                <button id="mdvu-open-btn" style="padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Open Markdown File (Ctrl+O)</button>
-                <button id="mdvu-open-folder-btn" style="padding:10px 24px;background:var(--soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;">Open Folder / Vault (Ctrl+Shift+O)</button>
+                <button id="mdvu-open-btn" style="padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:0.96rem;font-weight:600;cursor:pointer;">Open Markdown File (Ctrl+O)</button>
+                <button id="mdvu-open-folder-btn" style="padding:10px 22px;background:var(--soft);color:var(--fg);border:1px solid var(--line);border-radius:8px;font-size:0.96rem;font-weight:600;cursor:pointer;">Open Folder / Vault (Ctrl+Shift+O)</button>
             </div>
-            <p style="color:var(--muted);font-size:0.88rem;margin-top:18px;">or drag and drop a file anywhere into this window</p>
+            <p style="color:var(--muted);font-size:0.86rem;margin-top:18px;">or drag and drop a file or folder anywhere into this window</p>
         </div></article>
         <script>
             document.getElementById('mdvu-open-btn')?.addEventListener('click', () => window.ipc?.postMessage('trigger_open_file'));
@@ -436,7 +443,7 @@ fn build_gui_page(
 
         let base_html = mdvu_core::make_html_selective(
             empty_article,
-            "MDVu",
+            "mdvu",
             &st.theme,
             st.full_width,
             None,
@@ -466,7 +473,7 @@ fn build_gui_page(
             st.history.can_go_forward(),
         );
 
-        (full_gui_html, "MDVu".to_string(), None)
+        (full_gui_html, "mdvu".to_string(), None)
     }
 }
 
@@ -474,7 +481,11 @@ fn build_gui_page(
 /// only when the document requires them and they have not yet been injected.
 fn inject_needed_runtimes(webview: &wry::WebView, st: &mut AppState) {
     let (needs_math, needs_mermaid, needs_plantuml) = match st.last_rendered {
-        Some(ref doc) => (doc.has_math, doc.has_mermaid, doc.has_plantuml),
+        Some(ref doc) => (
+            doc.has_math,
+            st.enable_diagrams && doc.has_mermaid,
+            st.enable_diagrams && doc.has_plantuml,
+        ),
         None => return,
     };
 
@@ -512,7 +523,8 @@ fn update_webview_document(
     path: &Path,
     preserve_scroll: bool,
 ) {
-    let (_raw_html, window_title, base_url, doc) = render_file_for_state(path, st);
+    let (window_title, base_url, doc, effective_dialect) = render_body_for_state(path, st);
+    st.effective_dialect = effective_dialect;
     window.set_title(&window_title);
     st.current_title = window_title;
 
@@ -523,6 +535,7 @@ fn update_webview_document(
         .map(|f| f.to_string_lossy().to_string())
         .unwrap_or_else(|| "Workspace".to_string());
     let cur_path_str = path.to_string_lossy().replace('\\', "/");
+    let fragment = st.pending_fragment.take();
 
     let payload = serde_json::json!({
         "bodyHtml": doc.body,
@@ -534,6 +547,7 @@ fn update_webview_document(
         "canBack": st.history.can_go_back(),
         "canFwd": st.history.can_go_forward(),
         "preserveScroll": preserve_scroll,
+        "fragment": fragment,
     });
 
     st.last_rendered = Some(doc);
@@ -549,7 +563,7 @@ fn sync_win32_menu(hwnd: windows_sys::Win32::Foundation::HWND, st: &AppState) {
     unsafe {
         win32::update_menu_state(
             hwnd,
-            st.dialect,
+            st.effective_dialect,
             st.is_dialect_explicit,
             &st.theme,
             st.full_width,
@@ -616,6 +630,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let theme = args.theme;
     let full_width = args.full_width;
     let nav_requested = args.navigator;
+    let enable_diagrams = !args.no_mermaid;
 
     let (initial_file, initial_vault_root, initial_vault_items, is_nav_visible) = match args.input {
         Some(ref p) if p.is_dir() => {
@@ -640,17 +655,20 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let state = Arc::new(Mutex::new(AppState {
         current_file: initial_file.clone(),
+        pending_fragment: None,
         vault_root: initial_vault_root,
         vault_items: initial_vault_items,
-        current_title: "MDVu".to_string(),
+        current_title: "mdvu".to_string(),
         zoom_level: ZoomPolicy::DEFAULT_ZOOM,
         last_toggle: Instant::now() - Duration::from_secs(1),
         last_rendered: None,
         dialect,
+        effective_dialect: dialect,
         is_dialect_explicit,
+        enable_diagrams,
         theme,
         full_width,
-        is_toc_visible: true,
+        is_toc_visible: initial_file.is_some(),
         is_nav_visible,
         history,
         katex_injected: false,
@@ -658,12 +676,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         plantuml_injected: false,
     }));
 
-    let (initial_html, initial_title, _initial_rendered) = {
+    let (initial_html, initial_title) = {
         let mut st = state.lock().unwrap();
-        let (html, title, doc) = build_gui_page(initial_file.as_deref(), &st);
+        let (html, title, doc) = build_gui_page(initial_file.as_deref(), &mut st);
         st.current_title = title.clone();
-        st.last_rendered = doc.clone();
-        (html, title, doc)
+        st.last_rendered = doc;
+        (html, title)
     };
 
     let event_loop: EventLoop<UserEvent> = EventLoopBuilder::<UserEvent>::with_user_event().build();
@@ -683,11 +701,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         };
         let h = window.hwnd() as windows_sys::Win32::Foundation::HWND;
         unsafe {
-            win32::apply_dark_mode(h);
             let st = state.lock().unwrap();
+            win32::apply_window_icon(h);
+            win32::apply_dark_mode(h, &st.theme);
             win32::create_main_menu(
                 h,
-                st.dialect,
+                st.effective_dialect,
                 st.is_dialect_explicit,
                 &st.theme,
                 st.full_width,
@@ -722,10 +741,13 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     .strip_prefix("file:///")
                     .or_else(|| uri.strip_prefix("file://"))
                     .unwrap_or(&uri);
-                let path_part = raw_path.split('#').next().unwrap_or(raw_path);
+                let (path_part, frag) = split_path_and_fragment(raw_path);
                 let p = PathBuf::from(path_part);
                 if navigator::is_markdown_file(&p) {
-                    let _ = proxy_nav.send_event(UserEvent::OpenFile(p));
+                    let _ = proxy_nav.send_event(UserEvent::OpenFileWithFragment(
+                        p,
+                        frag.map(|s| s.to_string()),
+                    ));
                 }
                 return false;
             }
@@ -733,7 +755,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         })
         .with_ipc_handler(move |req| {
             let msg = req.body();
-            if msg == "trigger_open_file" || msg == "open" {
+            if msg == "shell_ready" {
+                let _ = proxy_ipc.send_event(UserEvent::ShellReady);
+            } else if msg == "trigger_open_file" || msg == "open" {
                 let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFile);
             } else if msg == "trigger_open_folder" {
                 let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFolder);
@@ -770,6 +794,8 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 let _ = proxy_ipc.send_event(UserEvent::FileChanged);
             } else if msg == "toggle_fullscreen" {
                 let _ = proxy_ipc.send_event(UserEvent::ToggleFullscreen);
+            } else if msg == "close_window" {
+                let _ = proxy_ipc.send_event(UserEvent::Exit);
             }
         })
         .with_devtools(cfg!(debug_assertions))
@@ -786,9 +812,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 use windows_sys::Win32::UI::WindowsAndMessaging::{
                     MessageBoxW, IDYES, MB_ICONERROR, MB_YESNO,
                 };
-                let title = win32::to_wide_null("MDVu - WebView2 Runtime Required");
+                let title = win32::to_wide_null("mdvu - WebView2 Runtime Required");
                 let text = win32::to_wide_null(
-                    "Microsoft Edge WebView2 Runtime is required to display Markdown documents in MDVu.\n\n\
+                    "Microsoft Edge WebView2 Runtime is required to display Markdown documents in mdvu.\n\n\
                     Would you like to open the official Microsoft download page to install it now?"
                 );
                 if MessageBoxW(hwnd, text.as_ptr(), title.as_ptr(), MB_YESNO | MB_ICONERROR) == IDYES {
@@ -798,12 +824,6 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             return Err(err.into());
         }
     };
-
-    // Inject required math/diagram engines for the initial document
-    {
-        let mut st = state.lock().unwrap();
-        inject_needed_runtimes(&webview, &mut st);
-    }
 
     // Setup file watcher with trailing-edge debounce (150ms) so multi-step saves never drop final writes
     let watcher_state = Arc::clone(&state);
@@ -881,6 +901,13 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
         match event {
             TaoEvent::UserEvent(user_event) => match user_event {
+                UserEvent::ShellReady => {
+                    let mut st = state.lock().unwrap();
+                    st.katex_injected = false;
+                    st.mermaid_injected = false;
+                    st.plantuml_injected = false;
+                    inject_needed_runtimes(&webview, &mut st);
+                }
                 UserEvent::TriggerOpenFile => {
                     #[cfg(windows)]
                     if let Some(path) = win32::prompt_open_file() {
@@ -896,17 +923,19 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::OpenExternal(url) => {
                     open_external_url(&url);
                 }
-                UserEvent::OpenRelativePath(rel) => {
+                UserEvent::OpenRelativePath(raw_rel) => {
+                    let (rel_path, frag) = split_path_and_fragment(&raw_rel);
+                    let frag_owned = frag.map(|s| s.to_string());
                     let resolved = {
                         let st = state.lock().unwrap();
                         st.current_file
                             .as_ref()
                             .and_then(|cur| cur.parent())
-                            .map(|dir| dir.join(&rel))
-                            .or_else(|| st.vault_root.as_ref().map(|root| root.join(&rel)))
+                            .map(|dir| dir.join(rel_path))
+                            .or_else(|| st.vault_root.as_ref().map(|root| root.join(rel_path)))
                     };
                     if let Some(p) = resolved {
-                        let _ = proxy.send_event(UserEvent::OpenFile(p));
+                        let _ = proxy.send_event(UserEvent::OpenFileWithFragment(p, frag_owned));
                     }
                 }
                 UserEvent::OpenFolder(folder) => {
@@ -925,7 +954,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         st.katex_injected = false;
                         st.mermaid_injected = false;
                         st.plantuml_injected = false;
-                        let (new_html, title, doc) = build_gui_page(None, &st);
+                        let (new_html, title, doc) = build_gui_page(None, &mut st);
                         window.set_title(&title);
                         st.current_title = title;
                         st.last_rendered = doc;
@@ -939,9 +968,14 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     let mut st = state.lock().unwrap();
                     if let Some(path) = st.current_file.clone() {
                         update_webview_document(&webview, &window, &mut st, &path, true);
+                        #[cfg(windows)]
+                        sync_win32_menu(hwnd, &st);
                     }
                 }
                 UserEvent::OpenFile(new_path) => {
+                    let _ = proxy.send_event(UserEvent::OpenFileWithFragment(new_path, None));
+                }
+                UserEvent::OpenFileWithFragment(new_path, fragment) => {
                     let mut st = state.lock().unwrap();
                     let canonical = dunce::canonicalize(&new_path).unwrap_or(new_path);
 
@@ -965,20 +999,14 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     let had_file = st.current_file.is_some();
                     st.history.record(canonical.clone());
                     st.current_file = Some(canonical.clone());
+                    st.pending_fragment = fragment;
 
-                    if had_file {
-                        update_webview_document(&webview, &window, &mut st, &canonical, false);
-                    } else {
-                        st.katex_injected = false;
-                        st.mermaid_injected = false;
-                        st.plantuml_injected = false;
-                        let (new_html, title, doc) = build_gui_page(Some(&canonical), &st);
-                        window.set_title(&title);
-                        st.current_title = title;
-                        st.last_rendered = doc;
-                        let _ = webview.load_html(&new_html);
-                        inject_needed_runtimes(&webview, &mut st);
+                    if !had_file && !st.is_toc_visible {
+                        st.is_toc_visible = true;
+                        let _ = webview.evaluate_script("window.__mdvuToggleTOCSidebar?.(true);");
                     }
+
+                    update_webview_document(&webview, &window, &mut st, &canonical, false);
 
                     #[cfg(windows)]
                     sync_win32_menu(hwnd, &st);
@@ -1064,6 +1092,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::SetDialect(dialect) => {
                     let mut st = state.lock().unwrap();
                     st.dialect = dialect;
+                    st.effective_dialect = dialect;
                     st.is_dialect_explicit = true;
                     if let Some(path) = st.current_file.clone() {
                         update_webview_document(&webview, &window, &mut st, &path, true);
@@ -1074,6 +1103,10 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::SetTheme(theme) => {
                     let mut st = state.lock().unwrap();
                     st.theme = theme.clone();
+                    #[cfg(windows)]
+                    unsafe {
+                        win32::apply_dark_mode(hwnd, &st.theme);
+                    }
                     let _ = webview.evaluate_script(&format!("window.__mdvuSetTheme?.({theme:?});"));
                     if let Some(path) = st.current_file.clone() {
                         update_webview_document(&webview, &window, &mut st, &path, true);
@@ -1149,10 +1182,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
                 UserEvent::ShowAbout => {
-                    #[cfg(windows)]
-                    unsafe {
-                        win32::show_about_box(hwnd);
-                    }
+                    let _ = webview.evaluate_script("window.__mdvuShowAbout?.();");
                 }
                 UserEvent::OpenRepo => {
                     open_external_url("https://github.com/stpork/mdvu");
@@ -1173,6 +1203,19 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         let _ = proxy.send_event(UserEvent::OpenFile(path));
                     }
                 }
+                WindowEvent::MouseInput {
+                    state: ElementState::Released,
+                    button,
+                    ..
+                } => match button {
+                    MouseButton::Other(1) => {
+                        let _ = proxy.send_event(UserEvent::GoBack);
+                    }
+                    MouseButton::Other(2) => {
+                        let _ = proxy.send_event(UserEvent::GoForward);
+                    }
+                    _ => {}
+                },
                 WindowEvent::ModifiersChanged(new_mods) => {
                     modifiers = new_mods;
                 }
@@ -1190,6 +1233,13 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = proxy.send_event(UserEvent::ToggleFullscreen);
                             }
                             KeyCode::F3 => {
+                                if is_shift {
+                                    let _ = proxy.send_event(UserEvent::FindPrev);
+                                } else {
+                                    let _ = proxy.send_event(UserEvent::FindNext);
+                                }
+                            }
+                            KeyCode::KeyG if is_ctrl => {
                                 if is_shift {
                                     let _ = proxy.send_event(UserEvent::FindPrev);
                                 } else {
@@ -1218,8 +1268,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             KeyCode::KeyD if is_ctrl && is_shift => {
                                 let _ = proxy.send_event(UserEvent::ToggleNav);
                             }
-                            KeyCode::KeyW if is_ctrl && is_shift => {
-                                let _ = proxy.send_event(UserEvent::ToggleFullWidth);
+                            KeyCode::KeyW if is_ctrl => {
+                                if is_shift {
+                                    let _ = proxy.send_event(UserEvent::ToggleFullWidth);
+                                } else {
+                                    let _ = proxy.send_event(UserEvent::Exit);
+                                }
                             }
                             KeyCode::Equal | KeyCode::NumpadAdd if is_ctrl => {
                                 let _ = proxy.send_event(UserEvent::ZoomIn);
@@ -1288,4 +1342,90 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mdvu_core::{TocEntry, VaultItem};
+
+    #[test]
+    fn test_cli_args_mac_and_windows_parity() {
+        // Test -t (macOS style) and -T (legacy Windows alias) for theme
+        let a1 = Args::try_parse_from(["mdvu", "-t", "dark", "-d", "obsidian", "--full-width", "README.md"]).unwrap();
+        assert_eq!(a1.theme, "dark");
+        assert_eq!(a1.dialect, "obsidian");
+        assert!(a1.full_width);
+        assert!(!a1.is_headless());
+
+        let a2 = Args::try_parse_from(["mdvu", "-T", "light", "--no-mermaid", "--navigator", "docs"]).unwrap();
+        assert_eq!(a2.theme, "light");
+        assert!(a2.no_mermaid);
+        assert!(a2.navigator);
+
+        // Test headless detection
+        let a_stdout = Args::try_parse_from(["mdvu", "--stdout", "README.md"]).unwrap();
+        assert!(a_stdout.is_headless());
+
+        let a_toc = Args::try_parse_from(["mdvu", "--toc", "README.md"]).unwrap();
+        assert!(a_toc.is_headless());
+
+        let a_stdin = Args::try_parse_from(["mdvu", "-"]).unwrap();
+        assert!(a_stdin.is_headless());
+
+        let a_out = Args::try_parse_from(["mdvu", "README.md", "-o", "out.html", "--standalone"]).unwrap();
+        assert!(a_out.is_headless());
+        assert!(a_out.standalone);
+    }
+
+    #[test]
+    fn test_gui_shell_generation_and_features() {
+        let base_html = mdvu_core::make_html_selective(
+            "<h1 id=\"intro\">Introduction</h1><p>Hello world</p>",
+            "Test Doc",
+            "dark",
+            true,
+            Some("file:///C:/docs/"),
+            false,
+            false,
+            false,
+        );
+        let toc = vec![TocEntry {
+            level: 1,
+            title: "Introduction".to_string(),
+            id: "intro".to_string(),
+        }];
+        let vault_items = vec![VaultItem {
+            name: "README.md".to_string(),
+            path: "C:/docs/README.md".to_string(),
+            is_dir: false,
+            rel_path: Some("README.md".to_string()),
+            children: None,
+        }];
+
+        let shell = gui_shell::build_gui_html(
+            &base_html,
+            &toc,
+            "docs",
+            &vault_items,
+            Some("C:/docs/README.md"),
+            true,
+            true,
+            true,
+            1.2,
+            true,
+            false,
+        );
+
+        assert!(shell.contains("id=\"mdvu-toolbar\""));
+        assert!(shell.contains("id=\"mdvu-toc-sidebar\""));
+        assert!(shell.contains("id=\"mdvu-navigator-sidebar\""));
+        assert!(shell.contains("id=\"mdvu-about-backdrop\""));
+        assert!(shell.contains("value=\"120%\""));
+        assert!(shell.contains("https://github.com/stpork/mdvu"));
+        assert!(shell.contains("mailto:finndebear@gmail.com"));
+        assert!(shell.contains("shell_ready"));
+        assert!(shell.contains("preserveReadingAnchor"));
+        assert!(shell.contains("<article><h1 id=\"intro\">Introduction</h1><p>Hello world</p></article>"));
+    }
 }
