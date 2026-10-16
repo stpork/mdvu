@@ -825,7 +825,8 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let startup = Instant::now();
     let metrics_file = std::env::var_os("MDVU_METRICS_FILE").map(PathBuf::from);
     let gui_smoke = std::env::var_os("MDVU_GUI_SMOKE").is_some();
-    let ui_script = std::env::var_os("MDVU_UI_SCRIPT").and_then(|path| fs::read_to_string(path).ok());
+    let ui_script =
+        std::env::var_os("MDVU_UI_SCRIPT").and_then(|path| fs::read_to_string(path).ok());
     let ui_result = std::env::var_os("MDVU_UI_RESULT_FILE").map(PathBuf::from);
     let startup_folder = args.input.as_ref().filter(|path| path.is_dir()).cloned();
     let clean_dialect = args.dialect.trim().to_ascii_lowercase();
@@ -972,56 +973,56 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let allowed_shell_url = shell_url.clone();
     let web_context = Box::leak(Box::new(wry::WebContext::new(Some(user_data_dir))));
     let handle_message = move |msg: &str| {
-            if let Some(json) = msg.strip_prefix("ui_test:") {
-                let _ = proxy_ipc.send_event(UserEvent::UiTestResult(json.to_string()));
-            } else if let Some(json) = msg.strip_prefix("article_ready:") {
-                let _ = proxy_ipc.send_event(UserEvent::ArticleReady(json.to_string()));
-            } else if gui_smoke && msg.starts_with("smoke_result:") {
-                let _ = proxy_ipc.send_event(UserEvent::SmokeResult(msg[13..].to_string()));
-            } else if let Some(theme) = msg.strip_prefix("system_theme:") {
-                let _ = proxy_ipc.send_event(UserEvent::SystemThemeChanged(theme == "dark"));
-            } else if msg == "shell_ready" {
-                let _ = proxy_ipc.send_event(UserEvent::ShellReady);
-            } else if msg == "trigger_open_file" || msg == "open" {
-                let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFile);
-            } else if msg == "trigger_open_folder" {
-                let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFolder);
-            } else if let Some(path_str) = msg.strip_prefix("open_path:") {
-                let p = PathBuf::from(path_str);
-                let _ = proxy_ipc.send_event(UserEvent::OpenFile(p));
-            } else if let Some(rel_str) = msg.strip_prefix("open_rel_path:") {
-                let _ = proxy_ipc.send_event(UserEvent::OpenRelativePath(rel_str.to_string()));
-            } else if let Some(ext_url) = msg.strip_prefix("open_external:") {
-                let _ = proxy_ipc.send_event(UserEvent::OpenExternal(ext_url.to_string()));
-            } else if let Some(cache_json) = msg.strip_prefix("cache_diagram:") {
-                if let Ok(entry) = serde_json::from_str::<DiagramCacheMsg>(cache_json) {
-                    DiagramCache::global().write(&entry.key, &entry.svg);
-                }
-            } else if let Some(zoom_str) = msg.strip_prefix("set_zoom:") {
-                let _ = proxy_ipc.send_event(UserEvent::SetZoom(zoom_str.to_string()));
-            } else if msg == "go_back" {
-                let _ = proxy_ipc.send_event(UserEvent::GoBack);
-            } else if msg == "go_forward" {
-                let _ = proxy_ipc.send_event(UserEvent::GoForward);
-            } else if msg == "toggle_toc" {
-                let _ = proxy_ipc.send_event(UserEvent::ToggleTOC);
-            } else if msg == "toggle_nav" {
-                let _ = proxy_ipc.send_event(UserEvent::ToggleNav);
-            } else if msg == "toggle_full_width" {
-                let _ = proxy_ipc.send_event(UserEvent::ToggleFullWidth);
-            } else if msg == "zoom_in" {
-                let _ = proxy_ipc.send_event(UserEvent::ZoomIn);
-            } else if msg == "zoom_out" {
-                let _ = proxy_ipc.send_event(UserEvent::ZoomOut);
-            } else if msg == "zoom_reset" {
-                let _ = proxy_ipc.send_event(UserEvent::ZoomReset);
-            } else if msg == "reload" {
-                let _ = proxy_ipc.send_event(UserEvent::FileChanged);
-            } else if msg == "toggle_fullscreen" {
-                let _ = proxy_ipc.send_event(UserEvent::ToggleFullscreen);
-            } else if msg == "close_window" {
-                let _ = proxy_ipc.send_event(UserEvent::Exit);
+        if let Some(json) = msg.strip_prefix("ui_test:") {
+            let _ = proxy_ipc.send_event(UserEvent::UiTestResult(json.to_string()));
+        } else if let Some(json) = msg.strip_prefix("article_ready:") {
+            let _ = proxy_ipc.send_event(UserEvent::ArticleReady(json.to_string()));
+        } else if gui_smoke && msg.starts_with("smoke_result:") {
+            let _ = proxy_ipc.send_event(UserEvent::SmokeResult(msg[13..].to_string()));
+        } else if let Some(theme) = msg.strip_prefix("system_theme:") {
+            let _ = proxy_ipc.send_event(UserEvent::SystemThemeChanged(theme == "dark"));
+        } else if msg == "shell_ready" {
+            let _ = proxy_ipc.send_event(UserEvent::ShellReady);
+        } else if msg == "trigger_open_file" || msg == "open" {
+            let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFile);
+        } else if msg == "trigger_open_folder" {
+            let _ = proxy_ipc.send_event(UserEvent::TriggerOpenFolder);
+        } else if let Some(path_str) = msg.strip_prefix("open_path:") {
+            let p = PathBuf::from(path_str);
+            let _ = proxy_ipc.send_event(UserEvent::OpenFile(p));
+        } else if let Some(rel_str) = msg.strip_prefix("open_rel_path:") {
+            let _ = proxy_ipc.send_event(UserEvent::OpenRelativePath(rel_str.to_string()));
+        } else if let Some(ext_url) = msg.strip_prefix("open_external:") {
+            let _ = proxy_ipc.send_event(UserEvent::OpenExternal(ext_url.to_string()));
+        } else if let Some(cache_json) = msg.strip_prefix("cache_diagram:") {
+            if let Ok(entry) = serde_json::from_str::<DiagramCacheMsg>(cache_json) {
+                DiagramCache::global().write(&entry.key, &entry.svg);
             }
+        } else if let Some(zoom_str) = msg.strip_prefix("set_zoom:") {
+            let _ = proxy_ipc.send_event(UserEvent::SetZoom(zoom_str.to_string()));
+        } else if msg == "go_back" {
+            let _ = proxy_ipc.send_event(UserEvent::GoBack);
+        } else if msg == "go_forward" {
+            let _ = proxy_ipc.send_event(UserEvent::GoForward);
+        } else if msg == "toggle_toc" {
+            let _ = proxy_ipc.send_event(UserEvent::ToggleTOC);
+        } else if msg == "toggle_nav" {
+            let _ = proxy_ipc.send_event(UserEvent::ToggleNav);
+        } else if msg == "toggle_full_width" {
+            let _ = proxy_ipc.send_event(UserEvent::ToggleFullWidth);
+        } else if msg == "zoom_in" {
+            let _ = proxy_ipc.send_event(UserEvent::ZoomIn);
+        } else if msg == "zoom_out" {
+            let _ = proxy_ipc.send_event(UserEvent::ZoomOut);
+        } else if msg == "zoom_reset" {
+            let _ = proxy_ipc.send_event(UserEvent::ZoomReset);
+        } else if msg == "reload" {
+            let _ = proxy_ipc.send_event(UserEvent::FileChanged);
+        } else if msg == "toggle_fullscreen" {
+            let _ = proxy_ipc.send_event(UserEvent::ToggleFullscreen);
+        } else if msg == "close_window" {
+            let _ = proxy_ipc.send_event(UserEvent::Exit);
+        }
     };
     let builder = WebViewBuilder::with_web_context(web_context)
         .with_hotkeys_zoom(false)
@@ -1052,10 +1053,11 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 return false;
             }
             false
-        })
-        ;
+        });
     #[cfg(windows)]
-    let builder = builder.with_initialization_script("window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};");
+    let builder = builder.with_initialization_script(
+        "window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};",
+    );
     #[cfg(not(windows))]
     let builder = builder.with_ipc_handler(move |request| handle_message(request.body()));
     let webview = match builder.with_devtools(cfg!(debug_assertions)).build(&window) {
@@ -1542,8 +1544,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 WindowEvent::ModifiersChanged(new_mods) => {
                     modifiers = new_mods;
                 }
-                WindowEvent::KeyboardInput { event: key_event, .. } => {
-                    if key_event.state == ElementState::Pressed {
+                WindowEvent::KeyboardInput { event: key_event, .. } if key_event.state == ElementState::Pressed => {
                         let is_ctrl = modifiers.control_key() || modifiers.super_key();
                         let is_shift = modifiers.shift_key();
                         let is_alt = modifiers.alt_key();
@@ -1619,14 +1620,11 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             KeyCode::BracketRight if is_ctrl => {
                                 let _ = proxy.send_event(UserEvent::GoForward);
                             }
-                            KeyCode::Escape => {
-                                if window.fullscreen().is_some() {
-                                    window.set_fullscreen(None);
-                                }
+                            KeyCode::Escape if window.fullscreen().is_some() => {
+                                window.set_fullscreen(None);
                             }
                             _ => {}
                         }
-                    }
                 }
                 _ => {}
             },

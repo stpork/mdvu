@@ -62,6 +62,7 @@ pub fn render_markdown(
     )
 }
 
+#[allow(clippy::too_many_arguments)] // Preserve the public rendering API.
 pub fn render_markdown_with_options(
     source: &str,
     title_override: Option<&str>,
@@ -85,6 +86,7 @@ pub fn render_markdown_with_options(
     )
 }
 
+#[allow(clippy::too_many_arguments)] // Preserve the public rendering API.
 pub fn render_markdown_full_options(
     source: &str,
     title_override: Option<&str>,

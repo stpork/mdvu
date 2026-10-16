@@ -1,5 +1,6 @@
 use mdvu_core::{escape_html, TocEntry, VaultItem, ZoomPolicy, VERSION};
 
+#[allow(clippy::too_many_arguments)] // Host state is passed without retaining duplicate document data.
 pub fn build_gui_html(
     document_html: &str,
     toc: &[TocEntry],

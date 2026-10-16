@@ -153,8 +153,8 @@ fn scan_directory_tree_inner(dir: &Path, root_norm: &str, max_depth: usize) -> V
         }
     }
 
-    dirs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
-    files.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    dirs.sort_by_cached_key(|entry| entry.0.to_lowercase());
+    files.sort_by_cached_key(|entry| entry.0.to_lowercase());
 
     for (name, path) in dirs {
         let children = scan_directory_tree_inner(&path, root_norm, max_depth - 1);
@@ -468,7 +468,9 @@ impl DiagramCache {
             }
         }
         let path = self.dir.join(format!("{key}.svg"));
-        if fs::metadata(&path).ok()?.len() > 10_000_000 { return None; }
+        if fs::metadata(&path).ok()?.len() > 10_000_000 {
+            return None;
+        }
         let svg = fs::read_to_string(path).ok()?;
         if !Self::is_safe_svg(&svg) {
             return None;
@@ -508,6 +510,25 @@ impl DiagramCache {
                 let _ = fs::remove_file(&temp);
             }
         }
+    }
+}
+
+/// Only these schemes may leave the preview and reach the operating system shell.
+pub fn is_external_url(value: &str) -> bool {
+    if value.chars().any(char::is_control) {
+        return false;
+    }
+    value.split_once(':').is_some_and(|(scheme, rest)| {
+        !rest.is_empty()
+            && ["http", "https", "mailto"]
+                .iter()
+                .any(|allowed| scheme.eq_ignore_ascii_case(allowed))
+    })
+}
+
+impl Default for DiagramCache {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -608,17 +629,4 @@ mod tests {
 
         let _ = fs::remove_dir_all(&temp);
     }
-}
-
-/// Only these schemes may leave the preview and reach the operating system shell.
-pub fn is_external_url(value: &str) -> bool {
-    if value.chars().any(char::is_control) {
-        return false;
-    }
-    value.split_once(':').is_some_and(|(scheme, rest)| {
-        !rest.is_empty()
-            && ["http", "https", "mailto"]
-                .iter()
-                .any(|allowed| scheme.eq_ignore_ascii_case(allowed))
-    })
 }

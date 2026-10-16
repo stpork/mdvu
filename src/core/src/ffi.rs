@@ -75,6 +75,8 @@ pub extern "C" fn mdvu_get_katex_js() -> *const c_char {
     }
 }
 
+/// # Safety
+/// Non-null inputs must point to readable, NUL-terminated UTF-8 strings for this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_diagram_cache_write(key: *const c_char, svg: *const c_char) {
     if let (Some(k), Some(s)) = (c_str_to_rust(key), c_str_to_rust(svg)) {
@@ -83,6 +85,9 @@ pub unsafe extern "C" fn mdvu_diagram_cache_write(key: *const c_char, svg: *cons
 }
 
 /// Fast path for rendering Markdown body + title + effective dialect without building a full standalone HTML document.
+/// # Safety
+/// `source` must be readable for `source_len` bytes (null is allowed for zero length).
+/// Other non-null inputs must be readable, NUL-terminated strings for this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_render_body_bytes(
     source: *const c_char,
@@ -129,6 +134,9 @@ pub unsafe extern "C" fn mdvu_render_body_bytes(
     Box::into_raw(doc)
 }
 
+/// # Safety
+/// `source` must be readable for `source_len` bytes (null is allowed for zero length).
+/// Other non-null inputs must be readable, NUL-terminated strings for this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_render_to_html_bytes(
     source: *const c_char,
@@ -207,6 +215,9 @@ pub unsafe extern "C" fn mdvu_render_to_html_bytes(
     Box::into_raw(doc)
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
+/// The returned string is borrowed until `mdvu_document_free`.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_get_html(doc: *const MdvuDocument) -> *const c_char {
     if doc.is_null() {
@@ -216,6 +227,9 @@ pub unsafe extern "C" fn mdvu_document_get_html(doc: *const MdvuDocument) -> *co
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
+/// The returned string is borrowed until `mdvu_document_free`.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_get_body(doc: *const MdvuDocument) -> *const c_char {
     if doc.is_null() {
@@ -225,6 +239,9 @@ pub unsafe extern "C" fn mdvu_document_get_body(doc: *const MdvuDocument) -> *co
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
+/// The returned string is borrowed until `mdvu_document_free`.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_get_title(doc: *const MdvuDocument) -> *const c_char {
     if doc.is_null() || !(*doc).has_title {
@@ -234,6 +251,9 @@ pub unsafe extern "C" fn mdvu_document_get_title(doc: *const MdvuDocument) -> *c
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
+/// The returned string is borrowed until `mdvu_document_free`.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_get_dialect(doc: *const MdvuDocument) -> *const c_char {
     if doc.is_null() {
@@ -243,6 +263,9 @@ pub unsafe extern "C" fn mdvu_document_get_dialect(doc: *const MdvuDocument) -> 
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
+/// The returned string is borrowed until `mdvu_document_free`.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_get_toc_json(doc: *const MdvuDocument) -> *const c_char {
     if doc.is_null() {
@@ -252,6 +275,8 @@ pub unsafe extern "C" fn mdvu_document_get_toc_json(doc: *const MdvuDocument) ->
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_has_mermaid(doc: *const MdvuDocument) -> bool {
     if doc.is_null() {
@@ -261,6 +286,8 @@ pub unsafe extern "C" fn mdvu_document_has_mermaid(doc: *const MdvuDocument) -> 
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_has_plantuml(doc: *const MdvuDocument) -> bool {
     if doc.is_null() {
@@ -270,6 +297,8 @@ pub unsafe extern "C" fn mdvu_document_has_plantuml(doc: *const MdvuDocument) ->
     }
 }
 
+/// # Safety
+/// A non-null `doc` must point to a live document returned by a render function.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_has_math(doc: *const MdvuDocument) -> bool {
     if doc.is_null() {
@@ -279,6 +308,9 @@ pub unsafe extern "C" fn mdvu_document_has_math(doc: *const MdvuDocument) -> boo
     }
 }
 
+/// # Safety
+/// A non-null `doc` must be an owned pointer returned by a render function, freed exactly once.
+/// No getter results may be used after this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_document_free(doc: *mut MdvuDocument) {
     if !doc.is_null() {
@@ -294,6 +326,8 @@ unsafe fn source_bytes<'a>(source: *const c_char, len: usize) -> Option<&'a str>
 }
 
 // Legacy C ABI remains available. New clients must use the length-delimited entry points.
+/// # Safety
+/// Non-null inputs must be readable, NUL-terminated strings for this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_render_body(
     source: *const c_char,
@@ -314,6 +348,8 @@ pub unsafe extern "C" fn mdvu_render_body(
         diagrams,
     )
 }
+/// # Safety
+/// Non-null inputs must be readable, NUL-terminated strings for this call.
 #[no_mangle]
 pub unsafe extern "C" fn mdvu_render_to_html(
     source: *const c_char,

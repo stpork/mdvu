@@ -1,6 +1,7 @@
 use crate::assets::{get_katex_js, get_mermaid_js, get_plantuml_js, APP_JS, MARKDOWN_CSS};
 use crate::parser::escape_html;
 
+#[allow(clippy::too_many_arguments)] // Preserve the public rendering API.
 pub fn make_html_selective(
     body: &str,
     title: &str,

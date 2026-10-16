@@ -344,16 +344,33 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{readingAnchor=null;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{readingAnchor=null;readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
+let readingEdgeGeneration=0;
+for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++},{passive:true});
 window.addEventListener('keydown',e=>{
+readingEdgeGeneration++;
 if(e.key==='Escape')document.getElementById('mdvu-toc-panel')?.classList.remove('visible');
 if(e.defaultPrevented||e.shiftKey||e.altKey||e.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;
 const end=e.key==='End'||(e.metaKey&&e.key==='ArrowDown'),home=e.key==='Home'||(e.metaKey&&e.key==='ArrowUp');
 if(!end&&!home)return;
 e.preventDefault();
 const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
-scroller.scrollTo({top:end?scroller.scrollHeight:0,behavior:'instant'});
+readingAnchor=null;
+if(home){scroller.scrollTo({top:0,behavior:'instant'});return}
+// Offscreen content can acquire its real height after the initial jump.
+// Keep the bottom anchored through layout, but stop as soon as the reader acts.
+const generation=readingEdgeGeneration;
+let frames=0,stable=0,lastHeight=0;
+const reachEnd=()=>{
+if(generation!==readingEdgeGeneration)return;
+const height=scroller.scrollHeight;
+scroller.scrollTo({top:height,behavior:'instant'});
+stable=height===lastHeight?stable+1:0;lastHeight=height;
+if(++frames<8&&stable<2)requestAnimationFrame(reachEnd);
+else window.__mdvuReadingEdgeSettled=generation;
+};
+reachEnd();
 });
 document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{window.__mdvuInitArticle()})});
 })();

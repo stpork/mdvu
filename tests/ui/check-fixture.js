@@ -32,7 +32,7 @@
     monitor=false;
     const frames=[...frameGaps].sort((a,b)=>a-b);
     const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
-    const edge=async key=>{const begin=performance.now();window.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return performance.now()-begin};
+    const edge=async key=>{const begin=performance.now(),previous=window.__mdvuReadingEdgeSettled;window.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));if(key==='End')for(let n=0;n<10&&window.__mdvuReadingEdgeSettled===previous;n++)await new Promise(r=>requestAnimationFrame(r));else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return performance.now()-begin};
     const endMs=await edge('End');
     checks.end=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
     const homeMs=await edge('Home');

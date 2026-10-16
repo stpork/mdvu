@@ -188,11 +188,14 @@ extension SharedRegressionTests {
             const key=(target,name)=>target.dispatchEvent(new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true}));
             const result={};
             key(window,'End');await pause();
-            result.documentEnd=scrollY>3000;
+            result.documentEnd=document.scrollingElement.scrollHeight-innerHeight-scrollY<3;
             key(window,'Home');await pause();result.documentHome=scrollY<2;
+            key(window,'End');requestAnimationFrame(()=>document.querySelector('article>p').style.height='5500px');await pause();
+            result.endFollowsLayout=document.scrollingElement.scrollHeight-innerHeight-scrollY<3;
+            key(window,'Home');await pause();
             const scroller=document.createElement('div');scroller.id='mdvu-main-content';scroller.style.cssText='height:500px;overflow:auto';
             const article=document.querySelector('article');article.replaceWith(scroller);scroller.append(article);
-            key(window,'End');await pause();result.nestedEnd=scroller.scrollTop>3000;
+            key(window,'End');await pause();result.nestedEnd=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
             key(document.getElementById('editor'),'Home');await pause();result.editorUnaffected=scroller.scrollTop>3000;
             key(window,'Home');await pause();result.nestedHome=scroller.scrollTop<2;
             scroller.scrollTop=250;
@@ -203,7 +206,7 @@ extension SharedRegressionTests {
             return result;
             """, arguments: [:], in: nil, contentWorld: .page)
         let checks = try #require(facts as? [String: Bool])
-        #expect(checks.count == 6)
+        #expect(checks.count == 7)
         #expect(checks.values.allSatisfy { $0 }, "\(checks)")
     }
 }

@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use tao::event_loop::EventLoopProxy;
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
-use windows_sys::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass, ShellExecuteW};
+use windows_sys::Win32::UI::Shell::{
+    DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass, ShellExecuteW,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
 use crate::UserEvent;
@@ -130,7 +132,12 @@ pub unsafe fn create_main_menu(
     let exit_text = to_wide_null("E&xit\tAlt+F4");
 
     AppendMenuW(file_menu, MF_STRING, IDM_FILE_OPEN, open_file.as_ptr());
-    AppendMenuW(file_menu, MF_STRING, IDM_FILE_OPEN_FOLDER, open_folder.as_ptr());
+    AppendMenuW(
+        file_menu,
+        MF_STRING,
+        IDM_FILE_OPEN_FOLDER,
+        open_folder.as_ptr(),
+    );
     AppendMenuW(file_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(file_menu, MF_STRING, IDM_FILE_RELOAD, reload_text.as_ptr());
     AppendMenuW(file_menu, MF_SEPARATOR, 0, std::ptr::null());
@@ -154,11 +161,26 @@ pub unsafe fn create_main_menu(
     AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_CUT, cut_text.as_ptr());
     AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_COPY, copy_text.as_ptr());
     AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_PASTE, paste_text.as_ptr());
-    AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_SELECT_ALL, select_all_text.as_ptr());
+    AppendMenuW(
+        edit_menu,
+        MF_STRING,
+        IDM_EDIT_SELECT_ALL,
+        select_all_text.as_ptr(),
+    );
     AppendMenuW(edit_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_FIND, find_text.as_ptr());
-    AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_FIND_NEXT, find_next_text.as_ptr());
-    AppendMenuW(edit_menu, MF_STRING, IDM_EDIT_FIND_PREV, find_prev_text.as_ptr());
+    AppendMenuW(
+        edit_menu,
+        MF_STRING,
+        IDM_EDIT_FIND_NEXT,
+        find_next_text.as_ptr(),
+    );
+    AppendMenuW(
+        edit_menu,
+        MF_STRING,
+        IDM_EDIT_FIND_PREV,
+        find_prev_text.as_ptr(),
+    );
 
     // --- Dialect Submenu ---
     let d_auto = to_wide_null("&Automatic");
@@ -171,12 +193,37 @@ pub unsafe fn create_main_menu(
 
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_AUTO, d_auto.as_ptr());
     AppendMenuW(dialect_menu, MF_SEPARATOR, 0, std::ptr::null());
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_GENERIC, d_generic.as_ptr());
+    AppendMenuW(
+        dialect_menu,
+        MF_STRING,
+        IDM_DIALECT_GENERIC,
+        d_generic.as_ptr(),
+    );
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_GFM, d_gfm.as_ptr());
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_OBSIDIAN, d_obsidian.as_ptr());
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_MKDOCS, d_mkdocs.as_ptr());
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_DOCUSAURUS, d_docusaurus.as_ptr());
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_COMMONMARK, d_commonmark.as_ptr());
+    AppendMenuW(
+        dialect_menu,
+        MF_STRING,
+        IDM_DIALECT_OBSIDIAN,
+        d_obsidian.as_ptr(),
+    );
+    AppendMenuW(
+        dialect_menu,
+        MF_STRING,
+        IDM_DIALECT_MKDOCS,
+        d_mkdocs.as_ptr(),
+    );
+    AppendMenuW(
+        dialect_menu,
+        MF_STRING,
+        IDM_DIALECT_DOCUSAURUS,
+        d_docusaurus.as_ptr(),
+    );
+    AppendMenuW(
+        dialect_menu,
+        MF_STRING,
+        IDM_DIALECT_COMMONMARK,
+        d_commonmark.as_ptr(),
+    );
 
     // --- Theme Submenu ---
     let t_system = to_wide_null("&System");
@@ -205,12 +252,22 @@ pub unsafe fn create_main_menu(
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_TOGGLE_NAV, v_nav.as_ptr());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_FULL_WIDTH, v_fw.as_ptr());
     AppendMenuW(view_menu, MF_SEPARATOR, 0, std::ptr::null());
-    AppendMenuW(view_menu, MF_POPUP, dialect_menu as usize, v_dialect.as_ptr());
+    AppendMenuW(
+        view_menu,
+        MF_POPUP,
+        dialect_menu as usize,
+        v_dialect.as_ptr(),
+    );
     AppendMenuW(view_menu, MF_POPUP, theme_menu as usize, v_theme.as_ptr());
     AppendMenuW(view_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_ZOOM_IN, v_zoom_in.as_ptr());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_ZOOM_OUT, v_zoom_out.as_ptr());
-    AppendMenuW(view_menu, MF_STRING, IDM_VIEW_ZOOM_RESET, v_zoom_reset.as_ptr());
+    AppendMenuW(
+        view_menu,
+        MF_STRING,
+        IDM_VIEW_ZOOM_RESET,
+        v_zoom_reset.as_ptr(),
+    );
     AppendMenuW(view_menu, MF_SEPARATOR, 0, std::ptr::null());
     AppendMenuW(view_menu, MF_STRING, IDM_VIEW_FULLSCREEN, v_fs.as_ptr());
 
@@ -327,7 +384,11 @@ pub unsafe fn update_menu_state(
     CheckMenuItem(
         menu,
         IDM_VIEW_FULL_WIDTH as u32,
-        if is_full_width { MF_CHECKED } else { MF_UNCHECKED },
+        if is_full_width {
+            MF_CHECKED
+        } else {
+            MF_UNCHECKED
+        },
     );
 
     // Go history buttons
@@ -568,19 +629,26 @@ pub fn attach_web_message_handler(
     unsafe {
         let webview = view.controller().CoreWebView2()?;
         let mut token = Default::default();
-        webview.add_WebMessageReceived(&WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
-            let Some(args) = args else { return Ok(()) };
-            let mut source = PWSTR::null();
-            args.Source(&mut source)?;
-            let source = take_pwstr(source);
-            let Ok(mut source) = url::Url::parse(&source) else { return Ok(()) };
-            source.set_fragment(None);
-            if source != expected { return Ok(()) }
-            let mut message = PWSTR::null();
-            args.TryGetWebMessageAsString(&mut message)?;
-            handler(&take_pwstr(message));
-            Ok(())
-        })), &mut token)?;
+        webview.add_WebMessageReceived(
+            &WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
+                let Some(args) = args else { return Ok(()) };
+                let mut source = PWSTR::null();
+                args.Source(&mut source)?;
+                let source = take_pwstr(source);
+                let Ok(mut source) = url::Url::parse(&source) else {
+                    return Ok(());
+                };
+                source.set_fragment(None);
+                if source != expected {
+                    return Ok(());
+                }
+                let mut message = PWSTR::null();
+                args.TryGetWebMessageAsString(&mut message)?;
+                handler(&take_pwstr(message));
+                Ok(())
+            })),
+            &mut token,
+        )?;
     }
     Ok(())
 }

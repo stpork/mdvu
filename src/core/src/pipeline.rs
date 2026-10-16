@@ -402,8 +402,8 @@ impl MarkdownPipeline {
                     output.push(">".to_string());
                     mkdocs_pending_blank_lines -= 1;
                 }
-                let stripped = if line.starts_with("    ") {
-                    &line[4..]
+                let stripped = if let Some(stripped) = line.strip_prefix("    ") {
+                    stripped
                 } else {
                     &line[1..]
                 };
@@ -644,11 +644,10 @@ impl MarkdownPipeline {
                     if bytes[search..search + tick_count]
                         .iter()
                         .all(|&c| c == b'`')
+                        && (search + tick_count == len || bytes[search + tick_count] != b'`')
                     {
-                        if search + tick_count == len || bytes[search + tick_count] != b'`' {
-                            found_close = Some(search + tick_count);
-                            break;
-                        }
+                        found_close = Some(search + tick_count);
+                        break;
                     }
                     search += 1;
                 }
