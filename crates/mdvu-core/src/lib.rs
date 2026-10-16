@@ -97,4 +97,17 @@ mod tests {
         assert!(preprocessed.contains("<sup>2</sup>"));
         assert!(preprocessed.contains("<u>underlined</u>"));
     }
+
+    #[test]
+    fn test_comment_dialect_directives() {
+        use pipeline::MarkdownDocumentDirective;
+        let md1 = "<!-- Open in Obsidian dialect for live wikilinks -->\n# Title";
+        assert_eq!(MarkdownDocumentDirective::extract_dialect(md1), Some(MarkdownDialect::Obsidian));
+
+        let md2 = "<!-- dialect: gfm -->\n# Title";
+        assert_eq!(MarkdownDocumentDirective::extract_dialect(md2), Some(MarkdownDialect::Gfm));
+
+        let md3 = "<!-- --dialect mkdocs -->\n# Title";
+        assert_eq!(MarkdownDocumentDirective::extract_dialect(md3), Some(MarkdownDialect::Mkdocs));
+    }
 }

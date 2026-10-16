@@ -72,6 +72,10 @@ struct Args {
     /// Show file navigator / vault sidebar on startup
     #[arg(long)]
     navigator: bool,
+
+    /// Run internal rendering benchmark on target file and print throughput
+    #[arg(long)]
+    benchmark: bool,
 }
 
 impl Args {
@@ -79,6 +83,7 @@ impl Args {
         self.output.is_some()
             || self.stdout
             || self.toc
+            || self.benchmark
             || self.input.as_ref().map(|p| p.to_string_lossy()) == Some("-".into())
     }
 }
@@ -161,6 +166,43 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
+
+    if args.benchmark {
+        let size_bytes = content.len();
+        let size_mb = size_bytes as f64 / 1_048_576.0;
+
+        // Warmup run
+        let _ = render_markdown(&content, None, dialect, &args.theme, args.full_width, base_url.as_deref(), false);
+
+        let runs = std::env::var("MDVU_BENCHMARK_RUNS")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(10)
+            .max(1);
+
+        let mut samples = Vec::with_capacity(runs);
+        for _ in 0..runs {
+            let start = Instant::now();
+            let _ = render_markdown(&content, None, dialect, &args.theme, args.full_width, base_url.as_deref(), false);
+            samples.push(start.elapsed().as_secs_f64() * 1000.0);
+        }
+
+        samples.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let median = samples[samples.len() / 2];
+        let min = samples.first().copied().unwrap_or(0.0);
+        let max = samples.last().copied().unwrap_or(0.0);
+        let throughput = if median > 0.0 { size_mb / (median / 1000.0) } else { 0.0 };
+
+        let file_name = args
+            .input
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .map(|f| f.to_string_lossy().to_string())
+            .unwrap_or_else(|| "stdin".to_string());
+        println!("{size_mb:7.2} MB  median {median:8.2} ms (min {min:6.2} ms, max {max:6.2} ms)  {throughput:8.1} MB/s  [{file_name}]");
+        let _ = io::stdout().flush();
+        return Ok(());
+    }
 
     let (html, rendered) = render_markdown(
         &content,

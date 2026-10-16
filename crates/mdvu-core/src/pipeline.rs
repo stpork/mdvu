@@ -77,7 +77,7 @@ pub struct MarkdownDocumentDirective;
 
 static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)<!--([\s\S]*?)-->").unwrap());
 static DIRECTIVE_IN_COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+)(["'`]?)([a-zA-Z_-]+)\1|\bin\s+(["'`]?)([a-zA-Z_-]+)\3\s+dialect\b"#).unwrap()
+    Regex::new(r#"(?i)(?:(?:dialect|markdown[-_]dialect)\s*[:=]\s*|--dialect\s+)["'`]?([a-zA-Z_-]+)["'`]?|\bin\s+["'`]?([a-zA-Z_-]+)["'`]?\s+dialect\b"#).unwrap()
 });
 
 impl MarkdownDocumentDirective {
@@ -98,8 +98,8 @@ impl MarkdownDocumentDirective {
                 let comment_content = caps.get(1)?.as_str();
                 if let Some(dir_caps) = DIRECTIVE_IN_COMMENT_RE.captures(comment_content) {
                     let val = dir_caps
-                        .get(2)
-                        .or_else(|| dir_caps.get(4))
+                        .get(1)
+                        .or_else(|| dir_caps.get(2))
                         .map(|m| m.as_str())?;
                     return MarkdownDialect::from_str_name(val);
                 }
@@ -593,30 +593,32 @@ impl MarkdownPipeline {
     }
 
     fn scan_single_delimiter(input: &str, delim: char, tag: &str) -> String {
-        let chars: Vec<char> = input.chars().collect();
-        let len = chars.len();
-        let mut result = String::with_capacity(input.len());
+        let bytes = input.as_bytes();
+        let delim_byte = delim as u8;
+        let len = bytes.len();
+        let mut result = String::with_capacity(len);
         let mut i = 0;
+        let mut last_copied = 0;
 
         while i < len {
-            let c = chars[i];
-            if c == delim {
+            let b = bytes[i];
+            if b == delim_byte {
                 // Must be a single delimiter: not preceded by delim, and not followed by delim
-                let prev_is_delim = i > 0 && chars[i - 1] == delim;
-                let next_is_delim = i + 1 < len && chars[i + 1] == delim;
+                let prev_is_delim = i > 0 && bytes[i - 1] == delim_byte;
+                let next_is_delim = i + 1 < len && bytes[i + 1] == delim_byte;
 
                 if !prev_is_delim && !next_is_delim {
                     // Look for closing delimiter
                     let mut j = i + 1;
                     let mut found_close = None;
                     while j < len {
-                        let cj = chars[j];
-                        if cj == '\n' || cj == '\r' || cj.is_whitespace() && j == i + 1 {
+                        let bj = bytes[j];
+                        if bj == b'\n' || bj == b'\r' || (bj.is_ascii_whitespace() && j == i + 1) {
                             break;
                         }
-                        if cj == delim {
-                            let next_next = j + 1 < len && chars[j + 1] == delim;
-                            if !next_next && !chars[j - 1].is_whitespace() {
+                        if bj == delim_byte {
+                            let next_next = j + 1 < len && bytes[j + 1] == delim_byte;
+                            if !next_next && !bytes[j - 1].is_ascii_whitespace() {
                                 found_close = Some(j);
                                 break;
                             }
@@ -625,15 +627,25 @@ impl MarkdownPipeline {
                     }
 
                     if let Some(close_idx) = found_close {
-                        let inner: String = chars[i + 1..close_idx].iter().collect();
-                        result.push_str(&format!("<{tag}>{inner}</{tag}>"));
+                        result.push_str(&input[last_copied..i]);
+                        result.push('<');
+                        result.push_str(tag);
+                        result.push('>');
+                        result.push_str(&input[i + 1..close_idx]);
+                        result.push_str("</");
+                        result.push_str(tag);
+                        result.push('>');
                         i = close_idx + 1;
+                        last_copied = i;
                         continue;
                     }
                 }
             }
-            result.push(c);
             i += 1;
+        }
+
+        if last_copied < len {
+            result.push_str(&input[last_copied..]);
         }
 
         result
@@ -653,27 +665,27 @@ impl MarkdownPipeline {
     }
 
     fn scan_math_in_chunk(chunk: &str) -> String {
-        let mut result = String::with_capacity(chunk.len());
-        let chars: Vec<char> = chunk.chars().collect();
-        let len = chars.len();
+        let bytes = chunk.as_bytes();
+        let len = bytes.len();
+        let mut result = String::with_capacity(len);
         let mut cursor = 0;
         let mut chunk_start = 0;
 
         while cursor < len {
-            let ch = chars[cursor];
+            let b = bytes[cursor];
 
             // 1. Skip inline backticks: `...`
-            if ch == '`' {
+            if b == b'`' {
                 let mut scan = cursor;
-                while scan < len && chars[scan] == '`' {
+                while scan < len && bytes[scan] == b'`' {
                     scan += 1;
                 }
                 let tick_count = scan - cursor;
                 let mut search = scan;
                 let mut found_close = None;
                 while search + tick_count <= len {
-                    if chars[search..search + tick_count].iter().all(|&c| c == '`') {
-                        if search + tick_count == len || chars[search + tick_count] != '`' {
+                    if bytes[search..search + tick_count].iter().all(|&c| c == b'`') {
+                        if search + tick_count == len || bytes[search + tick_count] != b'`' {
                             found_close = Some(search + tick_count);
                             break;
                         }
@@ -689,20 +701,20 @@ impl MarkdownPipeline {
             }
 
             // 2. Skip escaped backslash
-            if ch == '\\' {
+            if b == b'\\' {
                 cursor += 2;
                 continue;
             }
 
             // 3. Display math: $$
-            if ch == '$' && cursor + 1 < len && chars[cursor + 1] == '$' {
+            if b == b'$' && cursor + 1 < len && bytes[cursor + 1] == b'$' {
                 let math_start = cursor + 2;
                 let mut search = math_start;
                 let mut found_close = None;
 
                 while search + 1 < len {
-                    if chars[search] == '$' && chars[search + 1] == '$' {
-                        if search == math_start || chars[search - 1] != '\\' {
+                    if bytes[search] == b'$' && bytes[search + 1] == b'$' {
+                        if search == math_start || bytes[search - 1] != b'\\' {
                             found_close = Some(search);
                             break;
                         }
@@ -711,35 +723,35 @@ impl MarkdownPipeline {
                 }
 
                 if let Some(close_idx) = found_close {
-                    for &c in &chars[chunk_start..cursor] {
-                        result.push(c);
-                    }
-                    let tex: String = chars[math_start..close_idx].iter().collect();
+                    result.push_str(&chunk[chunk_start..cursor]);
+                    let tex = &chunk[math_start..close_idx];
                     let escaped = escape_html(tex.trim());
-                    result.push_str(&format!("<div class=\"math-display\">{escaped}</div>"));
+                    result.push_str("<div class=\"math-display\">");
+                    result.push_str(&escaped);
+                    result.push_str("</div>");
                     cursor = close_idx + 2;
                     chunk_start = cursor;
                     continue;
                 }
-            } else if ch == '$' {
+            } else if b == b'$' {
                 // 4. Inline math: $...$
-                if cursor + 1 < len && !chars[cursor + 1].is_whitespace() && chars[cursor + 1] != '$' {
+                if cursor + 1 < len && !bytes[cursor + 1].is_ascii_whitespace() && bytes[cursor + 1] != b'$' {
                     let math_start = cursor + 1;
                     let mut search = math_start;
                     let mut found_close = None;
 
                     while search < len {
-                        let c = chars[search];
-                        if c == '\n' || c == '\r' {
+                        let c = bytes[search];
+                        if c == b'\n' || c == b'\r' {
                             break;
                         }
-                        if c == '\\' {
+                        if c == b'\\' {
                             search += 2;
                             continue;
                         }
-                        if c == '$' {
-                            if search > math_start && !chars[search - 1].is_whitespace() {
-                                if search + 1 == len || chars[search + 1] != '$' {
+                        if c == b'$' {
+                            if search > math_start && !bytes[search - 1].is_ascii_whitespace() {
+                                if search + 1 == len || bytes[search + 1] != b'$' {
                                     found_close = Some(search);
                                     break;
                                 }
@@ -749,12 +761,12 @@ impl MarkdownPipeline {
                     }
 
                     if let Some(close_idx) = found_close {
-                        for &c in &chars[chunk_start..cursor] {
-                            result.push(c);
-                        }
-                        let tex: String = chars[math_start..close_idx].iter().collect();
-                        let escaped = escape_html(&tex);
-                        result.push_str(&format!("<span class=\"math-inline\">{escaped}</span>"));
+                        result.push_str(&chunk[chunk_start..cursor]);
+                        let tex = &chunk[math_start..close_idx];
+                        let escaped = escape_html(tex);
+                        result.push_str("<span class=\"math-inline\">");
+                        result.push_str(&escaped);
+                        result.push_str("</span>");
                         cursor = close_idx + 1;
                         chunk_start = cursor;
                         continue;
@@ -766,9 +778,7 @@ impl MarkdownPipeline {
         }
 
         if chunk_start < len {
-            for &c in &chars[chunk_start..len] {
-                result.push(c);
-            }
+            result.push_str(&chunk[chunk_start..len]);
         }
 
         result
