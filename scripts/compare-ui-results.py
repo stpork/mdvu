@@ -27,8 +27,8 @@ def load(path):
         ui = row.get('ui') or {}
         if not row.get('passed', True) or not ui.get('passed'):
             raise ValueError(f'Failed fixture: {name}')
-        if ui.get('timingMode') == 'timer':
-            raise ValueError('Timer-mode results cannot establish UI performance')
+        if ui.get('timingMode') != 'animation-frame':
+            raise ValueError('Only native animation-frame results establish UI performance')
         perf = ui['performance']
         zoom = [c['ms'] for c in perf['controls'] if c['action'].startswith('zoom')]
         memory_key = 'physicalFootprintBytes' if platform == 'macOS' else 'privateBytes'
