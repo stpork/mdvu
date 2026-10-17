@@ -293,6 +293,8 @@ readingAnchor={token,scroller,el,viewportWidth:innerWidth,offset:el?(el.getBound
 return token;
 };
 window.__mdvuRestoreReadingAnchor=(token,viewportScale=1)=>{
+if(readingAnchor?.token!==token)return;
+readingAnchorObserver?.disconnect();
 let frames=0,scheduled=false;
 const schedule=()=>{if(readingAnchor?.token===token&&!scheduled){scheduled=true;requestAnimationFrame(restore)}};
 const restore=()=>{
