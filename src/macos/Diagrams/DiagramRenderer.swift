@@ -43,6 +43,12 @@ struct PlantUMLRenderer: DiagramRenderer {
 
 
 final class DiagramCache: @unchecked Sendable {
+    private static let writeQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .utility
+        return queue
+    }()
     private let directory: URL
     private let directoryPath: String
     private static let sharedMemoryCache: NSCache<NSString, NSString> = {
@@ -102,6 +108,13 @@ final class DiagramCache: @unchecked Sendable {
 
     private static func isSafeSVG(_ svg: String) -> Bool {
         svg.hasPrefix("<svg") && svg.contains("</svg>") && svg.utf8.count <= 10_000_000 && !svg.lowercased().contains("javascript:") && svg.range(of: #"(?i)<(?:script|iframe|object|embed)\b|[\s/]on[a-z]+\s*="#, options: .regularExpression) == nil
+    }
+
+    @MainActor func enqueueWrite(key: String, svg: String) {
+        // Caching is optional. Slow storage must neither block reading nor build
+        // an unbounded backlog of large SVG strings.
+        guard Self.writeQueue.operationCount < 2 else { return }
+        Self.writeQueue.addOperation { [self] in write(key: key, svg: svg) }
     }
 
     func write(key: String, svg: String) {

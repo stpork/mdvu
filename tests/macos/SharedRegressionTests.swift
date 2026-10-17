@@ -229,8 +229,16 @@ extension SharedRegressionTests {
             if !web.isLoading, let ready = try? await web.evaluateJavaScriptValue("!!window.__mdvuCaptureReadingAnchor"), ready as? Bool == true { break }
             try await Task.sleep(for: .milliseconds(30))
         }
-        _ = try await web.evaluateJavaScriptValue("window.requestAnimationFrame=cb=>setTimeout(cb,0);document.documentElement.style.scrollBehavior='auto';const target=document.querySelectorAll('h2')[20];target.id='reading-target';target.scrollIntoView({block:'center',behavior:'instant'});window.auditRuntime=42;true")
-        try await Task.sleep(for: .milliseconds(100))
+        _ = try await web.evaluateJavaScriptValue("window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);document.documentElement.style.scrollBehavior='auto';const target=document.querySelectorAll('h2')[20];target.id='reading-target';target.scrollIntoView({block:'center',behavior:'instant'});window.auditRuntime=42;true")
+        // content-visibility refines offscreen heights after the first jump.
+        // Wait for a text block at the centre instead of sampling a margin.
+        var anchorReady = false
+        for _ in 0..<100 {
+            if try await web.evaluateJavaScriptValue("!!document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('p,h2')") as? Bool == true { anchorReady = true; break }
+            _ = try await web.evaluateJavaScriptValue("document.getElementById('reading-target').scrollIntoView({block:'center',behavior:'instant'});true")
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        try #require(anchorReady)
         let before = try await web.evaluateJavaScriptValue("(()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target').removeAttribute('id');anchor.id='reading-target';return anchor.getBoundingClientRect().top/innerHeight})()")
         _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{window.auditCapture={picked:document.elementFromPoint(innerWidth/2,innerHeight/2)?.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
         controller.applyPageZoom(1.1)

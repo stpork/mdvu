@@ -333,6 +333,22 @@ struct DiagramCacheMsg {
     svg: String,
 }
 
+fn cache_diagram_async(entry: DiagramCacheMsg) {
+    static WRITER: std::sync::OnceLock<std::sync::mpsc::SyncSender<DiagramCacheMsg>> =
+        std::sync::OnceLock::new();
+    let writer = WRITER.get_or_init(|| {
+        let (sender, receiver) = std::sync::mpsc::sync_channel::<DiagramCacheMsg>(2);
+        std::thread::spawn(move || {
+            for entry in receiver {
+                DiagramCache::global().write(&entry.key, &entry.svg);
+            }
+        });
+        sender
+    });
+    // A full optional cache queue drops this write, never blocks the UI or grows.
+    let _ = writer.try_send(entry);
+}
+
 #[derive(Debug)]
 pub struct PreparedDocument {
     generation: u64,
@@ -1016,7 +1032,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             let _ = proxy_ipc.send_event(UserEvent::OpenExternal(ext_url.to_string()));
         } else if let Some(cache_json) = msg.strip_prefix("cache_diagram:") {
             if let Ok(entry) = serde_json::from_str::<DiagramCacheMsg>(cache_json) {
-                DiagramCache::global().write(&entry.key, &entry.svg);
+                cache_diagram_async(entry);
             }
         } else if let Some(zoom_str) = msg.strip_prefix("set_zoom:") {
             let _ = proxy_ipc.send_event(UserEvent::SetZoom(zoom_str.to_string()));
@@ -1208,6 +1224,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     #[cfg(not(windows))] let _ = (id, source);
                 }
                 UserEvent::ShellReady => {
+                    #[cfg(windows)] diagram_worker.cancel();
                     let mut st = state.lock().unwrap();
                     st.katex_injected = false;
                     st.mermaid_injected = false;

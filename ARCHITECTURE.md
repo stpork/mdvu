@@ -25,12 +25,12 @@ Most modern cross-platform Markdown tools bundle 150+ MB of Chromium and Node.js
         │ • 3-Pane Split & OutlineView│ │ • Evergreen Edge Runtime    │
         │ • macOS Trackpad Gestures   │ │ • DWM Dark Window Frames    │
         │ • Proxy Icon & Titlebar Open│ │ • Live File Watcher (Notify)│
-        │ • Bundle Size: ~3.4 MB      │ │ • Standalone Exe: ~5.1 MB   │
-        │ • Startup: ~30-50 ms        │ │ • Startup: ~40-60 ms        │
+        │ • App bundle + shared core  │ │ • Standalone executable    │
+        │ • Lazy diagram renderer     │ │ • Lazy diagram renderer    │
         └─────────────────────────────┘ └─────────────────────────────┘
 ```
 
-Both platforms achieve sub-50 ms cold startup, negligible memory overhead, and 100% offline diagram and formula rendering with zero external runtime dependencies.
+The shared core parses Markdown locally. The system runners measure native window creation, first content, cold diagram rendering, responsiveness, and process memory separately.
 
 ---
 
@@ -59,6 +59,9 @@ All engine assets are compressed with **LZMA Ultra** and compiled into the core 
 * **PlantUML Core 1.2026.7 + Viz.js 3.24.0** (`plantuml.lzma`, ~1.20 MB): Complete client-side WebAssembly execution with Graphviz 14.1.1. **Zero Java runtime (JVM/JRE) requirement.**
 * **KaTeX MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
 * **Deterministic Diagram Caching**: SHA-256 / 64-bit SipHash cache keys (`compute_diagram_cache_key`) prevent diagram collisions across themes and documents.
+* **Native diagram isolation**: macOS shares one lazy, nonpersistent renderer WebView between document windows. Windows uses an isolated renderer origin within the same WebView2 environment, sharing its browser and GPU. Jobs run serially, obsolete work is cancelled, each job has a 30-second deadline, and the renderer is released after five idle seconds. Diagram engines never enter the reading document. Standalone HTML retains its browser fallback.
+* **Bounded reading DOM and cache writes**: offscreen diagrams retain SVG text and a size placeholder; SVG nodes are restored near the viewport or for matching search results. Cache writes run away from the UI thread through a bounded queue; slow storage can skip an optional cache write instead of delaying input.
+* **Regression checks**: both native CI jobs render every Markdown fixture. Their explicit timer mode checks correctness and renderer cleanup without claiming display-frame performance. The system runners' default mode measures actual animation frames while scrolling and zooming during cold rendering.
 
 ### D. C-ABI Foreign Function Interface (`include/mdvu_core.h`)
 * Stable C-ABI interface for language interop:
@@ -94,8 +97,8 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
 
 The Windows frontend is a lightweight standalone binary leveraging native Win32 controls and the Evergreen WebView2 runtime:
 
-* **Zero-Runtime Overhead**: Uses the pre-installed Microsoft Edge WebView2 runtime (available out-of-the-box on modern Windows 10 & 11).
-* **Compact Single Executable**: Produces a standalone `mdvu.exe` (~5.1 MB including all diagram engines, compared to 150+ MB for Electron).
+* **WebView2**: Uses the installed Microsoft Edge WebView2 runtime and reports a missing runtime with a download link.
+* **Single Executable**: Produces `mdvu.exe` with embedded offline diagram engines; packaging records the built executable's size and checksum.
 * **Native Win32 Chrome**:
   * **DWM Dark Mode**: Activates Windows 11 immersive dark mode window frames via `DwmSetWindowAttribute(hwnd, 20)`.
   * **Win32 Menus & Status Bar**: Native top menu bar (`File`, `View`) and bottom status bar (`CommonControlsEx`).

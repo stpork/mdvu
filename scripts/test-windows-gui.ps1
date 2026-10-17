@@ -39,7 +39,7 @@ Alice -> Bob: Hello
         if (-not $Process.WaitForExit(60000)) { $Process.Kill(); throw "WebView2 GUI smoke test timed out" }
         $Text = $Stdout.Result
         [IO.File]::WriteAllText($ErrorLog, $Stderr.Result)
-        if ($Process.ExitCode -ne 0) { throw "WebView2 GUI smoke test failed: $($Process.ExitCode) $($Stderr.Result)" }
+        if ($Process.ExitCode -ne 0) { throw "WebView2 GUI smoke test failed: $($Process.ExitCode) $Text $($Stderr.Result)" }
         $Match = [regex]::Match($Text, 'GUI smoke: (\{[^\r\n]+\})')
         if (-not $Match.Success) { throw "WebView2 smoke diagnostic missing: $Text $($Stderr.Result)" }
         $Checks = $Match.Groups[1].Value | ConvertFrom-Json

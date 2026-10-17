@@ -6,6 +6,7 @@ param(
     [string]$FixtureFilter = '*.md',
     [switch]$Install,
     [switch]$SkipUI,
+    [switch]$TimerOnly,
     [int]$SampleSeconds = 12,
     [int]$BenchmarkRuns = 10,
     [string]$Output = "test-results/windows"
@@ -101,7 +102,7 @@ try {
         Assert-Test "Benchmark $($Fixture.Name)" ($Bench.code -eq 0)
     }
     if (-not $SkipUI) {
-        if ((Get-Process -Id $PID).SessionId -eq 0) { throw 'UI and screenshots require an interactive session; use start-windows-interactive-test.ps1 from SSH.' }
+        if (-not $TimerOnly -and (Get-Process -Id $PID).SessionId -eq 0) { throw 'UI and screenshots require an interactive session; use start-windows-interactive-test.ps1 from SSH.' }
         try {
             & "$PSScriptRoot/test-windows-gui.ps1" -Exe $script:Binary
             Assert-Test 'Native WebView2: >2MB, local images, CSP, TOC' $true
@@ -116,6 +117,7 @@ public static class MdvuCapture {
 }
 '@
         $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
+        if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
         foreach ($Fixture in $Fixtures) {
             $Profile = Join-Path $Temp ('webview-' + [Guid]::NewGuid())
@@ -161,15 +163,17 @@ public static class MdvuCapture {
                 if ($null -eq $UI) { throw 'UI report missing: check the interactive desktop and renderer before continuing' }
                 Assert-Test "UI checks $($Fixture.Name)" ($null -ne $UI -and $UI.passed)
                 $Results.metrics += [ordered]@{fixture=$Fixture.FullName.Substring((Resolve-Path 'tests/fixtures').Path.Length+1); ui=$UI; firstWindowMs=$FirstWindowMs; documentReady=$Ready; samples=$Samples; note='Working sets sum shared pages; private bytes are the better total. First window is not first content.'}
-                [void][MdvuCapture]::SetForegroundWindow($Process.MainWindowHandle)
-                $Rect = [MdvuCapture+RECT]::new()
-                if ([MdvuCapture]::GetWindowRect($Process.MainWindowHandle,[ref]$Rect) -and $Rect.Right -gt $Rect.Left) {
-                    $Bitmap = [Drawing.Bitmap]::new($Rect.Right-$Rect.Left,$Rect.Bottom-$Rect.Top)
-                    $Graphics = [Drawing.Graphics]::FromImage($Bitmap)
-                    try {
-                        $Graphics.CopyFromScreen($Rect.Left,$Rect.Top,0,0,$Bitmap.Size)
-                        $Bitmap.Save((Join-Path $Output ($Fixture.BaseName+'.png')))
-                    } finally { $Graphics.Dispose(); $Bitmap.Dispose() }
+                if (-not $TimerOnly) {
+                    [void][MdvuCapture]::SetForegroundWindow($Process.MainWindowHandle)
+                    $Rect = [MdvuCapture+RECT]::new()
+                    if ([MdvuCapture]::GetWindowRect($Process.MainWindowHandle,[ref]$Rect) -and $Rect.Right -gt $Rect.Left) {
+                        $Bitmap = [Drawing.Bitmap]::new($Rect.Right-$Rect.Left,$Rect.Bottom-$Rect.Top)
+                        $Graphics = [Drawing.Graphics]::FromImage($Bitmap)
+                        try {
+                            $Graphics.CopyFromScreen($Rect.Left,$Rect.Top,0,0,$Bitmap.Size)
+                            $Bitmap.Save((Join-Path $Output ($Fixture.BaseName+'.png')))
+                        } finally { $Graphics.Dispose(); $Bitmap.Dispose() }
+                    }
                 }
                 Assert-Test "GUI fixture $($Fixture.Name)" ($null -ne $FirstWindowMs -and $null -ne $Ready)
                 Save-Results

@@ -1160,7 +1160,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         hasLoadedDocument = true
         let generation = renderGeneration
         profiler.mark("webview.firstContent")
-        if let auditScript { webView.evaluateJavaScript(auditScript, completionHandler: nil) }
+        if let auditScript {
+            window?.orderFrontRegardless()
+            NSApp.activate(ignoringOtherApps: true)
+            webView.evaluateJavaScript(auditScript, completionHandler: nil)
+        }
         if abs(webView.pageZoom - targetPageZoom) > 0.001 {
             webView.pageZoom = targetPageZoom
         }
@@ -1278,7 +1282,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             return
         }
         if message.name == "diagramCache", let body = message.body as? [String: Any], let key = body["key"] as? String, let svg = body["svg"] as? String {
-            DispatchQueue.global(qos: .utility).async { [cache] in cache.write(key: key, svg: svg) }
+            cache.enqueueWrite(key: key, svg: svg)
             return
         }
         if message.name == "tableOfContents", let body = message.body as? [[String: Any]] {
@@ -1528,6 +1532,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     func updateZoomControls() {
         let current = effectiveZoom
+        if auditScript != nil {
+            webView.evaluateJavaScript("window.__mdvuAuditZoom=\(Double(webView.pageZoom)); void 0", completionHandler: nil)
+        }
         zoomMinusButton?.isEnabled = current > (ZoomPolicy.minimum + 0.005)
         zoomPlusButton?.isEnabled = current < (ZoomPolicy.maximum - 0.005)
 

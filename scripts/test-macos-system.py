@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('binary', nargs='?', default='dist/mdvu.app/Contents/MacOS/mdvu')
 parser.add_argument('--output', default='test-results/macos')
 parser.add_argument('--fixture', help='Optional fixture path relative to tests/fixtures')
+parser.add_argument('--timer-only', action='store_true', help='CI correctness checks without animation-frame performance claims')
 args = parser.parse_args()
 os.chdir(root)
 output = pathlib.Path(args.output).resolve(); output.mkdir(parents=True, exist_ok=True)
@@ -31,6 +32,8 @@ def processes():
     return result
 expected_errors=json.loads((root/'tests/ui/expected-diagram-errors.json').read_text())
 ui_source=(root/'tests/ui/check-fixture.js').read_text()
+if args.timer_only:
+    ui_source="window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);\n"+ui_source
 results = {'binary':str(binary),'binarySha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'macOS':platform.mac_ver()[0],'machine':platform.machine(),'fixtures':[], 'memoryNote':'App RSS is sampled directly. WebKit RSS includes only processes newly created during this isolated fixture run; XPC services may have parent PID 1. Shared pages can be counted more than once.'}
 for fixture in fixtures:
     name = fixture.relative_to(root/'tests/fixtures').as_posix()

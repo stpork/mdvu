@@ -30,18 +30,18 @@
         let t=performance.now();
         if(coldScroll.length%4===0)coldTargets[(coldScroll.length*17)%Math.max(1,coldTargets.length)]?.scrollIntoView({block:'center',behavior:'instant'});
         scrollerDuringLoad.scrollBy({top:70,behavior:'instant'});await nextFrame();coldScroll.push(performance.now()-t);
-        const input=document.getElementById('mdvu-zoom-val'),width=innerWidth;
+        const input=document.getElementById('mdvu-zoom-val');
         const zoomIn=document.getElementById('btn-zoom-in'),zoomOut=document.getElementById('btn-zoom-out');
         t=performance.now();
         if(zoomIn)zoomIn.click();else window.webkit?.messageHandlers?.uiControl?.postMessage('zoomIn');
-        for(let n=0;n<100&&(input?input.value!=='110%':innerWidth>width*.98);n++)await nextFrame();
+        for(let n=0;n<100&&(input?input.value!=='110%':window.__mdvuAuditZoom!==1.1);n++)await nextFrame();
         await nextFrame();coldZoom.push(performance.now()-t);
-        checks.coldZoomIn=checks.coldZoomIn!==false&&(input?input.value==='110%':innerWidth<width*.98);
+        checks.coldZoomIn=checks.coldZoomIn!==false&&(input?input.value==='110%':window.__mdvuAuditZoom===1.1);
         t=performance.now();
         if(zoomOut)zoomOut.click();else window.webkit?.messageHandlers?.uiControl?.postMessage('zoomOut');
-        for(let n=0;n<100&&(input?input.value!=='100%':Math.abs(innerWidth-width)>3);n++)await nextFrame();
+        for(let n=0;n<100&&(input?input.value!=='100%':window.__mdvuAuditZoom!==1);n++)await nextFrame();
         await nextFrame();coldZoom.push(performance.now()-t);
-        checks.coldZoomOut=checks.coldZoomOut!==false&&(input?input.value==='100%':Math.abs(innerWidth-width)<4);
+        checks.coldZoomOut=checks.coldZoomOut!==false&&(input?input.value==='100%':window.__mdvuAuditZoom===1);
         await pause(120);
       } while(rendering);
     };
@@ -68,7 +68,7 @@
     scroller.scrollTo({top:0,behavior:'instant'});
     const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
     const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
-    checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
+    if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const headings = [...article.querySelectorAll('h1,h2,h3,h4,h5,h6')];
     const ids = headings.map(h => h.id);
     checks.uniqueHeadingTargets = ids.every(Boolean) && new Set(ids).size === ids.length;
@@ -118,7 +118,8 @@
     checks.diagramErrors=diagramErrors.length===expected.length&&diagramErrors.every(e=>expected.some(known=>normalize(known.source)===normalize(e.source)));
     checks.diagrams=[...article.querySelectorAll('figure.diagram')].every(n=>n.classList.contains('diagram-error')||window.__mdvuHasDiagramSVG?.(n));
     if(window.__mdvuAuditIdleProbe)await pause(5500);
-    const result = {checks, idleProbe:!!window.__mdvuAuditIdleProbe, performance:performanceMetrics, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
+    const timerOnly=window.__mdvuTimingMode==='timer';
+    const result = {checks, timingMode:timerOnly?'timer-correctness-only':'animation-frame', idleProbe:!!window.__mdvuAuditIdleProbe, performance:timerOnly?null:performanceMetrics, diagnosticTimers:timerOnly?performanceMetrics:undefined, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
       diagrams:diagramCount(),
       diagramErrors,
       mathErrors:article.querySelectorAll('.katex-error').length,
