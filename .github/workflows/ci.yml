@@ -17,11 +17,11 @@ jobs:
   # =========================================================================
   macos:
     name: macOS (Tests & Release Build)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 25
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Select Xcode
         run: |
@@ -37,17 +37,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.9.2
 
       - name: Run Rust Core Unit Tests
-        run: cargo test --workspace --verbose
+        run: cargo test -p mdvu-core --verbose
 
       - name: Run shared Rust coverage
         run: |
           rustup component add llvm-tools-preview
           cargo install cargo-llvm-cov --locked
           mkdir -p target/coverage
-          cargo llvm-cov --workspace --lcov --output-path target/coverage/rust.lcov
+          cargo llvm-cov -p mdvu-core --lcov --output-path target/coverage/rust.lcov
 
       - name: Run Swift & AppKit Test Suite
         run: |
@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload test diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: test-diagnostics-macos
           path: |
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload native fixture diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: native-fixtures-macos
           path: test-results/native-fixtures-macos/
@@ -110,7 +110,7 @@ jobs:
         run: make archive
 
       - name: Upload macOS Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: mdvu-macos-release
           path: |
@@ -131,7 +131,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -140,7 +140,7 @@ jobs:
           components: llvm-tools-preview
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2.9.2
 
       - name: Run Rust Workspace Tests
         run: cargo test --workspace --verbose
@@ -210,7 +210,7 @@ jobs:
 
       - name: Upload Windows coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-windows
           path: target/coverage/
@@ -221,14 +221,14 @@ jobs:
 
       - name: Upload native Windows fixture diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: native-fixtures-windows
           path: test-results/native-fixtures-windows/
           retention-days: 7
 
       - name: Upload Windows Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: mdvu-windows-x86_64
           path: |
@@ -245,7 +245,7 @@ jobs:
     name: Cross-platform Rust core (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.9.2
       - run: cargo test -p mdvu-core

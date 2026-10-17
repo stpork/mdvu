@@ -21,18 +21,20 @@ endif
 
 SWIFT_RELEASE_FLAGS := -Xswiftc -O -Xswiftc -cross-module-optimization -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
 
-.PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean rust-all rust-release rust-test windows-build
+.PHONY: prepare print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean rust-all rust-release rust-test windows-build
+prepare:
+	@mkdir -p "$(PROJECT_ROOT)/dist" "$(PROJECT_ROOT)/test-results"
 print-release-flags:
 	@printf '%s\n' '$(SWIFT_RELEASE_FLAGS)'
-all: rust-all
+all: prepare rust-all
 	cd "$(PROJECT_ROOT)" && swift build
-release: rust-release
+release: prepare rust-release
 	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
 	@mkdir -p "$(PROJECT_ROOT)/target/swift-ir"
 	@for f in "$(PROJECT_ROOT)"/*.bc; do \
 		if [ -f "$$f" ]; then mv "$$f" "$(PROJECT_ROOT)/target/swift-ir/"; fi; \
 	done
-test: rust-all
+test: prepare rust-all
 	cd "$(PROJECT_ROOT)" && MDVU_CORE_LIB="$(PROJECT_ROOT)/target/debug/libmdvu_core.dylib" swift test $(TEST_FLAGS) $(SWIFT_TEST_ARGS)
 DYLIB ?= $(PROJECT_ROOT)/target/release/libmdvu_core.dylib
 
@@ -58,7 +60,7 @@ package:
 	strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"
-universal:
+universal: prepare
 	"$(PROJECT_ROOT)/scripts/build-universal.sh"
 archive: universal
 	"$(PROJECT_ROOT)/scripts/package-release.sh"
@@ -98,12 +100,12 @@ windows-build:
 
 .PHONY: check coverage
 check:
-	cargo test --workspace
+	cargo test -p mdvu-core
 	$(MAKE) rust-release
 	$(MAKE) test
 
 coverage:
 	mkdir -p "$(PROJECT_ROOT)/target/coverage"
-	cargo llvm-cov --workspace --lcov --output-path "$(PROJECT_ROOT)/target/coverage/rust.lcov"
+	cargo llvm-cov -p mdvu-core --lcov --output-path "$(PROJECT_ROOT)/target/coverage/rust.lcov"
 	"$(PROJECT_ROOT)/scripts/coverage-swift.sh"
 	python3 "$(PROJECT_ROOT)/scripts/coverage-summary.py"

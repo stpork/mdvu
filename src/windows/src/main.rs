@@ -1835,7 +1835,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gui_shell_generation_and_features() {
+    fn gui_shell_preserves_reader_script_and_features() {
         let base_html = mdvu_core::make_html_selective(
             "<h1 id=\"intro\">Introduction</h1><p>Hello world</p>",
             "Test Doc",
@@ -1882,6 +1882,18 @@ mod tests {
         assert!(shell.contains("mailto:finndebear@gmail.com"));
         assert!(shell.contains("shell_ready"));
         assert!(shell.contains("preserveReadingAnchor"));
+        let reader = base_html
+            .split_once("<script ")
+            .unwrap()
+            .1
+            .split_once("</script>")
+            .unwrap()
+            .0;
+        assert!(reader.contains("</head>"));
+        assert!(
+            shell.contains(reader),
+            "Shell injection must preserve the reader script verbatim"
+        );
         assert!(shell
             .contains("<article><h1 id=\"intro\">Introduction</h1><p>Hello world</p></article>"));
     }

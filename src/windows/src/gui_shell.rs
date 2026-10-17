@@ -1203,12 +1203,12 @@ pub fn build_gui_html(
             "__TOC_MAX__",
             &(toc_sizing["maximumFraction"].as_f64().unwrap() * 100.0).to_string(),
         );
-    let with_css = if let Some(pos) = document_html.find("</head>") {
-        let (head, rest) = document_html.split_at(pos);
-        format!("{head}{native_bridge}<style>{shell_css}</style>{rest}")
-    } else {
-        format!("{native_bridge}<style>{shell_css}</style>{document_html}")
-    };
+    // Match the trusted reader's opening tag: its JavaScript contains HTML
+    // strings, including </head>, which are not document insertion points.
+    let reader_tag = format!("<script nonce=\"{nonce}\">");
+    let pos = document_html.find(&reader_tag).unwrap_or(0);
+    let (head, rest) = document_html.split_at(pos);
+    let with_css = format!("{head}{native_bridge}<style>{shell_css}</style>{rest}");
 
     if let (Some(art_start), Some(art_end)) =
         (with_css.find("<article>"), with_css.rfind("</article>"))
