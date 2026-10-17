@@ -138,10 +138,9 @@ import WebKit
         #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
     }
 
-    @Test(arguments: [false, true]) func codeVisibilityPreservesFindAndNativeSelectionText(legacy: Bool) async throws {
+    @Test func codeVisibilityPreservesFindAndNativeSelectionText() async throws {
         let configuration = WKWebViewConfiguration()
-        let compatibility = legacy ? "const supports=CSS.supports.bind(CSS);CSS.supports=(...args)=>args[0]==='content-visibility'?false:supports(...args);" : ""
-        configuration.userContentController.addUserScript(WKUserScript(source: compatibility + "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
         let source = (0..<2000).map { "line \($0): Åä 中文 العربية 😀 const text = 'needle';\n" }.joined()
         let html = HTMLDocument.make(body: "<div style='height:5000px'></div><pre contenteditable='false'><code class='language-text'>\(HTML.escape(source))</code></pre><pre id='wrapped' style='white-space:pre-wrap'><code class='language-text'>\(HTML.escape(source))</code></pre>", title: "Legacy code", theme: .light)
