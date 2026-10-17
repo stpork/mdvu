@@ -104,6 +104,10 @@ try {
     if (-not $SkipUI) {
         if (-not $TimerOnly -and (Get-Process -Id $PID).SessionId -eq 0) { throw 'UI and screenshots require an interactive session; use start-windows-interactive-test.ps1 from SSH.' }
         try {
+            & "$PSScriptRoot/test-windows-startup.ps1" -Exe $script:Binary -Output (Join-Path $Output 'startup') -CaptureScreenshot:(-not $TimerOnly)
+            Assert-Test 'Startup caption controls, themes and profile location' $true
+        } catch { Assert-Test 'Startup caption controls, themes and profile location' $false; Write-Warning $_ }
+        try {
             & "$PSScriptRoot/test-windows-gui.ps1" -Exe $script:Binary
             Assert-Test 'Native WebView2: >2MB, local images, CSP, TOC' $true
         } catch { Assert-Test 'Native WebView2: >2MB, local images, CSP, TOC' $false; Write-Warning $_ }

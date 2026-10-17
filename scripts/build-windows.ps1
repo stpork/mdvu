@@ -18,7 +18,15 @@ if (-not $ExeSource -or -not (Test-Path $ExeSource)) { throw 'Cargo did not retu
 
 $DistDir = "dist/windows"
 if (Test-Path $DistDir) {
-    Get-ChildItem -Path $DistDir -Exclude @("*.WebView2", "WebView2Loader.dll") | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    # Retain old runtime profiles outside the distributable directory. They are
+    # generated data, not release assets; current builds use LocalAppData.
+    foreach ($Profile in @(Get-ChildItem -Path $DistDir -Directory -Filter '*.WebView2')) {
+        $Retired = Join-Path 'target/legacy-webview2' ([Guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Force $Retired | Out-Null
+        Move-Item $Profile.FullName $Retired
+        Write-Host "  [OK] Retained legacy browser profile in $Retired"
+    }
+    Get-ChildItem -Path $DistDir -File | Remove-Item -Force
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 
@@ -51,7 +59,7 @@ $Version = (Get-Content "version.txt").Trim()
 $ZipPath = "dist/mdvu-$Version-windows-x86_64.zip"
 Write-Host "==> Creating portable release archive: $ZipPath" -ForegroundColor Cyan
 
-$ArchiveFiles = @(Get-ChildItem -Path $DistDir -Exclude "*.WebView2")
+$ArchiveFiles = @('mdvu.exe','WebView2Loader.dll','README.txt','LICENSE.txt') | ForEach-Object { Get-Item (Join-Path $DistDir $_) }
 # SDK DLLs can have a reproducible 1970 timestamp, outside ZIP's 1980..2107 range.
 $ArchiveFiles | Where-Object { $_.LastWriteTime.Year -lt 1980 -or $_.LastWriteTime.Year -gt 2107 } |
     ForEach-Object { $_.LastWriteTime = [datetime]'1980-01-01' }

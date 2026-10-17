@@ -5,7 +5,6 @@ use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use tao::event_loop::EventLoopProxy;
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
-use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
 use windows_sys::Win32::UI::Shell::{
     DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass, ShellExecuteW,
 };
@@ -88,20 +87,6 @@ pub unsafe fn apply_window_icon(hwnd: HWND) {
     if !small_icon.is_null() {
         SendMessageW(hwnd, WM_SETICON, ICON_SMALL as usize, small_icon as isize);
     }
-}
-
-pub unsafe fn apply_dark_mode(hwnd: HWND, theme: &str) {
-    let use_dark_mode: i32 = match theme.trim().to_ascii_lowercase().as_str() {
-        "light" => 0,
-        _ => 1,
-    };
-    // DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-    DwmSetWindowAttribute(
-        hwnd,
-        20,
-        &use_dark_mode as *const _ as *const _,
-        std::mem::size_of::<i32>() as u32,
-    );
 }
 
 #[allow(clippy::too_many_arguments)] // Explicit native menu state; no duplicated host model.

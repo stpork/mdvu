@@ -27,7 +27,7 @@ use tao::{
     event::{ElementState, Event as TaoEvent, MouseButton, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
     keyboard::{KeyCode, ModifiersState},
-    window::WindowBuilder,
+    window::{Theme, WindowBuilder},
 };
 use wry::WebViewBuilder;
 
@@ -853,6 +853,14 @@ fn ensure_webview2_runtime_env() {
 #[cfg(not(windows))]
 fn ensure_webview2_runtime_env() {}
 
+fn preferred_window_theme(theme: &str) -> Option<Theme> {
+    match theme.trim().to_ascii_lowercase().as_str() {
+        "light" => Some(Theme::Light),
+        "dark" => Some(Theme::Dark),
+        _ => None,
+    }
+}
+
 fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let startup = Instant::now();
     let metrics_file = std::env::var_os("MDVU_METRICS_FILE").map(PathBuf::from);
@@ -864,7 +872,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let clean_dialect = args.dialect.trim().to_ascii_lowercase();
     let is_dialect_explicit = clean_dialect != "auto" && clean_dialect != "automatic";
     let dialect = MarkdownDialect::from_str_name(&args.dialect).unwrap_or(MarkdownDialect::Generic);
-    let theme = args.theme;
+    let theme = args.theme.trim().to_ascii_lowercase();
     let full_width = args.full_width;
     let nav_requested = args.navigator;
     let enable_diagrams = !args.no_mermaid;
@@ -960,6 +968,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let window = WindowBuilder::new()
         .with_title(&initial_title)
+        .with_theme(preferred_window_theme(&state.lock().unwrap().theme))
         .with_inner_size(LogicalSize::new(1120.0, 800.0))
         .with_min_inner_size(LogicalSize::new(460.0, 360.0))
         .build(&event_loop)?;
@@ -974,7 +983,6 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         unsafe {
             let st = state.lock().unwrap();
             win32::apply_window_icon(h);
-            win32::apply_dark_mode(h, &st.theme);
             win32::create_main_menu(
                 h,
                 st.effective_dialect,
@@ -1263,9 +1271,10 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     *control_flow = ControlFlow::ExitWithCode(if passed { 0 } else { 1 });
                 }
                 UserEvent::SystemThemeChanged(dark) => {
-                    let mut st = state.lock().unwrap(); st.system_dark = dark;
-                    if st.theme == "system" {
-                        #[cfg(windows)] unsafe { win32::apply_dark_mode(hwnd, if dark { "dark" } else { "light" }); }
+                    let mut st = state.lock().unwrap();
+                    let changed = st.system_dark != dark;
+                    st.system_dark = dark;
+                    if changed && st.theme == "system" {
                         if let Some(path) = st.current_file.clone() { update_webview_document(&webview, &window, &mut st, &path, true); }
                     }
                 }
@@ -1486,10 +1495,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::SetTheme(theme) => {
                     let mut st = state.lock().unwrap();
                     st.theme = theme.clone();
-                    #[cfg(windows)]
-                    unsafe {
-                        win32::apply_dark_mode(hwnd, &st.theme);
-                    }
+                    window.set_theme(preferred_window_theme(&theme));
                     let _ = webview.evaluate_script(&format!("window.__mdvuSetTheme?.({theme:?});"));
                     if let Some(path) = st.current_file.clone() {
                         update_webview_document(&webview, &window, &mut st, &path, true);
@@ -1760,6 +1766,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use mdvu_core::{TocEntry, VaultItem};
+
+    #[test]
+    fn native_window_theme_preserves_system_preference() {
+        assert_eq!(preferred_window_theme("system"), None);
+        assert_eq!(preferred_window_theme(" LIGHT "), Some(Theme::Light));
+        assert_eq!(preferred_window_theme("dark"), Some(Theme::Dark));
+    }
 
     #[test]
     fn test_cli_args_mac_and_windows_parity() {
