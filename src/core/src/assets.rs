@@ -8,6 +8,7 @@ pub static APP_JS: &str = include_str!("../../../assets/app.js");
 pub static MERMAID_LZMA: &[u8] = include_bytes!("../../../assets/mermaid.lzma");
 pub static PLANTUML_LZMA: &[u8] = include_bytes!("../../../assets/plantuml.lzma");
 pub static KATEX_LZMA: &[u8] = include_bytes!("../../../assets/katex.lzma");
+pub const RUNTIME_MANIFEST: &str = include_str!("../../../scripts/runtime-assets/manifest.json");
 
 static MARKDOWN_CSS_C: OnceLock<Option<CString>> = OnceLock::new();
 static APP_JS_C: OnceLock<Option<CString>> = OnceLock::new();

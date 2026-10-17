@@ -258,8 +258,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2.9.2
       - run: cargo test -p mdvu-core
-      - name: Test complete release validation
-        run: python3 -m unittest discover -s tests -p 'test_release_assets.py'
+      - name: Verify release packages and embedded renderer integrity
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
 
   release:
     name: Publish all six release packages

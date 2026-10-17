@@ -42,8 +42,8 @@ This project incorporates or bundles components from the following open-source s
 - **Copyright**: (c) 2014 - 2024 Knut Sveidqvist and Mermaid Contributors.
 
 #### 4. PlantUML Core & Viz.js (Graphviz)
-- **Repositories**: https://github.com/plantuml/plantuml-core, https://github.com/mdaines/viz.js
-- **License**: GPL / LGPL / Apache-2.0 / MIT License
+- **Repositories**: https://github.com/plantuml/plantuml, https://github.com/mdaines/viz.js
+- **License**: PlantUML Core 1.2026.9: MIT; Viz.js: MIT; bundled Graphviz/Expat retain their upstream licenses.
 - **Copyright**: (c) PlantUML Team; (c) Michael Daines and Graphviz Contributors.
 
 #### 5. KaTeX

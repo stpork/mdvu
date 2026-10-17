@@ -30,7 +30,7 @@
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
-* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and SHA-256 disk caching.
+* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 12.2.0**, **ZenUML 1.0.1**, and **PlantUML Core 1.2026.9** + **Viz.js 3.31.0** (Graphviz 16.1.0) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and runtime-aware disk caching.
 * **Native Zoom & Window Management**:
   * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, titlebar quick-open, and 3-pane split view with Vault Navigator (`⌥⌘D`).
   * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, status bar, and live atomic-save file watcher (`notify`).
@@ -304,25 +304,26 @@ mdvu --snapshot output.png README.md
 
 `mdvu` bundles fully offline rendering engines compressed with **LZMA Ultra** for maximum storage efficiency:
 
-* **Mermaid 11.17.2**:
+* **Mermaid 12.2.0**:
   * **Core Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`.
   * **Extended Types**: `ishikawa-beta` (fishbone diagrams), `swimlane-beta` (workflow swimlanes), `packet-beta` (binary packet protocols), `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, `sankey-beta`, and `xychart-beta`.
-  * **ZenUML 0.2.3 Plugin**: Full support for concise ZenUML sequence diagrams within ````mermaid`` code blocks.
+  * **ZenUML 1.0.1 Plugin**: Support for concise ZenUML sequence diagrams within ````mermaid`` code blocks.
   * **Auto-Quoting Resilience**: Grammar preprocessor automatically quotes unquoted labels containing hyphens in `requirementDiagram` and complex models.
-* **PlantUML 1.2026.7 (`@plantuml/core`) + Graphviz (`Viz.js 3.24.0` / Graphviz 14.1.1)**:
+* **PlantUML 1.2026.9 (`@plantuml/core`) + Graphviz (`Viz.js 3.31.0` / Graphviz 16.1.0)**:
   * **100% Offline & Pure WebAssembly/JS**: Executes client-side inside WebKit via TeaVM. **No Java runtime (JRE/JVM) or external binaries required.**
   * **Fenced Blocks**: Supports both ````plantuml`` and ````puml`` code fences.
   * **UML Models**: Sequence diagrams, Class models with inheritance and associations, State machines, Activity diagrams, Component architectures, Object diagrams, Deployment diagrams, and Use-case models.
   * **Non-UML Families**: JSON/YAML data tree visualizers, Salt UI wireframes, Archimate enterprise models, MindMaps, Work Breakdown Structures (WBS), Gantt schedules, and Network (`nwdiag`) diagrams.
   * **Dark Mode & Transparency**: Automatically adapts to document theme with transparent SVG backgrounds.
+  * **Runtime limits**: Ditaa is absent from the JavaScript PlantUML engine. Optional standard-library `!include <...>` bundles are not shipped; an ArchiMate diagram written directly in the core syntax is distinct from an include-based macro library.
 * **Isolated Diagram Execution**:
   * Native builds generate diagrams in a separate renderer and attach SVGs near the reading viewport. The renderer is released after inactivity; a bounded queue and cache limit retained work.
 * **On-Demand Lazy Decompression**:
   * Documents without diagrams do not load the diagram engines; their LZMA archives remain compressed.
-  * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.33 MB).
-  * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.20 MB).
-* **SHA-256 SVG Disk Cache**:
-  * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by `SHA256(renderer + version + source + theme)`.
+  * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.64 MiB).
+  * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.18 MiB).
+* **Runtime-aware SVG Disk Cache**:
+  * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by renderer, source, theme, application version and the locked runtime manifest.
   * Renders once; subsequent loads reuse cached SVG and bypass diagram generation.
 
 ---
@@ -458,11 +459,11 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 * [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) — MIT / Apache-2.0 (c) Raph Levien and pulldown-cmark contributors.
 * [wry](https://github.com/tauri-apps/wry) & [tao](https://github.com/tauri-apps/tao) — MIT / Apache-2.0 (c) The Tauri Programme within The Commons Conservancy.
 * [lzma-rs](https://github.com/gendx/lzma-rs) — MIT / Apache-2.0 (c) Corentin Henry.
-* [Mermaid.js 11.17.2](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
-* [ZenUML Plugin 0.2.3](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
-* [PlantUML Core 1.2026.7](https://github.com/plantuml/plantuml-core) — GPL / LGPL / Apache-2.0 / MIT (c) PlantUML Team.
-* [Viz.js 3.24.0 (Graphviz 14.1.1)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.
-* [KaTeX 0.16.21](https://github.com/KaTeX/KaTeX) — MIT (c) Emily Eisenberg, Sophie Alpert, and KaTeX Contributors.
+* [Mermaid.js 12.2.0](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
+* [ZenUML Plugin 1.0.1](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
+* [PlantUML Core 1.2026.9](https://github.com/plantuml/plantuml) — MIT (c) PlantUML Team.
+* [Viz.js 3.31.0 (Graphviz 16.1.0)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.
+* [KaTeX 0.19.0](https://github.com/KaTeX/KaTeX) — MIT (c) Emily Eisenberg, Sophie Alpert, and KaTeX Contributors.
 
 ## Publishing a release
 

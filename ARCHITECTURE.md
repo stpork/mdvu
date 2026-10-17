@@ -55,10 +55,10 @@ The core repository logic lives in `src/core` and is shared across all frontends
 
 ### C. Embedded Offline Diagram & Math Engines
 All engine assets are compressed with **LZMA Ultra** and compiled into the core binary:
-* **Mermaid 11.17.2 + ZenUML 0.2.3** (`mermaid.lzma`, ~1.33 MB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
-* **PlantUML Core 1.2026.7 + Viz.js 3.24.0** (`plantuml.lzma`, ~1.20 MB): Offline TeaVM/Viz.js execution with Graphviz 14.1.1. **Zero Java runtime (JVM/JRE) requirement.**
-* **KaTeX MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
-* **Deterministic Diagram Caching**: SHA-256 / 64-bit SipHash cache keys (`compute_diagram_cache_key`) prevent diagram collisions across themes and documents.
+* **Mermaid 12.2.0 + ZenUML 1.0.1** (`mermaid.lzma`, ~1.64 MiB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
+* **PlantUML Core 1.2026.9 + Viz.js 3.31.0** (`plantuml.lzma`, ~1.18 MiB): Offline TeaVM/Viz.js execution with Graphviz 16.1.0. **Zero Java runtime (JVM/JRE) requirement.**
+* **KaTeX 0.19.0 MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
+* **Deterministic Diagram Caching**: Four domain-separated 64-bit hashes (`compute_diagram_cache_key`) distinguish source, theme, application version and the locked runtime manifest, including asset hashes. Updating an engine invalidates old SVG cache entries.
 * **Native diagram isolation**: macOS shares one lazy, nonpersistent renderer WebView between document windows. Windows uses an isolated renderer origin within the same WebView2 environment, sharing its browser and GPU. Jobs run serially, obsolete work is cancelled, each job has a 30-second deadline, and the renderer is released after five idle seconds. Diagram engines never enter the reading document. Standalone HTML retains its browser fallback.
 * **Bounded reading DOM and cache writes**: offscreen diagrams retain SVG text and a size placeholder; SVG nodes are restored near the viewport or for matching search results. Cache writes run away from the UI thread through a bounded queue; slow storage can skip an optional cache write instead of delaying input.
 * **Regression checks**: both native CI jobs render every Markdown fixture. Their explicit timer mode checks correctness and renderer cleanup without claiming display-frame performance. The system runners' default mode measures actual animation frames while scrolling and zooming during cold rendering.
@@ -161,3 +161,9 @@ mdvu document.md --toc
 * **Shared workflow (`ci.yml`)**: Linux tests the Rust core. macOS runs Swift/core tests and coverage, native fixture correctness checks, release and universal builds. Windows runs workspace tests and coverage, native fixture correctness checks, CLI checks and release packaging. Hosted fixture tests use timer mode; physical desktop measurements use the default system runners described in [COMPARISON.md](COMPARISON.md).
 
 * **Release publication**: A version tag must match `version.txt`. After all three CI jobs pass, a dedicated job downloads that run's macOS and Windows artifacts. `scripts/release-assets.py` requires six packages and valid SHA-256 sidecars, uploads them to a draft, verifies the remote asset set and only then publishes it. Public releases are immutable; the manifest identifies the tested source commit. `scripts/publish-release.sh` orchestrates tagging from clean, green `develop`, Homebrew and the website refresh.
+
+### Updating embedded renderers
+
+Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
+
+The JavaScript PlantUML build does not implement Ditaa. Its npm package excludes optional standard-library bundles; `!include <...>` requires separately supplied library data. These limits are distinct from parsing/rendering the diagram families in the core.

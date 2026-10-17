@@ -378,7 +378,7 @@ pub fn compute_diagram_cache_key(renderer: &str, theme: &str, source: &str) -> S
     for round in 0u64..4u64 {
         let mut hasher = DefaultHasher::new();
         crate::VERSION.hash(&mut hasher);
-        "runtime-strict-v2".hash(&mut hasher);
+        crate::assets::RUNTIME_MANIFEST.hash(&mut hasher);
         round.hash(&mut hasher);
         renderer.hash(&mut hasher);
         theme.hash(&mut hasher);

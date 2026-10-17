@@ -72,8 +72,8 @@ def main():
     # 2. Embedded Assets Breakdown
     print("\n--- 2. Compressed Assets Breakdown (Embedded in mdvu-core & mdvu) ---")
     assets = [
-        ("Mermaid 11.17.2 + ZenUML (mermaid.lzma)", "assets/mermaid.lzma"),
-        ("PlantUML 1.2026.7 + Viz.js (plantuml.lzma)", "assets/plantuml.lzma"),
+        ("Mermaid 12.2.0 + ZenUML (mermaid.lzma)", "assets/mermaid.lzma"),
+        ("PlantUML 1.2026.9 + Viz.js (plantuml.lzma)", "assets/plantuml.lzma"),
         ("KaTeX MathML Engine (katex.lzma)", "assets/katex.lzma"),
         ("Markdown Stylesheet (markdown.css)", "assets/markdown.css"),
         ("App Runtime Script (app.js)", "assets/app.js"),

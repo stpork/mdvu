@@ -167,6 +167,7 @@ extension SharedRegressionTests {
         let html = HTMLDocument.make(body: body, title: "Offline engines", theme: .light, embedEngines: true)
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=cb=>setTimeout(cb,0)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.scriptErrors=[];addEventListener('error',e=>scriptErrors.push(e.message));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: CGRect(x: 0,y: 0,width: 900,height: 700), configuration: configuration)
         view.loadHTMLString(html, baseURL: nil)
         defer { view.stopLoading() }
@@ -178,7 +179,7 @@ extension SharedRegressionTests {
             if count == 2 { break }
             try await Task.sleep(for: .milliseconds(50))
         }
-        let diagnostics = try? await view.evaluateJavaScriptValue("JSON.stringify({runtime:!!window.mermaid,error:window.__mdvuMermaidError,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.srcdoc.length,url:f.contentDocument?.URL}))})")
+        let diagnostics = try? await view.evaluateJavaScriptValue("JSON.stringify({scriptErrors:window.scriptErrors,runtime:!!window.mermaid,plantuml:typeof PlantUML,plantumlRender:typeof window.PlantUML?.renderToString,pending:[...document.querySelectorAll('figure.diagram')].map(n=>({renderer:n.dataset.renderer,classes:n.className})),error:window.__mdvuMermaidError,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.srcdoc.length,url:f.contentDocument?.URL}))})")
         #expect(count == 2, "\(String(describing: diagnostics))")
         let errors = try await view.evaluateJavaScriptValue("[...document.querySelectorAll('.diagram-error')].map(n=>n.textContent).join(' | ')")
         #expect(errors as? String == "")

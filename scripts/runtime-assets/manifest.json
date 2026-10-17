@@ -1,0 +1,28 @@
+{
+  "compression": "LZMA1 / .lzma, preset 9 extreme (64 MiB dictionary)",
+  "packages": {
+    "@mermaid-js/mermaid-zenuml": "1.0.1",
+    "@plantuml/core": "1.2026.9",
+    "@viz-js/viz": "3.31.0",
+    "esbuild": "0.28.2",
+    "katex": "0.19.0",
+    "mermaid": "12.2.0"
+  },
+  "assets": {
+    "mermaid": {
+      "sourceBytes": 8527159,
+      "compressedBytes": 1715935,
+      "sha256": "f9fc03eaed40c96b594a816d00236c54c6f194958c36f3986a1f46e61ed22206"
+    },
+    "plantuml": {
+      "sourceBytes": 4630257,
+      "compressedBytes": 1237803,
+      "sha256": "b8f8fc278a1137d78e5e7cf97e5a1a27aeac2d015038cb8406a32a59bfbec7f9"
+    },
+    "katex": {
+      "sourceBytes": 272868,
+      "compressedBytes": 64347,
+      "sha256": "fa1300c910fefc9d653c6954ef098fdf8a011e22c423feab73e86206cfbca255"
+    }
+  }
+}
