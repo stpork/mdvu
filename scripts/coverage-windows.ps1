@@ -17,6 +17,10 @@ try {
     }
     & cargo llvm-cov --workspace --lcov --output-path (Join-Path $Output 'windows-unit.lcov')
     if ($LASTEXITCODE -ne 0) { throw 'Native coverage tests failed' }
+    # Prepare before show-env: invoking llvm-cov run inside its exported wrapper
+    # environment would recursively wrap rustc on Windows.
+    & cargo llvm-cov run --no-report -p mdvu-windows --bin mdvu -- --help
+    if ($LASTEXITCODE -ne 0) { throw 'Instrumented GUI preparation failed' }
     # Decode cargo's escaped environment without executing shell output; also works on Windows PowerShell 5.
     $Environment = @(& cargo llvm-cov show-env --pwsh)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot obtain coverage environment' }
@@ -27,9 +31,6 @@ try {
         if (-not $Saved.ContainsKey($Name)) { $Saved[$Name] = [Environment]::GetEnvironmentVariable($Name) }
         [Environment]::SetEnvironmentVariable($Name,$Value)
     }
-    # Build through llvm-cov so a cached ordinary binary cannot masquerade as instrumented.
-    & cargo llvm-cov run --no-report -p mdvu-windows --bin mdvu -- --help
-    if ($LASTEXITCODE -ne 0) { throw 'Instrumented GUI preparation failed' }
     $Messages = @(& cargo build -p mdvu-windows --bin mdvu --message-format=json-render-diagnostics)
     if ($LASTEXITCODE -ne 0) { throw 'Instrumented GUI build failed' }
     $Binary = $Messages | ForEach-Object { $_ | ConvertFrom-Json } |
