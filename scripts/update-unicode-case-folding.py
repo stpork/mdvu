@@ -33,8 +33,8 @@ for point in parents:
     groups.setdefault(find(point), []).append(point)
 classes = ' ' + ' '.join(''.join(map(chr, sorted(group))) for group in sorted(groups.values(), key=min)) + ' '
 path = Path(__file__).resolve().parents[1] / 'assets/app.js'
-before = path.read_text()
-notice = '/* Unicode case folding license (generated)\n' + Path(__file__).with_name('unicode-LICENSE.txt').read_text() + '*/'
+before = path.read_text(encoding='utf-8')
+notice = '/* Unicode case folding license (generated)\n' + Path(__file__).with_name('unicode-LICENSE.txt').read_text(encoding='utf-8') + '*/'
 after, count = re.subn(r'/\* Unicode case folding license \(generated\)\n.*?\*/', lambda _: notice, before, flags=re.DOTALL)
 if count != 1:
     raise SystemExit('Expected one generated Unicode license notice')
@@ -45,5 +45,5 @@ if args.check:
     if after != before:
         raise SystemExit('Generated case-folding classes are out of date')
 else:
-    path.write_text(after)
+    path.write_text(after, encoding='utf-8', newline='\n')
 print(f'Unicode 17.0.0: {len(groups)} classes, {len(classes.encode())} UTF-8 bytes')
