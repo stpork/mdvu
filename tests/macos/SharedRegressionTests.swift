@@ -100,15 +100,28 @@ struct SharedRegressionTests {
     }
     @MainActor @Test func standaloneIncludesWorkingMathRuntime() async throws {
         let pipeline = MarkdownPipeline(dialect: .github, mermaid: false)
-        let html = HTMLDocument.make(body: pipeline.render("$x^2$").body, title: "Math", theme: .light, embedEngines: true)
+        let body = pipeline.render("$x^2$\n\n<div style='height:6000px'></div>\n\n$$\\int_0^1 x^2 dx$$").body
+        let html = HTMLDocument.make(body: body, title: "Math", theme: .light, embedEngines: true)
         #expect(html.utf8.count > 200_000)
-        let view = WKWebView(frame: .zero)
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
         view.loadHTMLString(html, baseURL: nil)
         defer { view.stopLoading() }
         try await ready(view)
         _ = try await view.evaluateJavaScriptValue("window.__mdvuRenderMath(); true")
         let rendered = try await view.evaluateJavaScriptValue("document.querySelector('.math-rendered math') !== null")
         #expect(rendered as? Bool == true)
+        let visible = try await view.evaluateJavaScriptValue("""
+            (()=>{
+                const block=document.querySelector('.math-display'),math=block.querySelector('math'),text=math.textContent;
+                block.id='far-math';
+                window.__mdvuScrollToFragment('far-math',false);
+                document.documentElement.style.fontSize='32px';
+                block.scrollIntoView({block:'center',behavior:'instant'});
+                const rect=math.getBoundingClientRect(),box=block.getBoundingClientRect();
+                return math===block.querySelector('math')&&math.textContent===text&&rect.width>0&&rect.height>0&&rect.bottom>0&&rect.top<innerHeight&&box.height>=rect.height-1;
+            })()
+            """)
+        #expect(visible as? Bool == true)
     }
 }
 
