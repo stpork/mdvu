@@ -63,7 +63,7 @@ const revealCodeChunk=node=>{const chunk=node.closest?.('.mdvu-code-virtual');if
 // Older WebKit cannot skip offscreen line groups. Keep their text in the DOM
 // for find/ranges, with a fixed-height placeholder until the group is visible.
 // Native selection/copy must see the complete text before it builds the range.
-const revealLegacyCode=()=>document.querySelectorAll('.mdvu-code-virtual>.mdvu-code-content').forEach(content=>{content.hidden=false});
+const revealLegacyCode=event=>{if(event.target?.closest?.('input,textarea,select,[contenteditable]'))return;document.querySelectorAll('.mdvu-code-virtual>.mdvu-code-content').forEach(content=>{content.hidden=false})};
 if(needsCodeVisibilityFallback){
  document.addEventListener('selectstart',revealLegacyCode);
  document.addEventListener('copy',revealLegacyCode);
@@ -82,7 +82,7 @@ let end=offset,lines=0;
 while(lines<32&&end<source.length){const next=source.indexOf('\n',end);end=next<0?source.length:next+1;lines++}
 const chunk=document.createElement('span');chunk.className=code.className+' mdvu-code-chunk';chunk.textContent=source.slice(offset,end);
 chunk.style.setProperty('--mdvu-chunk-height',lines*lineHeight+'px');
-if(needsCodeVisibilityFallback){const content=document.createElement('span');content.className='mdvu-code-content '+code.className;content.append(...chunk.childNodes);content.hidden=true;chunk.append(content);chunk.classList.add('mdvu-code-virtual')}
+if(needsCodeVisibilityFallback&&style.whiteSpace==='pre'){const content=document.createElement('span');content.className='mdvu-code-content '+code.className;content.append(...chunk.childNodes);content.hidden=true;chunk.append(content);chunk.classList.add('mdvu-code-virtual')}
 fragment.append(chunk);offset=end;
 }
 code.replaceChildren(fragment);code.classList.add('mdvu-chunked');
