@@ -35,9 +35,14 @@ pub fn build_gui_html(
     let safe_vault_name = escape_html(vault_name);
     let safe_version = escape_html(VERSION);
 
+    let toc_policy = include_str!("../../../assets/sidebar-policy.json").trim();
+    let toc_sizing: serde_json::Value =
+        serde_json::from_str(toc_policy).expect("Embedded sidebar policy");
     let shell_css = r#"
 :root {
-  --toc-width: 260px;
+  --toc-width: __TOC_DEFAULT__px;
+  --toc-min-width: __TOC_MIN__px;
+  --toc-max-width: max(__TOC_MIN__px, __TOC_MAX__vw);
   --nav-width: 250px;
 }
 #mdvu-app {
@@ -219,9 +224,9 @@ pub fn build_gui_html(
   position: relative;
 }
 .mdvu-sidebar-left {
-  width: var(--toc-width);
-  min-width: var(--toc-width);
-  max-width: var(--toc-width);
+  width: clamp(var(--toc-min-width), var(--toc-width), var(--toc-max-width));
+  min-width: var(--toc-min-width);
+  max-width: var(--toc-max-width);
   border-right: 1px solid var(--line);
 }
 .mdvu-sidebar-left.hidden {
@@ -791,16 +796,17 @@ pub fn build_gui_html(
     renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
   }});
 
-  // Sidebar drag resizers (constrained to 220px..48% for TOC and 180px..45% for Navigator, matching macOS)
+  const tocSizing = {toc_policy};
+  // TOC defaults and drag limits share the same policy with AppKit.
   function setupResizer(resizerId, cssVar, isLeft) {{
     const resizer = document.getElementById(resizerId);
     if (!resizer) return;
     resizer.addEventListener('mousedown', (e) => {{
       e.preventDefault();
       resizer.classList.add('dragging');
-      const minW = isLeft ? 220 : 180;
+      const minW = isLeft ? tocSizing.minimumWidth : 180;
       const onMove = (ev) => {{
-        const maxW = Math.floor(window.innerWidth * (isLeft ? 0.48 : 0.45));
+        const maxW = Math.floor(window.innerWidth * (isLeft ? tocSizing.maximumFraction : 0.45));
         const w = isLeft ? ev.clientX : (window.innerWidth - ev.clientX);
         const clamped = Math.max(minW, Math.min(maxW, w));
         document.documentElement.style.setProperty(cssVar, clamped + 'px');
@@ -1229,6 +1235,13 @@ pub fn build_gui_html(
     );
     #[cfg(not(windows))]
     let native_bridge = "";
+    let shell_css = shell_css
+        .replace("__TOC_DEFAULT__", &toc_sizing["defaultWidth"].to_string())
+        .replace("__TOC_MIN__", &toc_sizing["minimumWidth"].to_string())
+        .replace(
+            "__TOC_MAX__",
+            &(toc_sizing["maximumFraction"].as_f64().unwrap() * 100.0).to_string(),
+        );
     let with_css = if let Some(pos) = document_html.find("</head>") {
         let (head, rest) = document_html.split_at(pos);
         format!("{head}{native_bridge}<style>{shell_css}</style>{rest}")

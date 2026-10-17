@@ -4,6 +4,26 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
+    @Test func largeCodePreservesTextSelectionAndSearchAcrossLineGroups() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        let source = (0..<2000).map { "line \($0): Åä 中文 العربية 😀 const text = 'needle';\n" }.joined()
+        view.loadHTMLString(HTMLDocument.make(body: "<pre><code class='language-text'>\(HTML.escape(source))</code></pre>", title: "Large code", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("!!document.querySelector('.mdvu-chunked')") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('code').textContent") as? String == source)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
+        #expect(try await view.evaluateJavaScriptValue("(() => {const range=document.createRange();range.selectNodeContents(document.querySelector('code'));return range.toString()})()") as? String == source)
+        #expect(try await view.evaluateJavaScriptValue("window.__mdvuFind.search('needle').count") as? Int == 2000)
+        _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();window.__mdvuInitArticle();true")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('code').textContent") as? String == source)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
+    }
+
     @Test func nativeTransportCanArriveAfterTheReaderScript() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))

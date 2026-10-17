@@ -1198,14 +1198,14 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     let mut modifiers = ModifiersState::default();
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, _target, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         match event {
             TaoEvent::UserEvent(user_event) => match user_event {
                 UserEvent::DiagramRequest(json) => {
                     #[cfg(windows)]
-                    if let Some(result) = diagram_worker.submit(&json, &window, web_context, &proxy) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+                    if let Some(result) = diagram_worker.submit(&json, _target, web_context, &proxy) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
                     #[cfg(not(windows))] let _ = json;
                 }
                 UserEvent::DiagramCancel => { #[cfg(windows)] diagram_worker.cancel(); }
@@ -1235,7 +1235,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             if result["idleProbe"] == true {
                                 let released = !diagram_worker.has_renderer();
                                 result["checks"]["rendererReleased"] = serde_json::json!(released);
-                                if !released { result["passed"] = serde_json::json!(false); }
+                                let resizes = win32::audit_reader_resize(hwnd, &webview);
+                                result["checks"]["readerResizesAfterRendererRelease"] = serde_json::json!(resizes);
+                                if !released || !resizes { result["passed"] = serde_json::json!(false); }
                             }
                             result["allRenderedMs"] = serde_json::json!(startup.elapsed().as_secs_f64()*1000.0);
                             let _ = fs::write(path, result.to_string());
@@ -1574,7 +1576,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
 
-            TaoEvent::WindowEvent { event: win_event, .. } => match win_event {
+            TaoEvent::WindowEvent { window_id, event: win_event, .. } if window_id == window.id() => match win_event {
                 WindowEvent::CloseRequested => {
                     let _ = fs::remove_file(&shell_path);
                     *control_flow = ControlFlow::Exit;

@@ -8,6 +8,8 @@
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     window.__mdvuInitArticle?.();
     const article = document.querySelector('article');
+    const tocPane = document.getElementById('mdvu-toc-sidebar');
+    if (tocPane && !tocPane.classList.contains('hidden')) checks.tocInitialWidth = Math.abs(tocPane.getBoundingClientRect().width - Math.max(220,Math.min(260,Math.floor(innerWidth*.48)))) < 2;
     const roots=()=>[article,...[...article.querySelectorAll('figure.diagram')].map(n=>n.querySelector('.diagram-content')?.shadowRoot).filter(Boolean)];
     const diagramCount=()=>[...article.querySelectorAll('figure.diagram')].filter(n=>window.__mdvuHasDiagramSVG?.(n)).length;
     checks.article = !!article && article.textContent.trim().length > 0;
@@ -46,7 +48,9 @@
         await pause(120);
       } while(rendering);
     };
-    const interactions=exercise();
+    // CI's timer mode checks document/control correctness. The default mode
+    // additionally stresses native zoom and scrolling throughout cold rendering.
+    const interactions=window.__mdvuTimingMode==='timer'?Promise.resolve():exercise();
     let timer;
     try {
       await Promise.race([window.__mdvuRenderDiagrams?.({all:true}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagram rendering exceeded 90 seconds')),90000)})]);

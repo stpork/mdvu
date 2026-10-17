@@ -654,3 +654,28 @@ pub fn attach_web_message_handler(
     }
     Ok(())
 }
+
+/// Native GUI regression probe, called only by the explicit idle audit.
+/// The reader must still follow its host after the diagram controller is closed.
+pub fn audit_reader_resize(hwnd: HWND, view: &wry::WebView) -> bool {
+    unsafe {
+        let mut outer = windows_sys::Win32::Foundation::RECT::default();
+        if GetWindowRect(hwnd, &mut outer) == 0 {
+            return false;
+        }
+        let flags = SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE;
+        let width = outer.right - outer.left;
+        let height = outer.bottom - outer.top;
+        if SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, width + 32, height, flags) == 0 {
+            return false;
+        }
+        let mut client = windows_sys::Win32::Foundation::RECT::default();
+        let passed = GetClientRect(hwnd, &mut client) != 0
+            && view.bounds().is_ok_and(|bounds| {
+                let size = bounds.size.to_physical::<i32>(1.0);
+                size.width == client.right && size.height == client.bottom
+            });
+        SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, width, height, flags);
+        passed
+    }
+}

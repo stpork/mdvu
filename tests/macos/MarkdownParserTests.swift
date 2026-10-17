@@ -96,19 +96,14 @@ struct MarkdownParserTests {
         #expect(MarkdownLinkRouting.internalFragment(in: other, currentDocument: current) == nil)
     }
 
-    @Test func sidebarUsesPercentileForInitialWidthAndMidpointForMaximum() {
-        let widths: [CGFloat] = [230, 240, 250, 260, 270, 280, 290, 300, 310, 900]
-        let sizing = SidebarSizing.widths(widths, splitWidth: 1_000)
-        #expect(sizing.suggested == 310)
-        #expect(sizing.maximum == 500)
-
-        let short = SidebarSizing.widths([180, 240, 280], splitWidth: 1_000)
-        #expect(short.suggested == 280)
-        #expect(short.maximum == 280)
-
-        let minimum = SidebarSizing.widths([100], splitWidth: 1_000)
-        #expect(minimum.suggested == 220)
-        #expect(minimum.maximum == 220)
+    @Test func sidebarUsesTheSharedCompactPolicy() {
+        let sizing = SidebarSizing.widths(splitWidth: 1_000)
+        #expect(sizing.suggested == 260)
+        #expect(sizing.maximum == 480)
+        let narrow = SidebarSizing.widths(splitWidth: 500)
+        #expect(narrow.suggested == 240)
+        #expect(narrow.maximum == 240)
+        #expect(SidebarSizing.widths(splitWidth: 400).suggested == 220)
     }
 
     @Test func toolbarPrioritiesFollowSidebarState() {

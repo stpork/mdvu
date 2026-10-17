@@ -42,6 +42,7 @@ enum ResourceLoader {
 
     static let markdownCSS: String = MdvuCoreBridge.shared.markdownCSS ?? text("markdown", "css")
     static let appJavaScript: String = MdvuCoreBridge.shared.appJavaScript ?? text("app", "js")
+    static let sidebarPolicyJSON = text("sidebar-policy", "json")
     static let diagramRendererJavaScript = text("diagram-renderer", "js")
     static var mermaidJavaScript: String {
         if let script = MdvuCoreBridge.shared.mermaidJavaScript { return script }

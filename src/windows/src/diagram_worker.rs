@@ -7,12 +7,16 @@ use std::{
     collections::HashSet,
     time::{Duration, Instant},
 };
-use tao::{event_loop::EventLoopProxy, window::Window};
+use tao::{
+    event_loop::{EventLoopProxy, EventLoopWindowTarget},
+    window::{Window, WindowBuilder},
+};
 use wry::{WebContext, WebView, WebViewBuilder};
 
 #[derive(Default)]
 pub struct DiagramWorker {
     view: Option<WebView>,
+    owner: Option<Window>,
     active: Option<Value>,
     ready: bool,
     loaded: HashSet<String>,
@@ -26,7 +30,7 @@ impl DiagramWorker {
     pub fn submit(
         &mut self,
         text: &str,
-        window: &Window,
+        target: &EventLoopWindowTarget<UserEvent>,
         context: &mut WebContext,
         proxy: &EventLoopProxy<UserEvent>,
     ) -> Option<Value> {
@@ -41,7 +45,7 @@ impl DiagramWorker {
         self.active = Some(job);
         self.deadline = Some(Instant::now() + Duration::from_secs(30));
         if self.view.is_none() {
-            if let Err(error) = self.create(window, context, proxy) {
+            if let Err(error) = self.create(target, context, proxy) {
                 return self.fail(error.to_string());
             }
         }
@@ -53,7 +57,7 @@ impl DiagramWorker {
     }
     fn create(
         &mut self,
-        window: &Window,
+        target: &EventLoopWindowTarget<UserEvent>,
         context: &mut WebContext,
         proxy: &EventLoopProxy<UserEvent>,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -68,6 +72,12 @@ impl DiagramWorker {
         let html = format!(
             r#"<!doctype html><html><head><meta charset="utf-8"><meta name="mdvu-script-nonce" content="{nonce}"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-{nonce}' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; worker-src blob:; connect-src 'none'; object-src 'none'; form-action 'none'"><style>body{{margin:0;font:16px Arial,sans-serif}}</style></head><body><script nonce="{nonce}">window.__mdvuRendererSession='{nonce}';{script}</script></body></html>"#
         );
+        // Wry owns one resize/focus subclass per host HWND. Sharing the reader's
+        // host replaces that subclass, and dropping the worker removes it.
+        let owner = WindowBuilder::new()
+            .with_visible(false)
+            .with_inner_size(tao::dpi::LogicalSize::new(920., 800.))
+            .build(target)?;
         let view = WebViewBuilder::with_web_context(context)
             .with_custom_protocol("mdvu-diagram".into(), move |_, _| {
                 wry::http::Response::builder()
@@ -81,7 +91,8 @@ impl DiagramWorker {
                 size: tao::dpi::LogicalSize::new(920., 800.).into(),
             })
             .with_visible(false)
-            .build(window)?;
+            .with_focused(false)
+            .build(&owner)?;
         let proxy = proxy.clone();
         win32::attach_web_message_handler(
             &view,
@@ -91,6 +102,7 @@ impl DiagramWorker {
             },
         )?;
         self.view = Some(view);
+        self.owner = Some(owner);
         Ok(())
     }
     fn start(&mut self, proxy: &EventLoopProxy<UserEvent>) -> Option<Value> {
@@ -163,6 +175,7 @@ impl DiagramWorker {
     }
     fn release(&mut self) {
         self.view = None;
+        self.owner = None;
         self.ready = false;
         self.loaded.clear();
         self.deadline = None;

@@ -57,7 +57,27 @@ window.__mdvuOnTOC?.(entries);
 };
 const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
 let highlightObserver=null;
-const scheduleHighlight=()=>{highlightObserver?.disconnect();const blocks=document.querySelectorAll('pre>code');if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}const observer=highlightObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});blocks.forEach(block=>observer.observe(block))};
+const scheduleHighlight=()=>{
+highlightObserver?.disconnect();
+// A single Unicode corpus can force seconds of font shaping on every zoom.
+// Keep its text intact, but give the browser independent line groups to skip.
+document.querySelectorAll('pre>code:not(.mdvu-chunked)').forEach(code=>{
+const source=code.textContent;if(source.length<65536)return;
+const style=getComputedStyle(code.parentElement),lineHeight=parseFloat(style.lineHeight)||parseFloat(style.fontSize)*1.55;
+code.style.lineHeight=lineHeight+'px';const fragment=document.createDocumentFragment();
+for(let offset=0;offset<source.length;){
+let end=offset,lines=0;
+while(lines<32&&end<source.length){const next=source.indexOf('\n',end);end=next<0?source.length:next+1;lines++}
+const chunk=document.createElement('span');chunk.className=code.className+' mdvu-code-chunk';chunk.textContent=source.slice(offset,end);
+chunk.style.setProperty('--mdvu-chunk-height',lines*lineHeight+'px');fragment.append(chunk);offset=end;
+}
+code.replaceChildren(fragment);code.classList.add('mdvu-chunked');
+});
+const blocks=document.querySelectorAll('pre>code:not(.mdvu-chunked),.mdvu-code-chunk');
+if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}
+const observer=highlightObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});
+blocks.forEach(block=>observer.observe(block));
+};
 // Mermaid measures temporary SVGs in its own document, independent of the reading DOM.
 window.__mdvuLoadMermaid=source=>{
 if(window.__mdvuMermaidReady)return window.__mdvuMermaidReady;

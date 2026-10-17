@@ -25,19 +25,17 @@ enum MarkdownLinkRouting {
 }
 
 enum SidebarSizing {
-    static let minimumWidth: CGFloat = 220
-    static let suggestedPercentile = 0.85
-
-    static func widths(_ measuredWidths: [CGFloat], splitWidth: CGFloat) -> (suggested: CGFloat, maximum: CGFloat) {
-        let sorted = measuredWidths.map { max(minimumWidth, $0) }.sorted()
-        guard let longest = sorted.last else { return (minimumWidth, minimumWidth) }
-        let midpoint = floor(splitWidth / 2)
-        let maximum = max(minimumWidth, min(longest, midpoint))
-        let percentileIndex = min(
-            sorted.count - 1,
-            max(0, Int(ceil(Double(sorted.count) * suggestedPercentile)) - 1)
-        )
-        return (min(sorted[percentileIndex], maximum), maximum)
+    private struct Policy: Decodable {
+        let defaultWidth: CGFloat
+        let minimumWidth: CGFloat
+        let maximumFraction: CGFloat
+    }
+    private static let policy = try! JSONDecoder().decode(Policy.self, from: Data(ResourceLoader.sidebarPolicyJSON.utf8))
+    static var minimumWidth: CGFloat { policy.minimumWidth }
+    static var defaultWidth: CGFloat { policy.defaultWidth }
+    static func widths(splitWidth: CGFloat) -> (suggested: CGFloat, maximum: CGFloat) {
+        let maximum = max(minimumWidth, floor(splitWidth * policy.maximumFraction))
+        return (min(defaultWidth, maximum), maximum)
     }
 }
 
@@ -232,9 +230,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private(set) var isFullWidth: Bool
     private(set) var isSidebarVisible: Bool = false
     private(set) var isFileNavigatorVisible: Bool = false
-    private var lastSidebarWidth: CGFloat = 340
-    private var suggestedSidebarWidth: CGFloat = 340
-    private var longestSidebarWidth: CGFloat = 340
+    private var lastSidebarWidth = SidebarSizing.defaultWidth
     private var lastNavigatorWidth: CGFloat = 240
     private var hasUserResizedSidebar = false
     private var hasUserResizedNavigator = false
@@ -924,7 +920,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 tocOutline.expandItem(root)
             }
         }
-        fitSidebarToContents(headings)
+        applySidebarSizing()
         if let pendingFragment {
             self.pendingFragment = nil
             scrollToFragment(pendingFragment, updateHistory: false)
@@ -1048,38 +1044,14 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         updateFileNavigatorControl()
     }
 
-    private func flattenedHeadings() -> [TOCHeading] {
-        func flatten(_ nodes: [TOCNode]) -> [TOCHeading] {
-            nodes.flatMap { [$0.heading] + flatten($0.children) }
-        }
-        return flatten(tocRoots)
-    }
-
-    private func fitSidebarToContents(_ headings: [TOCHeading]) {
-        guard !headings.isEmpty else { return }
-        let font = NSFont.systemFont(ofSize: 13)
-        let baseLevel = headings.map(\.level).min() ?? 1
-        let candidates: [TOCHeading] = {
-            if headings.count <= 50 { return headings }
-            return Array(headings.sorted(by: {
-                ($0.title.count + $0.level * 4) > ($1.title.count + $1.level * 4)
-            }).prefix(50))
-        }()
-        let measuredWidths = candidates.map { heading in
-            let textWidth = ceil((heading.title as NSString).size(withAttributes: [.font: font]).width)
-            let indentation = CGFloat(max(0, heading.level - baseLevel)) * tocOutline.indentationPerLevel
-            return textWidth + indentation + 52
-        }
-        let sizing = SidebarSizing.widths(measuredWidths, splitWidth: split.bounds.width)
-        suggestedSidebarWidth = sizing.suggested
-        longestSidebarWidth = measuredWidths.max() ?? SidebarSizing.minimumWidth
+    private func applySidebarSizing() {
         guard isSidebarVisible, sidebarContainer.superview === split else { return }
-        let target = hasUserResizedSidebar ? min(lastSidebarWidth, sizing.maximum) : sizing.suggested
-        applySidebarPosition(target)
+        let sizing = SidebarSizing.widths(splitWidth: split.bounds.width)
+        applySidebarPosition(hasUserResizedSidebar ? min(lastSidebarWidth, sizing.maximum) : sizing.suggested)
     }
 
     private func maximumSidebarWidth(in splitView: NSSplitView) -> CGFloat {
-        max(SidebarSizing.minimumWidth, min(longestSidebarWidth, floor(splitView.bounds.width / 2)))
+        SidebarSizing.widths(splitWidth: splitView.bounds.width).maximum
     }
 
     private func applySidebarPosition(_ width: CGFloat) {
@@ -1258,6 +1230,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         if message.name == "uiTest", auditScript != nil, var result = message.body as? [String: Any] {
             var checks = result["checks"] as? [String: Bool] ?? [:]
+            if isSidebarVisible, !hasUserResizedSidebar {
+                let sizing = SidebarSizing.widths(splitWidth: split.bounds.width)
+                checks["nativeTOCInitialWidth"] = abs(sidebarContainer.frame.width - sizing.suggested) < 2
+                result["sidebarWidth"] = sidebarContainer.frame.width
+            }
             if result["idleProbe"] as? Bool == true { checks["rendererReleased"] = !DiagramRenderingService.shared.hasRenderer }
             let originalZoom = effectiveZoom
             zoomIn(nil); checks["nativeZoomIn"] = effectiveZoom > originalZoom
