@@ -61,11 +61,11 @@ pub fn make_html_selective(
         @media(max-width:900px){{article{{padding-left:30px;padding-right:30px}}}}
         @media(max-width:700px){{article{{padding-left:22px;padding-right:22px}}}}
     </style>
+    <script nonce="{nonce}">{APP_JS}</script>
 </head>
 <body>
     <article>{body}</article>
     {extra_scripts}
-    <script nonce="{nonce}">{APP_JS}</script>
 </body>
 </html>"#,
         escaped_title = escape_html(title),
