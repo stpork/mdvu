@@ -355,7 +355,9 @@ if(!q||!q.trim())return{count:0,current:0};
 const article=document.querySelector('article')||document.body;
 // Only materialize offscreen diagrams which can contain this query. Searching
 // labels must not retain every SVG DOM in a long document.
-const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu'),decode=document.createElement('textarea');
+// Singleton classes preserve Unicode case folding without WebKit's faulty
+// ignore-case literal fast path, which skips matches in long UTF-16 strings.
+const pattern=new RegExp([...q].map(c=>'['+c.replace(/[\\\]\[\^-]/g,'\\$&')+']').join(''),'giu'),decode=document.createElement('textarea');
 article.querySelectorAll('figure.diagram-rendered').forEach(node=>{
 const record=diagramSVGs.get(node);if(!record)return;
 if(record.text===undefined){decode.innerHTML=record.svg.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ');record.text=decode.value}
