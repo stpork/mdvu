@@ -284,7 +284,7 @@ impl ZoomPolicy {
     pub fn parse_manual_input(input: &str, fallback: f64) -> f64 {
         let cleaned = input.trim().trim_end_matches('%').trim();
         if let Ok(val) = cleaned.parse::<f64>() {
-            if val.is_finite() && val > 0.0 {
+            if val.is_finite() {
                 return Self::clamp(val / 100.0);
             }
         }
@@ -547,6 +547,13 @@ mod tests {
         assert_eq!(ZoomPolicy::format_percentage(1.01), "100%");
         assert_eq!(ZoomPolicy::format_percentage(1.34), "134%");
         assert!((ZoomPolicy::parse_manual_input("150%", 1.0) - 1.50).abs() < 1e-4);
+        for input in ["-100%", "0%", "5%"] {
+            assert_eq!(ZoomPolicy::parse_manual_input(input, 1.25), 0.10);
+        }
+        assert_eq!(ZoomPolicy::parse_manual_input("999%", 1.25), 5.0);
+        for input in ["NaN", "inf", "not-a-percent"] {
+            assert_eq!(ZoomPolicy::parse_manual_input(input, 1.25), 1.25);
+        }
     }
 
     #[test]

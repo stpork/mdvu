@@ -1486,7 +1486,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var isCapturingReadingAnchor = false
 
     private func preserveReadingAnchor(_ kind: String, _ mutate: @escaping () -> Void) {
-        guard hasLoadedDocument else { mutate(); return }
+        if kind == "panes", !hasLoadedDocument { mutate(); return }
         pendingLayoutChanges[kind] = mutate
         guard !isCapturingReadingAnchor else { return }
         isCapturingReadingAnchor = true

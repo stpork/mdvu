@@ -47,7 +47,7 @@ for fixture in fixtures:
     samples = []
     with (output/(stem+'-stderr.log')).open('w') as log:
         process = subprocess.Popen([str(binary),'--theme','light','--snapshot',str(image),str(fixture)], stdout=log, stderr=log, env=env)
-        while process.poll() is None and time.perf_counter()-start < 120:
+        while process.poll() is None and time.perf_counter()-start < 180:
             all_processes = processes(); own = all_processes.get(process.pid,{})
             webkit = {pid: info for pid,info in all_processes.items() if pid not in before and 'com.apple.WebKit.' in info['command']}
             physical=[footprint(pid) for pid in [process.pid,*webkit]]

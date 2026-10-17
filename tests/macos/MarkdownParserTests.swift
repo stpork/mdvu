@@ -276,6 +276,12 @@ struct MarkdownParserTests {
         #expect(abs(ZoomPolicy.parseManualInput("5%", fallback: 1.0) - 0.10) < 0.001)
         #expect(abs(ZoomPolicy.parseManualInput("1000", fallback: 1.0) - 5.00) < 0.001)
         #expect(abs(ZoomPolicy.parseManualInput("invalid", fallback: 1.35) - 1.35) < 0.001)
+        for input in ["-100%", "0%", "5%"] {
+            #expect(ZoomPolicy.parseManualInput(input, fallback: 1.25) == 0.10)
+        }
+        for input in ["NaN", "inf", "not-a-percent"] {
+            #expect(ZoomPolicy.parseManualInput(input, fallback: 1.25) == 1.25)
+        }
 
         // Formatting
         #expect(ZoomPolicy.formatPercentage(1.00) == "100%")

@@ -2,6 +2,9 @@
 window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause, fullscreen = true}) => {
   const windows = !!document.getElementById('btn-zoom-in'), samples = [];
   metrics.controls=samples;window.__mdvuAuditControls=samples;
+  const changes={mounts:0,unmounts:0};
+  const observer=new MutationObserver(entries=>{for(const e of entries){if(e.addedNodes.length)changes.mounts++;if(e.removedNodes.length)changes.unmounts++}});
+  for(const host of article.querySelectorAll('.diagram-content'))if(host.shadowRoot)observer.observe(host.shadowRoot,{childList:true});
   let sequence = 0;
   const native = async (action, value) => {
     const id = ++sequence;
@@ -24,7 +27,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
         branch:folder?folder.nextElementSibling.style.display!=='none':null}};
   };
   const act = async (action,value,expected) => {
-    const begin=performance.now();
+    const begin=performance.now(),beforeChanges={...changes};
     if (!windows) await native(action,value);
     else {
       const buttons={zoomIn:'btn-zoom-in',zoomOut:'btn-zoom-out',toc:'btn-toc',navigator:'btn-navigator',fullWidth:'btn-full-width',navTree:'btn-nav-mode-tree',navList:'btn-nav-mode-list'};
@@ -51,7 +54,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
     await nextFrame();await nextFrame();
     const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
     if(!Number.isFinite(scroller.scrollHeight)||scroller.clientHeight<=0||innerWidth<=0) throw Error('Invalid layout after '+action);
-    samples.push({action,value,ms:performance.now()-begin,zoom:current.zoom,readerWidth:scroller.clientWidth,readerHeight:scroller.clientHeight});
+    samples.push({action,value,ms:performance.now()-begin,zoom:current.zoom,readerWidth:scroller.clientWidth,readerHeight:scroller.clientHeight,diagramMounts:changes.mounts-beforeChanges.mounts,diagramUnmounts:changes.unmounts-beforeChanges.unmounts});
     return current;
   };
   const initial=await state(), originalArticle=article.firstChild;
@@ -138,7 +141,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
       await act('fullscreen',null,{fullscreen:initial.fullscreen});await pause(400);
       checks.fullscreenRestore=Math.abs(innerWidth-originalViewport.width)<3&&Math.abs(innerHeight-originalViewport.height)<3;
     }
-  } finally {window.__mdvuCaptureReadingAnchor=capture}
+  } finally {window.__mdvuCaptureReadingAnchor=capture;observer.disconnect()}
   metrics.controls=samples;
   metrics.controlMaxMs=Math.max(...samples.map(s=>s.ms),0);
   metrics.zoomRangeMaxMs=Math.max(...samples.filter(s=>s.action.startsWith('zoom')).map(s=>s.ms),0);

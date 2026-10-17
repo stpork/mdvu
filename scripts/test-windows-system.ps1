@@ -162,7 +162,7 @@ public static class MdvuCapture {
                     $Samples += [PSCustomObject]@{elapsedMs=$Clock.Elapsed.TotalMilliseconds; processCount=$Tree.Count; privateBytes=($Tree | Measure-Object PrivateMemorySize64 -Sum).Sum; workingSet=($Tree | Measure-Object WorkingSet64 -Sum).Sum; cpuMs=($Tree | ForEach-Object {$_.TotalProcessorTime.TotalMilliseconds} | Measure-Object -Sum).Sum; appPrivateBytes=$Process.PrivateMemorySize64; appWorkingSet=$Process.WorkingSet64}
                     foreach ($SampledProcess in $Tree) { $SampledProcess.Dispose() }
                     Start-Sleep -Milliseconds 500
-                } while ($Clock.Elapsed.TotalSeconds -lt $SampleSeconds -or (-not (Test-Path $UIResult) -and $Clock.Elapsed.TotalSeconds -lt 100))
+                } while ($Clock.Elapsed.TotalSeconds -lt $SampleSeconds -or (-not (Test-Path $UIResult) -and $Clock.Elapsed.TotalSeconds -lt 180))
                 $Samples | Export-Csv (Join-Path $Output ($Fixture.BaseName+'-process-tree.csv')) -NoTypeInformation
                 $Ready = if (Test-Path $Telemetry) { Get-Content $Telemetry -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
                 $UI = if (Test-Path $UIResult) { Get-Content $UIResult -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }

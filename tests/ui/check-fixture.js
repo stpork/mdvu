@@ -99,6 +99,11 @@
     const ids = headings.map(h => h.id);
     checks.uniqueHeadingTargets = ids.every(Boolean) && new Set(ids).size === ids.length;
     checks.fragment = !headings.length || window.__mdvuScrollToFragment?.(headings.at(-1).id, false) === true;
+    if(headings.length&&checks.fragment){
+      const begin=performance.now(),target=headings.at(-1);let stable=0;
+      for(let n=0;n<120&&stable<2;n++){await nextFrame();const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect(),top=target.getBoundingClientRect().top-rect.top;const bottom=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;stable=(Math.abs(top)<3||bottom&&top>=-3&&top<rect.height)?stable+1:0}
+      checks.fragmentPosition=stable>=2;performanceMetrics.fragmentMs=performance.now()-begin;
+    }
     const word = (article.textContent.match(/[A-Za-z\p{L}\p{N}]{3,20}/u) || [])[0];
     if (word) {
       const found = window.__mdvuFind.search(word);

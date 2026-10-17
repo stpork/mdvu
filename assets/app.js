@@ -46,6 +46,8 @@ const anchor=document.createElement('a');
 anchor.className='heading-anchor';
 anchor.href=`#${heading.id}`;
 anchor.textContent='#';
+// Keep the hanging link outside paint containment while skipping offscreen text.
+if(!heading.querySelector(':scope>.mdvu-heading-content')){const content=document.createElement('span');content.className='mdvu-heading-content';content.append(...heading.childNodes);heading.append(content)}
 heading.prepend(anchor);
 });
 const newKey=JSON.stringify(entries);
@@ -96,7 +98,7 @@ window.__mdvuDiagramResult=result=>{const request=diagramRequests.get(result.id)
 const renderNativeDiagram=(renderer,source,dark)=>new Promise((resolve,reject)=>{const id=diagramSession+String(++diagramSeq);diagramRequests.set(id,{resolve,reject});nativeDiagrams().post({id,renderer,source,dark})});
 let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
 const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
-const diagramViewportMargin=200;
+const diagramViewportMargin=400,diagramRetentionMargin=800;
 const diagramSVGs=new WeakMap;
 const mountDiagram=node=>{
 const record=diagramSVGs.get(node),host=node.querySelector('.diagram-content');
@@ -115,8 +117,11 @@ const record=diagramSVGs.get(entry.target.parentElement);
 if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)record.ratio=String(entry.contentRect.width/entry.contentRect.height);
 }));
 const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
-if(entry.isIntersecting)mountDiagram(entry.target);else unmountDiagram(entry.target);
+if(entry.isIntersecting)mountDiagram(entry.target);
 }),{rootMargin:diagramViewportMargin+'px 0px'});
+// Separate enter/leave bounds prevent repeated SVG parsing when reflow moves a
+// diagram back and forth across the viewport boundary. Both observers are bounded.
+const diagramRetentionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)unmountDiagram(entry.target)}),{rootMargin:diagramRetentionMargin+'px 0px'});
 window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
@@ -129,7 +134,7 @@ diagramSVGs.set(node,{svg,ratio});host.style.aspectRatio=ratio;
 const width=header.match(/max-width:\s*([\d.]+)px/i)||header.match(/\bwidth=["']([\d.]+)(?:px)?["']/);
 host.style.maxWidth=width?width[1]+'px':'';host.style.marginInline='auto';
 if(!diagramVisibilityObserver)mountDiagram(node);
-diagramSizeObserver?.observe(host);diagramVisibilityObserver?.observe(node);
+diagramSizeObserver?.observe(host);diagramVisibilityObserver?.observe(node);diagramRetentionObserver?.observe(node);
 };
 const diagramQueue=[];let isProcessingQueue=false,lastReadingInput=-Infinity;
 ['wheel','touchmove','keydown'].forEach(type=>window.addEventListener(type,event=>{if(event.isTrusted)lastReadingInput=performance.now()},{passive:true}));
@@ -327,7 +332,7 @@ const parents=new Set;
 allMatches.forEach(m=>{parents.add(m.parentNode);m.replaceWith(...m.childNodes)});
 parents.forEach(p=>p?.normalize());
 allMatches=[];currentIndex=-1;
-document.querySelectorAll('figure.diagram-rendered').forEach(node=>{const record=diagramSVGs.get(node);if(record){record.findActive=false;if(!isElementInViewport(node))unmountDiagram(node)}});
+document.querySelectorAll('figure.diagram-rendered').forEach(node=>{const record=diagramSVGs.get(node);if(record){record.findActive=false;if(!isElementInViewport(node,diagramRetentionMargin))unmountDiagram(node)}});
 };
 const searchFind=q=>{
 clearFind();
@@ -412,7 +417,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
 for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;cancelReadingAnchor()},{passive:true});

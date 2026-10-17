@@ -253,7 +253,7 @@ extension SharedRegressionTests {
         try #require(anchorReady)
         // Observe the element actually captured by the zoom operation. Lazy
         // layout can move another paragraph into the centre between IPC calls.
-        _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target')?.removeAttribute('id');anchor.id='reading-target';window.auditCapture={picked:anchor.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:anchor.getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
+        _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2)?.closest('p,h2');if(anchor){document.getElementById('reading-target')?.removeAttribute('id');anchor.id='reading-target'}window.auditCapture={picked:anchor?.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,ratio:!anchor,target:anchor?anchor.getBoundingClientRect().top/innerHeight:scrollY/Math.max(1,document.scrollingElement.scrollHeight-innerHeight)};return window.auditCaptureNative()};true")
         controller.applyPageZoom(1.1)
         controller.applyPageZoom(1.2)
         controller.applyPageZoom(1.5)
@@ -265,7 +265,7 @@ extension SharedRegressionTests {
         #expect(abs(web.pageZoom - 1.5) < 0.001)
         #expect(abs(controller.effectiveZoom - 1.5) < 0.001)
         let before = try await web.evaluateJavaScriptValue("window.auditCapture.target")
-        let after = try await web.evaluateJavaScriptValue("document.getElementById('reading-target').getBoundingClientRect().top/innerHeight")
+        let after = try await web.evaluateJavaScriptValue("window.auditCapture.ratio?scrollY/Math.max(1,document.scrollingElement.scrollHeight-innerHeight):document.getElementById('reading-target').getBoundingClientRect().top/innerHeight")
         let diagnostic = try? await web.evaluateJavaScriptValue("JSON.stringify({capture:window.auditCapture,width:innerWidth,height:innerHeight,y:scrollY,settled:window.__mdvuReadingAnchorSettled,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight})")
         #expect(abs((after as? Double ?? -10) - (before as? Double ?? 10)) < 0.02, "\(String(describing: diagnostic))")
         #expect(try await web.evaluateJavaScriptValue("window.auditRuntime") as? Int == 42)
