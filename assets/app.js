@@ -46,8 +46,6 @@ const anchor=document.createElement('a');
 anchor.className='heading-anchor';
 anchor.href=`#${heading.id}`;
 anchor.textContent='#';
-// Keep the hanging link outside paint containment while skipping offscreen text.
-if(!heading.querySelector(':scope>.mdvu-heading-content')){const content=document.createElement('span');content.className='mdvu-heading-content';content.append(...heading.childNodes);heading.append(content)}
 heading.prepend(anchor);
 });
 const newKey=JSON.stringify(entries);
@@ -117,11 +115,11 @@ const record=diagramSVGs.get(entry.target.parentElement);
 if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)record.ratio=String(entry.contentRect.width/entry.contentRect.height);
 }));
 const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
-if(entry.isIntersecting)mountDiagram(entry.target);
+if(entry.isIntersecting&&isElementInViewport(entry.target))mountDiagram(entry.target);
 }),{rootMargin:diagramViewportMargin+'px 0px'});
 // Separate enter/leave bounds prevent repeated SVG parsing when reflow moves a
 // diagram back and forth across the viewport boundary. Both observers are bounded.
-const diagramRetentionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)unmountDiagram(entry.target)}),{rootMargin:diagramRetentionMargin+'px 0px'});
+const diagramRetentionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting&&!isElementInViewport(entry.target,diagramRetentionMargin))unmountDiagram(entry.target)}),{rootMargin:diagramRetentionMargin+'px 0px'});
 window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
@@ -234,7 +232,7 @@ if(!('IntersectionObserver'in window))return null;
 if(diagramObserver)return diagramObserver;
 diagramObserver=new IntersectionObserver((entries)=>{
 entries.forEach(entry=>{
-if(entry.isIntersecting){
+if(entry.isIntersecting&&isElementInViewport(entry.target)){
 diagramObserver.unobserve(entry.target);
 enqueueDiagram(entry.target);
 }
@@ -286,48 +284,44 @@ node.textContent=tex;
 });
 };
 window.__mdvuRenderMath=renderMath;
-let readingAnchor=null,readingAnchorSeq=0,readingAnchorObserver=null,readingAnchorTimer;
-const cancelReadingAnchor=()=>{readingAnchor=null;readingAnchorObserver?.disconnect();readingAnchorObserver=null;clearTimeout(readingAnchorTimer)};
-window.__mdvuCaptureReadingAnchor=()=>{
+let readingAnchor=null,readingAnchorSeq=0;
+const cancelReadingAnchor=()=>{if(readingAnchor){const {scroller,overflowAnchor,overflowAnchorPriority}=readingAnchor;scroller.style.setProperty('overflow-anchor',overflowAnchor,overflowAnchorPriority)}readingAnchor=null};
+window.__mdvuCaptureReadingAnchor=(target=null,anchorOffset)=>{
 cancelReadingAnchor();
 const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
 const rect=scroller===document.scrollingElement?{left:0,top:0,width:innerWidth,height:innerHeight}:scroller.getBoundingClientRect();
-let el=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
-el=el?.closest('p,h1,h2,h3,h4,h5,h6,li,pre,tr,blockquote,table,img,figure');
-const token=++readingAnchorSeq;
-readingAnchor={token,scroller,el,viewportWidth:innerWidth,offset:el?(el.getBoundingClientRect().top-rect.top)/rect.height:0,ratio:scroller.scrollTop/Math.max(1,scroller.scrollHeight-scroller.clientHeight)};
+let el=target||document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+el=target||el?.closest('p,h1,h2,h3,h4,h5,h6,li,pre,tr,blockquote,table,img,figure');
+const token=++readingAnchorSeq,overflowAnchor=scroller.style.getPropertyValue('overflow-anchor'),overflowAnchorPriority=scroller.style.getPropertyPriority('overflow-anchor');
+scroller.style.setProperty('overflow-anchor','none','important');
+readingAnchor={token,scroller,el,overflowAnchor,overflowAnchorPriority,viewportWidth:innerWidth,offset:anchorOffset??(el?(el.getBoundingClientRect().top-rect.top)/rect.height:0),ratio:scroller.scrollTop/Math.max(1,scroller.scrollHeight-scroller.clientHeight)};
 return token;
 };
-window.__mdvuRestoreReadingAnchor=(token,viewportScale=1)=>{
-if(readingAnchor?.token!==token)return;
-readingAnchorObserver?.disconnect();
-let frames=0,scheduled=false;
-const schedule=()=>{if(readingAnchor?.token===token&&!scheduled){scheduled=true;requestAnimationFrame(restore)}};
+window.__mdvuRestoreReadingAnchor=(token,viewportScale=null)=>{
+let frames=0,start,stable=0;
 const restore=()=>{
-scheduled=false;
 if(readingAnchor?.token!==token)return;
 const {scroller,el,offset,ratio,viewportWidth}=readingAnchor;
-if(Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){schedule();return}
+if(viewportScale!==null&&Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){requestAnimationFrame(restore);return}
+start??=performance.now();
 const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect();
 const delta=el?.isConnected?el.getBoundingClientRect().top-rect.top-offset*rect.height:ratio*Math.max(1,scroller.scrollHeight-scroller.clientHeight)-scroller.scrollTop;
-if(Math.abs(delta)>.5){const previous=scroller.scrollTop;scroller.scrollBy({top:delta,behavior:'instant'});if(Math.abs(scroller.scrollTop-previous)>.5)schedule()}
-clearTimeout(readingAnchorTimer);
-readingAnchorTimer=setTimeout(()=>{if(readingAnchor?.token===token){cancelReadingAnchor();window.__mdvuReadingAnchorSettled=token}},200);
+if(Math.abs(delta)>.5){scroller.scrollBy({top:delta,behavior:'instant'});stable=0}else stable++;
+// Lazy layout can move a block without resizing it or the article. Keep checking
+// through the deferred layout frames, with one bounded task cancelled by input.
+const elapsed=performance.now()-start;
+if(elapsed<300||stable<2&&elapsed<1000)requestAnimationFrame(restore);
+else{cancelReadingAnchor();window.__mdvuReadingAnchorSettled=token}
 };
-// Scrolling can reveal lazy blocks and move the anchor without changing its
-// size. Recheck each correction; observe later resizes until layout settles.
-if(typeof ResizeObserver!=='undefined'){
-readingAnchorObserver=new ResizeObserver(schedule);
-readingAnchorObserver.observe(document.querySelector('article')||document.documentElement,{box:'border-box'});
-if(readingAnchor?.el)readingAnchorObserver.observe(readingAnchor.el,{box:'border-box'});
-}
-schedule();
+requestAnimationFrame(restore);
 };
 window.__mdvuPreserveReadingAnchor=mutate=>{const token=window.__mdvuCaptureReadingAnchor();mutate();window.__mdvuRestoreReadingAnchor(token)};
-window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;cancelReadingAnchor();try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}target.scrollIntoView({block:'start'});if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
+const scrollToReadingTarget=(target,offset)=>{const token=window.__mdvuCaptureReadingAnchor(target,offset);target.scrollIntoView({block:offset===0?'start':'center',behavior:'instant'});window.__mdvuRestoreReadingAnchor(token)};
+window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}scrollToReadingTarget(target,0);if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
 document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
 let allMatches=[];let currentIndex=-1;
 const clearFind=()=>{
+cancelReadingAnchor();
 const parents=new Set;
 allMatches.forEach(m=>{parents.add(m.parentNode);m.replaceWith(...m.childNodes)});
 parents.forEach(p=>p?.normalize());
@@ -381,19 +375,17 @@ node.replaceWith(frag);
 allMatches=created;
 if(allMatches.length){
 currentIndex=0;
-cancelReadingAnchor();
 allMatches[0].classList.add('find-current');
-allMatches[0].scrollIntoView({block:'center',behavior:'smooth'});
+scrollToReadingTarget(allMatches[0],.5);
 }
 return{count:allMatches.length,current:allMatches.length?1:0};
 };
 const stepFind=delta=>{
 if(!allMatches.length)return{count:0,current:0};
-cancelReadingAnchor();
 allMatches[currentIndex].classList.remove('find-current');
 currentIndex=(currentIndex+delta+allMatches.length)%allMatches.length;
 allMatches[currentIndex].classList.add('find-current');
-allMatches[currentIndex].scrollIntoView({block:'center',behavior:'smooth'});
+scrollToReadingTarget(allMatches[currentIndex],.5);
 return{count:allMatches.length,current:currentIndex+1};
 };
 window.__mdvuFind={search:searchFind,next:()=>stepFind(1),previous:()=>stepFind(-1),clear:clearFind};

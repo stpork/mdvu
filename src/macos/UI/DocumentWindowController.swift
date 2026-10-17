@@ -1498,7 +1498,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             let oldZoom = self.webView.pageZoom
             changes.values.forEach { $0() }
             if let token = token as? NSNumber {
-                let viewportScale = oldZoom / self.webView.pageZoom
+                let viewportScale = oldZoom == self.webView.pageZoom ? "null" : String(Double(oldZoom / self.webView.pageZoom))
                 self.webView.evaluateJavaScript("window.__mdvuRestoreReadingAnchor?.(\(token.intValue), \(viewportScale))")
             }
         }

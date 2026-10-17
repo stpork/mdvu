@@ -445,6 +445,8 @@ Run `make check` and `make coverage` on macOS. After `make app`, `python3 script
 
 The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
 
+Interactive regression ceilings are 250 ms for cold scrolling and 500 ms for a cold frame, zoom or pane reflow. Control timings include acknowledgement and two animation frames. Render-frame p95 remains a diagnostic distribution: the cold stress scenario repeatedly changes zoom while diagrams are being generated. Fullscreen transition durations are reported separately because they include the operating system's animation. These ceilings do not imply a constant frame rate or a globally optimal implementation.
+
 For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---

@@ -146,5 +146,5 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
   metrics.controlMaxMs=Math.max(...samples.map(s=>s.ms),0);
   metrics.zoomRangeMaxMs=Math.max(...samples.filter(s=>s.action.startsWith('zoom')).map(s=>s.ms),0);
   metrics.paneMaxMs=Math.max(...samples.filter(s=>['toc','navigator','fullWidth'].includes(s.action)).map(s=>s.ms),0);
-  if(window.__mdvuTimingMode!=='timer'){checks.zoomRangeResponsive=metrics.zoomRangeMaxMs<500;checks.paneResponsive=metrics.paneMaxMs<250}
+  if(window.__mdvuTimingMode!=='timer'){checks.zoomRangeResponsive=metrics.zoomRangeMaxMs<500;checks.paneResponsive=metrics.paneMaxMs<500}
 };

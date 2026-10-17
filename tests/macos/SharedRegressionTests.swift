@@ -208,18 +208,22 @@ extension SharedRegressionTests {
             const paragraph=article.querySelector('p'),before=paragraph.getBoundingClientRect().top;
             article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await pause();
             result.anchorStable=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
-            setTimeout(()=>article.style.paddingTop='350px',50);await new Promise(r=>setTimeout(r,280));
+            const deferred=window.__mdvuCaptureReadingAnchor(),started=performance.now();let shifted;const capturedTop=paragraph.getBoundingClientRect().top;
+            setTimeout(()=>{article.style.paddingTop='350px';shifted=performance.now()-started},50);window.__mdvuRestoreReadingAnchor(deferred);
+            for(let n=0;n<100&&window.__mdvuReadingAnchorSettled!==deferred;n++)await pause();
             result.anchorFollowsDeferredLayout=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
+            const deferredState={top:paragraph.getBoundingClientRect().top,scroll:scroller.scrollTop,elapsed:performance.now()-started,settled:window.__mdvuReadingAnchorSettled,overflow:getComputedStyle(scroller).overflowAnchor};
             const interrupted=window.__mdvuCaptureReadingAnchor();
             article.style.paddingTop='400px';
             window.dispatchEvent(new WheelEvent('wheel'));scroller.scrollTop=800;
             window.__mdvuRestoreReadingAnchor(interrupted);await pause();
             result.userScrollCancelsAnchor=Math.abs(scroller.scrollTop-800)<2;
-            return result;
+            return {checks:result,diagnostic:{before,capturedTop,deferredState,after:paragraph.getBoundingClientRect().top,elapsed:performance.now()-started,shifted,deferred,settled:window.__mdvuReadingAnchorSettled,scroll:scroller.scrollTop,overflow:getComputedStyle(scroller).overflowAnchor}};
             """, arguments: [:], in: nil, contentWorld: .page)
-        let checks = try #require(facts as? [String: Bool])
+        let payload = try #require(facts as? [String: Any])
+        let checks = try #require(payload["checks"] as? [String: Bool])
         #expect(checks.count == 9)
-        #expect(checks.values.allSatisfy { $0 }, "\(checks)")
+        #expect(checks.values.allSatisfy { $0 }, "\(payload)")
     }
 }
 

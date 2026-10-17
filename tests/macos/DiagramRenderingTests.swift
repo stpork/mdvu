@@ -123,7 +123,7 @@ import WebKit
         for query in ["needle", "&", "σ"] {
             let literal = String(data: try JSONSerialization.data(withJSONObject: query, options: .fragmentsAllowed), encoding: .utf8)!
             #expect(try await view.evaluateJavaScriptValue("window.__mdvuFind.search(\(literal)).count") as? Int == 1)
-            _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();true")
+            _ = try await view.evaluateJavaScriptValue("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true,cancelable:true}));window.__mdvuFind.clear();true")
             #expect(try await view.evaluateJavaScriptValue("document.getElementById('far').querySelector('.diagram-content').shadowRoot.childElementCount") as? Int == 0)
         }
     }
