@@ -4,6 +4,7 @@ const highlightOne=el=>{
 const source=el.textContent;
 if(!source||source.length>300000)return;
 const lang=(el.className.match(/\blanguage-([\w-]+)\b/)||[,''])[1].toLowerCase();
+if(/^(text|plain|plaintext|txt|none)$/.test(lang))return;
 const isHashComment=/^(py|python|sh|bash|zsh|rb|ruby|yaml|yml|r|pl|perl|dockerfile|makefile)$/.test(lang);
 const isCStyle=/^(c|cpp|cxx|h|hpp|objc|m|mm|cs|swift|go|rust|rs|java|kt|kotlin|js|javascript|ts|typescript|json)$/.test(lang);
 const token=/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\*[\s\S]*?\*\/|\/\/[^\n]*|#[^\n]*|\b(?:class|struct|enum|protocol|func|let|var|if|else|for|while|return|import|from|def|async|await|throw|throws|try|catch|switch|case|const|function|new|true|false|null|nil|public|private|static|final)\b|\b\d+(?:\.\d+)?\b)/g;
@@ -56,9 +57,20 @@ window.__mdvuOnTOC?.(entries);
 }
 };
 const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
-let highlightObserver=null;
+let highlightObserver=null,legacyCodeObserver=null;
+const needsCodeVisibilityFallback=!CSS.supports('content-visibility','auto')&&'IntersectionObserver'in window;
+const revealCodeChunk=node=>{const chunk=node.closest?.('.mdvu-code-virtual');if(chunk)chunk.firstElementChild.hidden=false};
+// Older WebKit cannot skip offscreen line groups. Keep their text in the DOM
+// for find/ranges, with a fixed-height placeholder until the group is visible.
+// Native selection/copy must see the complete text before it builds the range.
+const revealLegacyCode=()=>document.querySelectorAll('.mdvu-code-virtual>.mdvu-code-content').forEach(content=>{content.hidden=false});
+if(needsCodeVisibilityFallback){
+ document.addEventListener('selectstart',revealLegacyCode);
+ document.addEventListener('copy',revealLegacyCode);
+ document.addEventListener('selectionchange',()=>{if(window.getSelection()?.isCollapsed)document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>{legacyCodeObserver?.unobserve(chunk);legacyCodeObserver?.observe(chunk)})});
+}
 const scheduleHighlight=()=>{
-highlightObserver?.disconnect();
+highlightObserver?.disconnect();legacyCodeObserver?.disconnect();
 // A single Unicode corpus can force seconds of font shaping on every zoom.
 // Keep its text intact, but give the browser independent line groups to skip.
 document.querySelectorAll('pre>code:not(.mdvu-chunked)').forEach(code=>{
@@ -69,11 +81,17 @@ for(let offset=0;offset<source.length;){
 let end=offset,lines=0;
 while(lines<32&&end<source.length){const next=source.indexOf('\n',end);end=next<0?source.length:next+1;lines++}
 const chunk=document.createElement('span');chunk.className=code.className+' mdvu-code-chunk';chunk.textContent=source.slice(offset,end);
-chunk.style.setProperty('--mdvu-chunk-height',lines*lineHeight+'px');fragment.append(chunk);offset=end;
+chunk.style.setProperty('--mdvu-chunk-height',lines*lineHeight+'px');
+if(needsCodeVisibilityFallback){const content=document.createElement('span');content.className='mdvu-code-content '+code.className;content.append(...chunk.childNodes);content.hidden=true;chunk.append(content);chunk.classList.add('mdvu-code-virtual')}
+fragment.append(chunk);offset=end;
 }
 code.replaceChildren(fragment);code.classList.add('mdvu-chunked');
 });
-const blocks=document.querySelectorAll('pre>code:not(.mdvu-chunked),.mdvu-code-chunk');
+if(needsCodeVisibilityFallback&&'IntersectionObserver'in window){
+ legacyCodeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{const chunk=entry.target;if(entry.isIntersecting)chunk.firstElementChild.hidden=false;else if(window.getSelection()?.isCollapsed!==false&&!chunk.querySelector('.find-current'))chunk.firstElementChild.hidden=true}),{rootMargin:'800px 0px'});
+ document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>legacyCodeObserver.observe(chunk));
+}
+const blocks=document.querySelectorAll('pre>code:not(.mdvu-chunked),.mdvu-code-chunk:not(.mdvu-code-virtual),.mdvu-code-content');
 if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}
 const observer=highlightObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});
 blocks.forEach(block=>observer.observe(block));
@@ -316,7 +334,7 @@ else{cancelReadingAnchor();window.__mdvuReadingAnchorSettled=token}
 requestAnimationFrame(restore);
 };
 window.__mdvuPreserveReadingAnchor=mutate=>{const token=window.__mdvuCaptureReadingAnchor();mutate();window.__mdvuRestoreReadingAnchor(token)};
-const scrollToReadingTarget=(target,offset)=>{const token=window.__mdvuCaptureReadingAnchor(target,offset);target.scrollIntoView({block:offset===0?'start':'center',behavior:'instant'});window.__mdvuRestoreReadingAnchor(token)};
+const scrollToReadingTarget=(target,offset)=>{revealCodeChunk(target);const token=window.__mdvuCaptureReadingAnchor(target,offset);target.scrollIntoView({block:offset===0?'start':'center',behavior:'instant'});window.__mdvuRestoreReadingAnchor(token)};
 window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}scrollToReadingTarget(target,0);if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
 document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
 let allMatches=[];let currentIndex=-1;
@@ -409,7 +427,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;legacyCodeObserver?.disconnect();legacyCodeObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
 for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;cancelReadingAnchor()},{passive:true});
@@ -437,5 +455,5 @@ else window.__mdvuReadingEdgeSettled=generation;
 };
 reachEnd();
 });
-document.addEventListener('DOMContentLoaded',()=>{window.__mdvuRestoreScroll();requestAnimationFrame(()=>{window.__mdvuInitArticle()})});
+document.addEventListener('DOMContentLoaded',()=>{window.__mdvuInitArticle();window.__mdvuRestoreScroll()});
 })();

@@ -5,3 +5,5 @@ html[data-theme=light]{color-scheme:light}@media(prefers-color-scheme:dark){html
 
 article>p,article>ul,article>ol,article>blockquote,article>.math-display{content-visibility:auto;contain-intrinsic-size:auto 100px}
 pre>code.mdvu-chunked{display:block}.mdvu-code-chunk{display:block;content-visibility:auto;contain-intrinsic-size:auto var(--mdvu-chunk-height)}
+
+.mdvu-code-virtual{height:var(--mdvu-chunk-height)}

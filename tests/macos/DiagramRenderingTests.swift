@@ -50,6 +50,34 @@ import WebKit
         #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
     }
 
+    @Test func legacyCodeVisibilityPreservesFindAndNativeSelectionText() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: "const supports=CSS.supports.bind(CSS);CSS.supports=(...args)=>args[0]==='content-visibility'?false:supports(...args);window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        let source = (0..<2000).map { "line \($0): Åä 中文 العربية 😀 const text = 'needle';\n" }.joined()
+        view.loadHTMLString(HTMLDocument.make(body: "<div style='height:5000px'></div><pre><code class='language-text'>\(HTML.escape(source))</code></pre>", title: "Legacy code", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<200 {
+            if try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length>50") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length>50") as? Bool == true)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('code').textContent") as? String == source)
+        #expect(try await view.evaluateJavaScriptValue("window.__mdvuFind.search('needle').count") as? Int == 2000)
+        #expect(try await view.evaluateJavaScriptValue("!document.querySelector('.find-current').closest('.mdvu-code-content').hidden") as? Bool == true)
+        _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();document.dispatchEvent(new Event('selectstart'));const range=document.createRange();range.selectNodeContents(document.querySelector('code'));getSelection().removeAllRanges();getSelection().addRange(range);true")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length") as? Int == 0)
+        let selected = try await view.evaluateJavaScriptValue("getSelection().toString()") as? String
+        #expect(selected?.count == source.count)
+        #expect(selected == source)
+        _ = try await view.evaluateJavaScriptValue("getSelection().removeAllRanges();window.scrollTo(0,0);true")
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length>50") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length>50") as? Bool == true)
+    }
+
     @Test func nativeTransportCanArriveAfterTheReaderScript() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
