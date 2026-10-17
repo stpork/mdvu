@@ -63,21 +63,26 @@ window.__mdvuOnTOC?.(entries);
 }
 };
 const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
-let highlightObserver=null,legacyCodeObserver=null;
-const needsCodeVisibilityFallback=!CSS.supports('content-visibility','auto')&&'IntersectionObserver'in window;
+let highlightObserver=null,codeVisibilityObserver=null;
+const canVirtualizeCode='IntersectionObserver'in window;
 document.documentElement.classList.add('mdvu-code-pending');
-const revealCodeChunk=node=>{const chunk=node.closest?.('.mdvu-code-virtual');if(chunk)chunk.firstElementChild.hidden=false};
-// Older WebKit cannot skip offscreen line groups. Keep their text in the DOM
-// for find/ranges, with a fixed-height placeholder until the group is visible.
+const setCodeVisible=(chunk,visible)=>{
+const content=chunk.firstElementChild;if(content.hidden===!visible)return;
+content.hidden=!visible;
+if(visible)chunk.removeAttribute('aria-labelledby');else chunk.setAttribute('aria-labelledby',content.id);
+};
+const revealCodeChunk=node=>{const chunk=node.closest?.('.mdvu-code-virtual');if(chunk)setCodeVisible(chunk,true)};
+// Bound code layout explicitly: browser content-visibility overscan expands at
+// small zoom factors. Keep text in the DOM and reveal only nearby line groups.
 // Native selection/copy must see the complete text before it builds the range.
-const revealLegacyCode=event=>{if(event.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;document.querySelectorAll('.mdvu-code-virtual>.mdvu-code-content').forEach(content=>{content.hidden=false})};
-if(needsCodeVisibilityFallback){
- document.addEventListener('selectstart',revealLegacyCode);
- document.addEventListener('copy',revealLegacyCode);
- document.addEventListener('selectionchange',()=>{if(window.getSelection()?.isCollapsed)document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>{legacyCodeObserver?.unobserve(chunk);legacyCodeObserver?.observe(chunk)})});
+const revealCodeForSelection=event=>{if(event.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>setCodeVisible(chunk,true))};
+if(canVirtualizeCode){
+ document.addEventListener('selectstart',revealCodeForSelection);
+ document.addEventListener('copy',revealCodeForSelection);
+ document.addEventListener('selectionchange',()=>{if(window.getSelection()?.isCollapsed)document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>{codeVisibilityObserver?.unobserve(chunk);codeVisibilityObserver?.observe(chunk)})});
 }
 const scheduleHighlight=()=>{
-highlightObserver?.disconnect();legacyCodeObserver?.disconnect();
+highlightObserver?.disconnect();codeVisibilityObserver?.disconnect();
 document.documentElement.classList.add('mdvu-code-pending');
 // A single Unicode corpus can force seconds of font shaping on every zoom.
 // Keep its text intact, but give the browser independent line groups to skip.
@@ -90,14 +95,14 @@ let end=offset,lines=0;
 while(lines<32&&end<source.length){const next=source.indexOf('\n',end);end=next<0?source.length:next+1;lines++}
 const chunk=document.createElement('span');chunk.className=code.className+' mdvu-code-chunk';chunk.textContent=source.slice(offset,end);
 chunk.style.setProperty('--mdvu-chunk-height',lines*lineHeight+'px');
-if(needsCodeVisibilityFallback&&style.whiteSpace==='pre'){const content=document.createElement('span');content.className='mdvu-code-content '+code.className;content.append(...chunk.childNodes);content.hidden=true;chunk.append(content);chunk.classList.add('mdvu-code-virtual')}
+if(canVirtualizeCode&&style.whiteSpace==='pre'){const content=document.createElement('span');content.className='mdvu-code-content '+code.className;content.id='mdvu-code-'+diagramSession+String(++renderSeq);content.append(...chunk.childNodes);chunk.append(content);chunk.classList.add('mdvu-code-virtual');chunk.setAttribute('role','group');setCodeVisible(chunk,false)}
 fragment.append(chunk);offset=end;
 }
 code.replaceChildren(fragment);code.classList.add('mdvu-chunked');
 });
-if(needsCodeVisibilityFallback&&'IntersectionObserver'in window){
- legacyCodeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{const chunk=entry.target;if(entry.isIntersecting)chunk.firstElementChild.hidden=false;else if(window.getSelection()?.isCollapsed!==false&&!chunk.querySelector('.find-current'))chunk.firstElementChild.hidden=true}),{rootMargin:'800px 0px'});
- document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>legacyCodeObserver.observe(chunk));
+if(canVirtualizeCode){
+ codeVisibilityObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{const chunk=entry.target;if(entry.isIntersecting)setCodeVisible(chunk,true);else if(window.getSelection()?.isCollapsed!==false&&!chunk.querySelector('.find-current'))setCodeVisible(chunk,false)}),{rootMargin:diagramViewportMargin+'px 0px'});
+ document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>codeVisibilityObserver.observe(chunk));
 }
 document.documentElement.classList.remove('mdvu-code-pending');
 const blocks=document.querySelectorAll('pre>code:not(.mdvu-chunked),.mdvu-code-chunk:not(.mdvu-code-virtual),.mdvu-code-content');
@@ -120,8 +125,8 @@ const nativeDiagrams=()=>window.__mdvuNativeDiagramTransport;
 const diagramRequests=new Map,diagramSession=Math.random().toString(36).slice(2);
 window.__mdvuDiagramTimings=[];
 window.__mdvuDiagramResult=result=>{const request=diagramRequests.get(result.id);if(!request)return;diagramRequests.delete(result.id);window.__mdvuDiagramTimings.push({type:result.type,ms:result.ms});if(result.error)request.reject(new Error(result.error));else request.resolve(result.svg)};
-const renderNativeDiagram=(renderer,source,dark)=>new Promise((resolve,reject)=>{const id=diagramSession+String(++diagramSeq);diagramRequests.set(id,{resolve,reject});nativeDiagrams().post({id,renderer,source,dark})});
-let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
+const renderNativeDiagram=(renderer,source,dark)=>new Promise((resolve,reject)=>{const id=diagramSession+String(++renderSeq);diagramRequests.set(id,{resolve,reject});nativeDiagrams().post({id,renderer,source,dark})});
+let renderSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
 const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
 const diagramViewportMargin=400,diagramRetentionMargin=800;
 const diagramSVGs=new WeakMap;
@@ -202,7 +207,7 @@ if(nativeDiagrams()){svg=await renderNativeDiagram(renderer,source,isDark)}
 else if(renderer==='mermaid'){
 if(typeof mermaid==='undefined'){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 await ensureMermaidInit();
-svg=(await mermaid.render(`mdvu-diagram-${++diagramSeq}`,source)).svg;
+svg=(await mermaid.render(`mdvu-diagram-${++renderSeq}`,source)).svg;
 }else if(renderer==='plantuml'){
 if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 const lines=source.trim().split(/\r?\n/);
@@ -478,7 +483,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;legacyCodeObserver?.disconnect();legacyCodeObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;codeVisibilityObserver?.disconnect();codeVisibilityObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
 for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;cancelReadingAnchor()},{passive:true});

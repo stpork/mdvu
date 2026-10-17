@@ -15,6 +15,8 @@ args = parser.parse_args()
 
 def load(path):
     report = json.loads(path.read_text(encoding='utf-8-sig'))
+    if report.get('failures'):
+        raise ValueError(f'System runner failures: {report["failures"]}')
     platform = 'macOS' if 'fixtures' in report else 'Windows'
     rows = report.get('fixtures', report.get('metrics', []))
     fixtures = {}
