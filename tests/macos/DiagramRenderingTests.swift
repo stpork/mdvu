@@ -45,8 +45,7 @@ import WebKit
         #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
         #expect(try await view.evaluateJavaScriptValue("(() => {const range=document.createRange();range.selectNodeContents(document.querySelector('code'));return range.toString()})()") as? String == source)
         let matches = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('needle').count") as? Int
-        let findDiagnostic = try await view.evaluateJavaScriptValue("JSON.stringify({reader:window.__mdvuFind.search.toString().slice(0,1400),codes:[...document.querySelectorAll('code')].map(code=>({plain:code.textContent.match(/needle/g)?.length,unicode:code.textContent.match(/needle/giu)?.length,classes:code.textContent.match(/[Nn][Ee][Ee][Dd][Ll][Ee]/gu)?.length,copied:code.textContent.split('').join('').match(/needle/giu)?.length,marks:code.querySelectorAll('.find-match').length}))})") as? String
-        #expect(matches == 2000, "\(findDiagnostic ?? "Missing find diagnostics")")
+        #expect(matches == 2000)
         _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();window.__mdvuInitArticle();true")
         #expect(try await view.evaluateJavaScriptValue("document.querySelector('code').textContent") as? String == source)
         #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-chunk').length") as? Int == 63)
@@ -73,8 +72,7 @@ import WebKit
         _ = try await view.evaluateJavaScriptValue("const field=document.createElement('input');document.body.append(field);field.dispatchEvent(new Event('selectstart',{bubbles:true}));field.dispatchEvent(new Event('copy',{bubbles:true}));true")
         #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-code-content[hidden]').length>50") as? Bool == true)
         let matches = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('needle').count") as? Int
-        let findDiagnostic = try await view.evaluateJavaScriptValue("JSON.stringify({reader:window.__mdvuFind.search.toString().slice(0,1400),codes:[...document.querySelectorAll('code')].map(code=>({plain:code.textContent.match(/needle/g)?.length,unicode:code.textContent.match(/needle/giu)?.length,classes:code.textContent.match(/[Nn][Ee][Ee][Dd][Ll][Ee]/gu)?.length,copied:code.textContent.split('').join('').match(/needle/giu)?.length,marks:code.querySelectorAll('.find-match').length}))})") as? String
-        #expect(matches == 4000, "\(findDiagnostic ?? "Missing find diagnostics")")
+        #expect(matches == 4000)
         #expect(try await view.evaluateJavaScriptValue("!document.querySelector('#wrapped .mdvu-code-virtual')") as? Bool == true)
         #expect(try await view.evaluateJavaScriptValue("!document.querySelector('.find-current').closest('.mdvu-code-content').hidden") as? Bool == true)
         _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();document.querySelector('code').dispatchEvent(new Event('selectstart',{bubbles:true}));const range=document.createRange();range.selectNodeContents(document.querySelector('code'));getSelection().removeAllRanges();getSelection().addRange(range);true")
