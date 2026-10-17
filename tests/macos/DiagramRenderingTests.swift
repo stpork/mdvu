@@ -4,6 +4,47 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
+    @Test func diagramVisibilityBatchesFreshGeometryBeforeDOMChanges() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: """
+            window.observers=[];
+            window.IntersectionObserver=class {
+                constructor(callback,options){this.callback=callback;this.margin=options?.rootMargin;window.observers.push(this)}
+                observe(){} unobserve(){} disconnect(){}
+            };
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        let figure = "<figure class='diagram diagram-rendered' style='margin:0;padding:0;height:50px'><svg xmlns='http://www.w3.org/2000/svg' width='100' viewBox='0 0 100 50'><text>Diagram</text></svg></figure>"
+        view.loadHTMLString(HTMLDocument.make(body: figure + figure, title: "Visibility", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("document.querySelectorAll('.diagram-content').length===2") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        _ = try await view.evaluateJavaScriptValue("""
+            window.operations=[];
+            const bounds=Element.prototype.getBoundingClientRect;
+            Element.prototype.getBoundingClientRect=function(){if(this.matches('figure'))operations.push('read');return bounds.call(this)};
+            const html=Object.getOwnPropertyDescriptor(ShadowRoot.prototype,'innerHTML');
+            Object.defineProperty(ShadowRoot.prototype,'innerHTML',{get:html.get,set(value){operations.push('mount');html.set.call(this,value)}});
+            const replace=ShadowRoot.prototype.replaceChildren;
+            ShadowRoot.prototype.replaceChildren=function(...nodes){operations.push('unmount');return replace.apply(this,nodes)};
+            const entries=[...document.querySelectorAll('figure')].map(target=>({target,isIntersecting:true}));
+            observers.find(o=>o.margin==='400px 0px').callback(entries);true
+            """)
+        #expect(try await view.evaluateJavaScriptValue("operations.join(',')") as? String == "read,read,mount,mount")
+        _ = try await view.evaluateJavaScriptValue("operations=[];observers.find(o=>o.margin==='400px 0px').callback(entries);true")
+        #expect(try await view.evaluateJavaScriptValue("operations.length") as? Int == 0)
+        // Stale leave notifications must not remove a diagram which moved back into view.
+        _ = try await view.evaluateJavaScriptValue("operations=[];entries.forEach(e=>e.isIntersecting=false);observers.find(o=>o.margin==='800px 0px').callback(entries);true")
+        #expect(try await view.evaluateJavaScriptValue("operations.join(',')") as? String == "read,read")
+        _ = try await view.evaluateJavaScriptValue("operations=[];document.querySelector('article').style.marginTop='10000px';observers.find(o=>o.margin==='800px 0px').callback(entries);true")
+        #expect(try await view.evaluateJavaScriptValue("operations.join(',')") as? String == "read,read,unmount,unmount")
+        #expect(try await view.evaluateJavaScriptValue("[...document.querySelectorAll('.diagram-content')].every(n=>!n.shadowRoot.firstChild)") as? Bool == true)
+        _ = try await view.evaluateJavaScriptValue("operations=[];observers.find(o=>o.margin==='800px 0px').callback(entries);true")
+        #expect(try await view.evaluateJavaScriptValue("operations.length") as? Int == 0)
+    }
+
     @Test func articleInitializationDefersDiagramGeometryUntilIntersection() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: """

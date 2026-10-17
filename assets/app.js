@@ -125,6 +125,7 @@ let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserv
 const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
 const diagramViewportMargin=400,diagramRetentionMargin=800;
 const diagramSVGs=new WeakMap;
+const hasDiagramDOM=node=>!!node.querySelector('.diagram-content')?.shadowRoot?.firstChild;
 const mountDiagram=node=>{
 const record=diagramSVGs.get(node),host=node.querySelector('.diagram-content');
 if(!record||!host||host.shadowRoot.firstChild)return;
@@ -141,12 +142,11 @@ const diagramSizeObserver=typeof ResizeObserver==='undefined'?null:new ResizeObs
 const record=diagramSVGs.get(entry.target.parentElement);
 if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)record.ratio=String(entry.contentRect.width/entry.contentRect.height);
 }));
-const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
-if(entry.isIntersecting&&isElementInViewport(entry.target))mountDiagram(entry.target);
-}),{rootMargin:diagramViewportMargin+'px 0px'});
+// Read every bound before changing SVG DOM; interleaving them forces layout per diagram.
+const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.filter(entry=>entry.isIntersecting&&!hasDiagramDOM(entry.target)&&isElementInViewport(entry.target)).forEach(entry=>mountDiagram(entry.target)),{rootMargin:diagramViewportMargin+'px 0px'});
 // Separate enter/leave bounds prevent repeated SVG parsing when reflow moves a
 // diagram back and forth across the viewport boundary. Both observers are bounded.
-const diagramRetentionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting&&!isElementInViewport(entry.target,diagramRetentionMargin))unmountDiagram(entry.target)}),{rootMargin:diagramRetentionMargin+'px 0px'});
+const diagramRetentionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.filter(entry=>!entry.isIntersecting&&hasDiagramDOM(entry.target)&&!isElementInViewport(entry.target,diagramRetentionMargin)).forEach(entry=>unmountDiagram(entry.target)),{rootMargin:diagramRetentionMargin+'px 0px'});
 window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
