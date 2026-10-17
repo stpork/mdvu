@@ -96,6 +96,7 @@ window.__mdvuDiagramResult=result=>{const request=diagramRequests.get(result.id)
 const renderNativeDiagram=(renderer,source,dark)=>new Promise((resolve,reject)=>{const id=diagramSession+String(++diagramSeq);diagramRequests.set(id,{resolve,reject});nativeDiagrams().post({id,renderer,source,dark})});
 let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
 const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
+const diagramViewportMargin=200;
 const diagramSVGs=new WeakMap;
 const mountDiagram=node=>{
 const record=diagramSVGs.get(node),host=node.querySelector('.diagram-content');
@@ -115,7 +116,7 @@ if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)recor
 }));
 const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
 if(entry.isIntersecting)mountDiagram(entry.target);else unmountDiagram(entry.target);
-}),{rootMargin:'400px 0px'});
+}),{rootMargin:diagramViewportMargin+'px 0px'});
 window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
@@ -194,7 +195,7 @@ node.querySelector('small').textContent=String(e.message||e);
 delete node.__mdvuRendering;
 }
 };
-const isElementInViewport=(el,margin=400)=>{
+const isElementInViewport=(el,margin=diagramViewportMargin)=>{
 const rect=el.getBoundingClientRect(),vh=window.innerHeight||document.documentElement.clientHeight||800;
 return rect.top<=vh+margin&&rect.bottom>=-margin;
 };
@@ -233,7 +234,7 @@ diagramObserver.unobserve(entry.target);
 enqueueDiagram(entry.target);
 }
 });
-},{rootMargin:'400px 0px'});
+},{rootMargin:diagramViewportMargin+'px 0px'});
 return diagramObserver;
 };
 const isRendererReady=r=>!!nativeDiagrams()||(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
@@ -252,7 +253,7 @@ return;
 }
 const initialBatch=[];
 pendingNodes.forEach(node=>{
-if(isElementInViewport(node,400)){
+if(isElementInViewport(node)){
 initialBatch.push(node);
 }else{
 observer.observe(node);

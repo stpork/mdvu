@@ -143,6 +143,7 @@
       checks.fullWidth = document.documentElement.classList.contains('full-width') !== full;
       document.getElementById('btn-full-width').click(); await pause(150);
     }
+    await window.__mdvuCheckControls({checks,metrics:performanceMetrics,article,nextFrame,pause,fullscreen:window.__mdvuTimingMode!=='timer'});
     await pause(400);
     // Keep the window at its initial reading position for the captured screenshot.
     document.getElementById('mdvu-main-content')?.scrollTo(0,0); window.scrollTo(0,0);
@@ -163,7 +164,7 @@
     window.ipc?.postMessage('ui_test:' + JSON.stringify(result));
     window.webkit?.messageHandlers?.uiTest?.postMessage(result);
   } catch (error) {
-    window.__mdvuAuditResult = {passed:false,error:String(error),checks,renderTimings,frameGaps,pending:[...document.querySelectorAll('.diagram-pending:not(.diagram-error)')].map(n=>({renderer:n.dataset.renderer,rendering:!!n.__mdvuRendering,source:n.textContent.slice(0,300)})),diagrams:[...document.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')||n.querySelector('svg')).length};
+    window.__mdvuAuditResult = {passed:false,error:String(error),checks,renderTimings,frameGaps,controls:window.__mdvuAuditControls,pending:[...document.querySelectorAll('.diagram-pending:not(.diagram-error)')].map(n=>({renderer:n.dataset.renderer,rendering:!!n.__mdvuRendering,source:n.textContent.slice(0,300)})),diagrams:[...document.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')||n.querySelector('svg')).length};
     window.ipc?.postMessage('ui_test:' + JSON.stringify(window.__mdvuAuditResult));
     window.webkit?.messageHandlers?.uiTest?.postMessage(window.__mdvuAuditResult);
   }

@@ -320,6 +320,7 @@ pub enum UserEvent {
     Exit,
     DocumentReady(Box<PreparedDocument>),
     FolderReady(PathBuf, Vec<navigator::VaultItem>, Option<PathBuf>),
+    NavigatorReady(PathBuf, Vec<navigator::VaultItem>),
     SmokeResult(String),
     ArticleReady(String),
     UiTestResult(String),
@@ -378,6 +379,7 @@ struct AppState {
     pending_fragment: Option<String>,
     vault_root: Option<PathBuf>,
     vault_items: Vec<navigator::VaultItem>,
+    navigator_loading: bool,
     current_title: String,
     zoom_level: f64,
     last_toggle: Instant,
@@ -906,6 +908,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         pending_fragment: None,
         vault_root: initial_vault_root,
         vault_items: initial_vault_items,
+        navigator_loading: false,
         current_title: "mdvu".to_string(),
         zoom_level: ZoomPolicy::DEFAULT_ZOOM,
         last_toggle: Instant::now() - Duration::from_secs(1),
@@ -1294,6 +1297,15 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     if !success { match name { "katex" => st.katex_injected = false, "mermaid" => st.mermaid_injected = false, _ => st.plantuml_injected = false } }
                     let _ = webview.evaluate_script("window.__mdvuRenderMath?.(); window.__mdvuRenderDiagrams?.();");
                 }
+                UserEvent::NavigatorReady(root, items) => {
+                    let mut st = state.lock().unwrap();
+                    st.navigator_loading = false;
+                    if st.vault_root.as_ref() != Some(&root) { return; }
+                    st.vault_items = items;
+                    if let Ok(json) = serde_json::to_string(&st.vault_items) {
+                        let _ = webview.evaluate_script(&format!("window.__mdvuUpdateNavigator?.({json});"));
+                    }
+                }
                 UserEvent::FolderReady(root, items, first) => {
                     let mut st = state.lock().unwrap();
                     if st.vault_root.as_ref() != Some(&root) { return; }
@@ -1451,8 +1463,15 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     }
                     st.last_toggle = Instant::now();
                     st.is_nav_visible = !st.is_nav_visible;
-                    if st.is_nav_visible && st.vault_items.is_empty() {
-                        if let Some(path) = st.current_file.clone() { update_webview_document(&webview, &window, &mut st, &path, true); }
+                    if st.is_nav_visible && st.vault_items.is_empty() && !st.navigator_loading {
+                        if let Some(root) = st.vault_root.clone() {
+                            st.navigator_loading = true;
+                            let proxy = proxy.clone();
+                            std::thread::spawn(move || {
+                                let items = navigator::scan_directory_tree(&root, 6);
+                                let _ = proxy.send_event(UserEvent::NavigatorReady(root, items));
+                            });
+                        }
                     }
                     let vis = st.is_nav_visible;
                     let _ = webview.evaluate_script(&format!("window.__mdvuToggleNavSidebar?.({vis});"));
@@ -1569,6 +1588,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     } else {
                         Some(tao::window::Fullscreen::Borderless(None))
                     });
+                    if ui_script.is_some() {
+                        let _ = webview.evaluate_script(&format!("window.__mdvuAuditFullscreen={};", !is_fullscreen));
+                    }
                 }
                 UserEvent::ShowAbout => {
                     let _ = webview.evaluate_script("window.__mdvuShowAbout?.();");

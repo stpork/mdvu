@@ -1030,7 +1030,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         isSidebarVisible.toggle()
         UserDefaults.standard.set(isSidebarVisible, forKey: "layout.sidebarVisible")
-        rebuildSplitSubviews()
+        preserveReadingAnchor("panes") { [weak self] in self?.rebuildSplitSubviews() }
         updateSidebarControl()
     }
 
@@ -1046,7 +1046,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 vaultNavigatorView?.setRoot(documentURL: docURL)
             }
         }
-        rebuildSplitSubviews()
+        preserveReadingAnchor("panes") { [weak self] in self?.rebuildSplitSubviews() }
         updateFileNavigatorControl()
     }
 
@@ -1222,6 +1222,42 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if message.name == "uiControl", auditScript != nil {
             if message.body as? String == "zoomIn" { zoomIn(nil) }
             if message.body as? String == "zoomOut" { zoomOut(nil) }
+            if let request = message.body as? [String: Any], let id = request["id"] as? Int {
+                let action = request["action"] as? String ?? "state"
+                switch action {
+                case "zoomIn": zoomIn(nil)
+                case "zoomOut": zoomOut(nil)
+                case "zoomReset": resetZoom(nil)
+                case "zoomSet": applyPageZoom(ZoomPolicy.parseManualInput(request["value"] as? String ?? "", fallback: effectiveZoom), resetMagnification: true)
+                case "toc": toggleContents(nil)
+                case "navigator": toggleFileNavigator(nil)
+                case "fullWidth": toggleFullWidth(nil)
+                case "fullscreen":
+                    // Basic audits stay above RDP; fullscreen uses a regular
+                    // primary window, as in an ordinary application launch.
+                    window?.level = .normal
+                    window?.collectionBehavior = [.fullScreenPrimary, .managed]
+                    NSApp.activate(ignoringOtherApps: true)
+                    window?.makeKeyAndOrderFront(nil)
+                    window?.toggleFullScreen(nil)
+                case "navTree": vaultNavigatorView?.setMode(.tree)
+                case "navList": vaultNavigatorView?.setMode(.list)
+                default: break
+                }
+                let branch = (0..<tocOutline.numberOfRows).compactMap { tocOutline.item(atRow: $0) }.first { tocOutline.isExpandable($0) }
+                if let branch {
+                    if action == "tocCollapse" { tocOutline.collapseItem(branch) }
+                    if action == "tocExpand" { tocOutline.expandItem(branch) }
+                }
+                let state: [String: Any] = ["id": id, "zoom": effectiveZoom, "toc": isSidebarVisible,
+                    "navigator": isFileNavigatorVisible, "fullWidth": isFullWidth,
+                    "fullscreen": window?.styleMask.contains(.fullScreen) ?? false,
+                    "tocRows": tocOutline.numberOfRows, "tocBranch": branch.map { tocOutline.isItemExpanded($0) as Any } ?? NSNull(),
+                    "nav": vaultNavigatorView?.auditOutline(action: action) ?? [:]]
+                if let data = try? JSONSerialization.data(withJSONObject: state), let json = String(data: data, encoding: .utf8) {
+                    webView.evaluateJavaScript("window.__mdvuAuditNative=\(json);void 0", completionHandler: nil)
+                }
+            }
             return
         }
         if message.name == "diagramCancel" { DiagramRenderingService.shared.cancel(owner: diagramOwner); return }
@@ -1242,12 +1278,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 result["sidebarWidth"] = sidebarContainer.frame.width
             }
             if result["idleProbe"] as? Bool == true { checks["rendererReleased"] = !DiagramRenderingService.shared.hasRenderer }
-            let originalZoom = effectiveZoom
-            zoomIn(nil); checks["nativeZoomIn"] = effectiveZoom > originalZoom
-            zoomOut(nil); checks["nativeZoomOut"] = abs(effectiveZoom - originalZoom) < 0.001
-            let originalContents = isSidebarVisible
-            toggleContents(nil); checks["nativeContentsToggle"] = isSidebarVisible != originalContents
-            toggleContents(nil)
             result["checks"] = checks
             result["passed"] = (result["passed"] as? Bool == true) && checks.values.allSatisfy { $0 }
             if let path = ProcessInfo.processInfo.environment["MDVU_UI_RESULT_FILE"], let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
@@ -1456,6 +1486,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var isCapturingReadingAnchor = false
 
     private func preserveReadingAnchor(_ kind: String, _ mutate: @escaping () -> Void) {
+        guard hasLoadedDocument else { mutate(); return }
         pendingLayoutChanges[kind] = mutate
         guard !isCapturingReadingAnchor else { return }
         isCapturingReadingAnchor = true

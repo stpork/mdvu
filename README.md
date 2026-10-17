@@ -317,8 +317,8 @@ mdvu --snapshot output.png README.md
   * **UML Models**: Sequence diagrams, Class models with inheritance and associations, State machines, Activity diagrams, Component architectures, Object diagrams, Deployment diagrams, and Use-case models.
   * **Non-UML Families**: JSON/YAML data tree visualizers, Salt UI wireframes, Archimate enterprise models, MindMaps, Work Breakdown Structures (WBS), Gantt schedules, and Network (`nwdiag`) diagrams.
   * **Dark Mode & Transparency**: Automatically adapts to document theme with transparent SVG backgrounds.
-* **Frame-Budgeted Diagram Execution**:
-  * Diagram rendering yields every 16 ms to the WebKit animation loop, preventing main-thread locks on documents with hundreds of diagrams (e.g. 300+ diagrams in stress fixtures).
+* **Isolated Diagram Execution**:
+  * Native builds generate diagrams in a separate renderer and attach SVGs near the reading viewport. The renderer is released after inactivity; a bounded queue and cache limit retained work.
 * **On-Demand Lazy Decompression**:
   * Documents without diagrams incur **zero CPU/memory overhead**; the LZMA archives are never accessed.
   * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.33 MB).
@@ -442,6 +442,8 @@ scripts/           Build, validation and benchmark entry points
 Build output belongs in `.build/`, `target/` and `dist/`; measurements and screenshots belong in `test-results/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
 
 Run `make check` and `make coverage` on macOS. After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. Pass `-Msi <path> -Install` to the Windows runner to validate an MSI installation. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
+
+The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
 
 For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 

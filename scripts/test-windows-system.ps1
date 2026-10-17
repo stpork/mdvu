@@ -121,7 +121,7 @@ public static class MdvuCapture {
 }
 '@
         }
-        $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
+        $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-controls.js').Path) + [Environment]::NewLine + [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
         if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
         foreach ($Fixture in $Fixtures) {

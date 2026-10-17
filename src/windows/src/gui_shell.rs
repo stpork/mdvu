@@ -734,6 +734,10 @@ pub fn build_gui_html(
 
   renderTOC(window.__mdvuInitialTOC);
   renderVault(window.__mdvuInitialVault, window.__mdvuCurrentPath);
+  window.__mdvuUpdateNavigator = items => {{
+    window.__mdvuInitialVault = items;
+    renderVault(items, window.__mdvuCurrentPath);
+  }};
 
   // Tree | List switcher
   const btnModeTree = document.getElementById('btn-nav-mode-tree');
@@ -785,7 +789,7 @@ pub fn build_gui_html(
     const btn = document.getElementById('btn-toc');
     if (!aside) return;
     const isHidden = typeof force === 'boolean' ? !force : !aside.classList.contains('hidden');
-    aside.classList.toggle('hidden', isHidden);
+    preserveReadingAnchor(() => aside.classList.toggle('hidden', isHidden));
     if (btn) btn.classList.toggle('active', !isHidden);
   }};
 
@@ -794,7 +798,7 @@ pub fn build_gui_html(
     const btn = document.getElementById('btn-navigator');
     if (!aside) return;
     const isHidden = typeof force === 'boolean' ? !force : !aside.classList.contains('hidden');
-    aside.classList.toggle('hidden', isHidden);
+    preserveReadingAnchor(() => aside.classList.toggle('hidden', isHidden));
     if (btn) btn.classList.toggle('active', !isHidden);
   }};
 
