@@ -341,6 +341,7 @@ const scrollToReadingTarget=(target,offset)=>{revealCodeChunk(target);const toke
 window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}scrollToReadingTarget(target,0);if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
 document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
 let allMatches=[];let currentIndex=-1;
+const findUnicodeMode=(()=>{try{new RegExp('','v');return'v'}catch{return'u'}})();
 const clearFind=()=>{
 cancelReadingAnchor();
 const parents=new Set;
@@ -355,9 +356,7 @@ if(!q||!q.trim())return{count:0,current:0};
 const article=document.querySelector('article')||document.body;
 // Only materialize offscreen diagrams which can contain this query. Searching
 // labels must not retain every SVG DOM in a long document.
-// Singleton classes preserve Unicode case folding without WebKit's faulty
-// ignore-case literal fast path, which skips matches in long UTF-16 strings.
-const pattern=new RegExp([...q].map(c=>'['+c.replace(/[\\\]\[\^-]/g,'\\$&')+']').join(''),'giu'),decode=document.createElement('textarea');
+const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'+findUnicodeMode),decode=document.createElement('textarea');
 article.querySelectorAll('figure.diagram-rendered').forEach(node=>{
 const record=diagramSVGs.get(node);if(!record)return;
 if(record.text===undefined){decode.innerHTML=record.svg.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ');record.text=decode.value}
