@@ -12,7 +12,6 @@
     <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
     <a href="#windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/version-0.5.0-emerald" alt="Version 0.5.0"></a>
-    <a href="#performance-and-size"><img src="https://img.shields.io/badge/bundle_size-3.4_MB_macOS_%7C_5.1_MB_Windows-brightgreen" alt="Bundle Size"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
   </p>
 </div>
@@ -26,8 +25,8 @@
 ## Why mdvu?
 
 Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
-* **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS (~3.4 MB bundle) and native **Win32 & WebView2** on Windows (`mdvu.exe`, ~5.1 MB standalone). Both run on the shared, high-throughput `mdvu-core` Rust engine with zero Electron, Node, or JVM.
-* **Instant Startup & Minimal Memory**: Launches in 30–50 ms and uses a fraction of Electron's memory footprint.
+* **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS and native **Win32 & WebView2** on Windows. Both run on the shared `mdvu-core` Rust engine with zero Electron, Node, or JVM.
+* **Responsive Reading**: Diagram execution uses a separate renderer so scrolling and zoom can continue while a diagram is being generated. Native fixture tests measure cold interaction latency and process memory.
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
@@ -82,11 +81,11 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
 | Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
 | **`mdvu-X.Y.Z-windows-x86_64.msi`** | Windows 10 & 11 (`x86_64`) | Native Windows MSI installer (Start Menu shortcut, `PATH` CLI registration, `.md` file associations) |
-| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Portable standalone package containing single-file `mdvu.exe` (GUI & CLI) |
+| **`mdvu-X.Y.Z-windows-x86_64.zip`** | Windows 10 & 11 (`x86_64`) | Portable package containing `mdvu.exe` (GUI & CLI) and the WebView2 loader |
 | **`mdvu-X.Y.Z-macos.dmg`** | macOS Universal (`arm64` + `x86_64`) | Graphical macOS installer with Drag-to-Applications |
 | **`mdvu-X.Y.Z-macos-universal.zip`** | macOS Universal (`arm64` + `x86_64`) | Portable archive for both Apple Silicon and Intel |
-| **`mdvu-X.Y.Z-macos-arm64.zip`** | macOS Apple Silicon (`arm64`) | Ultra-compact (2.9 MB) optimized for M1/M2/M3/M4 |
-| **`mdvu-X.Y.Z-macos-x86_64.zip`** | macOS Intel (`x86_64`) | Ultra-compact (2.9 MB) optimized for Intel Macs |
+| **`mdvu-X.Y.Z-macos-arm64.zip`** | macOS Apple Silicon (`arm64`) | Application containing only the Apple Silicon binaries |
+| **`mdvu-X.Y.Z-macos-x86_64.zip`** | macOS Intel (`x86_64`) | Application containing only the Intel binaries |
 
 ---
 
@@ -381,10 +380,10 @@ Measurements vary with architecture, OS, document, and cache state. `make benchm
 
 | Property | Configuration / measurement |
 | :--- | :--- |
-| Native / Universal app | Approximately 3.4 / 4.2 MiB, with shared compressed resources |
+| Application size | Depends on architecture and packaging; CI publishes release archives for each build |
 | Compiler | `-O`, cross-module optimization, linker dead stripping, stripped Mach-O |
 | Resources | Lazy LZMA decompression off the UI queue; reused for later documents |
-| Cache | Shared SVG `NSCache`, advisory 16 MiB cost limit; persistent disk cache |
+| Cache | Shared Rust SVG cache: at most 128 entries / 16 MiB; persistent disk cache |
 | Zoom | Native WebKit magnification and page zoom; display/document dependent |
 
 For the previous measured build, `-Osize` saved less than 1% of the entire app while reducing parser throughput in that run, so the speed-oriented flags are retained. No formatting or parser capabilities have been removed to reduce size.

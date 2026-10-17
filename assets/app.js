@@ -280,8 +280,10 @@ node.textContent=tex;
 });
 };
 window.__mdvuRenderMath=renderMath;
-let readingAnchor=null,readingAnchorSeq=0;
+let readingAnchor=null,readingAnchorSeq=0,readingAnchorObserver=null,readingAnchorTimer;
+const cancelReadingAnchor=()=>{readingAnchor=null;readingAnchorObserver?.disconnect();readingAnchorObserver=null;clearTimeout(readingAnchorTimer)};
 window.__mdvuCaptureReadingAnchor=()=>{
+cancelReadingAnchor();
 const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
 const rect=scroller===document.scrollingElement?{left:0,top:0,width:innerWidth,height:innerHeight}:scroller.getBoundingClientRect();
 let el=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
@@ -291,21 +293,30 @@ readingAnchor={token,scroller,el,viewportWidth:innerWidth,offset:el?(el.getBound
 return token;
 };
 window.__mdvuRestoreReadingAnchor=(token,viewportScale=1)=>{
-let frames=0,stable=0;
+let frames=0,scheduled=false;
+const schedule=()=>{if(readingAnchor?.token===token&&!scheduled){scheduled=true;requestAnimationFrame(restore)}};
 const restore=()=>{
+scheduled=false;
 if(readingAnchor?.token!==token)return;
 const {scroller,el,offset,ratio,viewportWidth}=readingAnchor;
-if(Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){requestAnimationFrame(restore);return}
+if(Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){schedule();return}
 const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect();
 const delta=el?.isConnected?el.getBoundingClientRect().top-rect.top-offset*rect.height:ratio*Math.max(1,scroller.scrollHeight-scroller.clientHeight)-scroller.scrollTop;
-if(Math.abs(delta)>.5){scroller.scrollBy({top:delta,behavior:'instant'});stable=0}else stable++;
-if(++frames<12&&stable<2)requestAnimationFrame(restore);
-else{readingAnchor=null;window.__mdvuReadingAnchorSettled=token}
+if(Math.abs(delta)>.5){const previous=scroller.scrollTop;scroller.scrollBy({top:delta,behavior:'instant'});if(Math.abs(scroller.scrollTop-previous)>.5)schedule()}
+clearTimeout(readingAnchorTimer);
+readingAnchorTimer=setTimeout(()=>{if(readingAnchor?.token===token){cancelReadingAnchor();window.__mdvuReadingAnchorSettled=token}},200);
 };
-requestAnimationFrame(restore);
+// Scrolling can reveal lazy blocks and move the anchor without changing its
+// size. Recheck each correction; observe later resizes until layout settles.
+if(typeof ResizeObserver!=='undefined'){
+readingAnchorObserver=new ResizeObserver(schedule);
+readingAnchorObserver.observe(document.querySelector('article')||document.documentElement,{box:'border-box'});
+if(readingAnchor?.el)readingAnchorObserver.observe(readingAnchor.el,{box:'border-box'});
+}
+schedule();
 };
 window.__mdvuPreserveReadingAnchor=mutate=>{const token=window.__mdvuCaptureReadingAnchor();mutate();window.__mdvuRestoreReadingAnchor(token)};
-window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}target.scrollIntoView({block:'start'});if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
+window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}catch{}const compact=value=>value.replace(/-/g,''),target=document.getElementById(id)||document.getElementsByName(id)[0]||[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(heading=>compact(heading.id)===compact(id));if(!target)return false;cancelReadingAnchor();try{(push?history.pushState:history.replaceState).call(history,null,'','#'+encodeURIComponent(id))}catch(e){}target.scrollIntoView({block:'start'});if(push&&window.webkit?.messageHandlers?.navigationHistory){window.webkit.messageHandlers.navigationHistory.postMessage({fragment:id})}return true};
 document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
 let allMatches=[];let currentIndex=-1;
 const clearFind=()=>{
@@ -362,6 +373,7 @@ node.replaceWith(frag);
 allMatches=created;
 if(allMatches.length){
 currentIndex=0;
+cancelReadingAnchor();
 allMatches[0].classList.add('find-current');
 allMatches[0].scrollIntoView({block:'center',behavior:'smooth'});
 }
@@ -369,6 +381,7 @@ return{count:allMatches.length,current:allMatches.length?1:0};
 };
 const stepFind=delta=>{
 if(!allMatches.length)return{count:0,current:0};
+cancelReadingAnchor();
 allMatches[currentIndex].classList.remove('find-current');
 currentIndex=(currentIndex+delta+allMatches.length)%allMatches.length;
 allMatches[currentIndex].classList.add('find-current');
@@ -396,19 +409,19 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;readingAnchor=null;readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
-for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;readingAnchor=null},{passive:true});
+for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;cancelReadingAnchor()},{passive:true});
 window.addEventListener('keydown',e=>{
-readingEdgeGeneration++;readingAnchor=null;
+readingEdgeGeneration++;cancelReadingAnchor();
 if(e.key==='Escape')document.getElementById('mdvu-toc-panel')?.classList.remove('visible');
 if(e.defaultPrevented||e.shiftKey||e.altKey||e.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;
 const end=e.key==='End'||(e.metaKey&&e.key==='ArrowDown'),home=e.key==='Home'||(e.metaKey&&e.key==='ArrowUp');
 if(!end&&!home)return;
 e.preventDefault();
 const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
-readingAnchor=null;
+cancelReadingAnchor();
 if(home){scroller.scrollTo({top:0,behavior:'instant'});return}
 // Offscreen content can acquire its real height after the initial jump.
 // Keep the bottom anchored through layout, but stop as soon as the reader acts.

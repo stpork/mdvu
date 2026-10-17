@@ -17,13 +17,18 @@ fn fast_scans_preserve_unicode_and_literal_tokens() {
 
 #[test]
 fn combined_inline_pass_preserves_math_code_links_and_attributes() {
-    let rendered = body("{++H~2~O++} {>>t^2^<<} $x^{++y++}$ `H~2~O` [H~2~O](https://example.com/~user)");
-    assert!(rendered.body.contains("<ins class=\"critic-add\">H<sub>2</sub>O</ins>"));
+    let rendered =
+        body("{++H~2~O++} {>>t^2^<<} $x^{++y++}$ `H~2~O` [H~2~O](https://example.com/~user)");
+    assert!(rendered
+        .body
+        .contains("<ins class=\"critic-add\">H<sub>2</sub>O</ins>"));
     assert!(rendered.body.contains("title=\"t^2^\""));
     assert!(rendered.body.contains("t<sup>2</sup>"));
     assert!(rendered.body.contains("x^{++y++}"));
     assert!(rendered.body.contains("<code>H~2~O</code>"));
-    assert!(rendered.body.contains("href=\"https://example.com/~user\">H~2~O</a>"));
+    assert!(rendered
+        .body
+        .contains("href=\"https://example.com/~user\">H~2~O</a>"));
 }
 
 #[test]

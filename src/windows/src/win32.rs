@@ -178,7 +178,12 @@ pub unsafe fn create_main_menu(
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_AUTO, d_auto.as_ptr());
     AppendMenuW(dialect_menu, MF_SEPARATOR, 0, std::ptr::null());
     for (index, (_, label)) in DIALECT_MENU.iter().enumerate() {
-        AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_FIRST + index, to_wide_null(label).as_ptr());
+        AppendMenuW(
+            dialect_menu,
+            MF_STRING,
+            IDM_DIALECT_FIRST + index,
+            to_wide_null(label).as_ptr(),
+        );
     }
 
     // --- Theme Submenu ---
@@ -296,7 +301,11 @@ pub unsafe fn update_menu_state(
     );
 
     // Dialect radio check
-    let dialect_id = IDM_DIALECT_FIRST + DIALECT_MENU.iter().position(|(value, _)| *value == dialect).unwrap_or(0);
+    let dialect_id = IDM_DIALECT_FIRST
+        + DIALECT_MENU
+            .iter()
+            .position(|(value, _)| *value == dialect)
+            .unwrap_or(0);
     CheckMenuRadioItem(
         menu,
         IDM_DIALECT_FIRST as u32,
@@ -453,7 +462,9 @@ pub unsafe extern "system" fn menu_subclass_proc(
                 return 0;
             }
             IDM_DIALECT_FIRST..=IDM_DIALECT_LAST => {
-                let _ = proxy.send_event(UserEvent::SetDialect(DIALECT_MENU[cmd_id - IDM_DIALECT_FIRST].0));
+                let _ = proxy.send_event(UserEvent::SetDialect(
+                    DIALECT_MENU[cmd_id - IDM_DIALECT_FIRST].0,
+                ));
                 return 0;
             }
 

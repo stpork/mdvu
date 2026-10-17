@@ -178,10 +178,15 @@ extension SharedRegressionTests {
 extension SharedRegressionTests {
     @MainActor @Test func readingShortcutsAndLayoutAnchorUseTheActiveScroller() async throws {
         let configuration = WKWebViewConfiguration()
+        if #available(macOS 14.0, *) { configuration.preferences.inactiveSchedulingPolicy = .none }
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=cb=>setTimeout(cb,0)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 900, height: 700), configuration: configuration)
+        let window = NSWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = view
+        window.orderFront(nil)
         view.loadHTMLString(HTMLDocument.make(body: "<h1>Start</h1><p style='height:4000px'>Long content</p><h2>End</h2><input id='editor'>", title: "Reading controls", theme: .light), baseURL: nil)
-        defer { view.stopLoading() }
+        defer { view.stopLoading(); window.close() }
         try await ready(view)
         let facts = try await view.callAsyncJavaScript("""
             const pause=()=>new Promise(r=>setTimeout(r,50));
@@ -203,6 +208,8 @@ extension SharedRegressionTests {
             const paragraph=article.querySelector('p'),before=paragraph.getBoundingClientRect().top;
             article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await pause();
             result.anchorStable=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
+            setTimeout(()=>article.style.paddingTop='350px',50);await new Promise(r=>setTimeout(r,280));
+            result.anchorFollowsDeferredLayout=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
             const interrupted=window.__mdvuCaptureReadingAnchor();
             article.style.paddingTop='400px';
             window.dispatchEvent(new WheelEvent('wheel'));scroller.scrollTop=800;
@@ -211,7 +218,7 @@ extension SharedRegressionTests {
             return result;
             """, arguments: [:], in: nil, contentWorld: .page)
         let checks = try #require(facts as? [String: Bool])
-        #expect(checks.count == 8)
+        #expect(checks.count == 9)
         #expect(checks.values.allSatisfy { $0 }, "\(checks)")
     }
 }

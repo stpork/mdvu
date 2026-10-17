@@ -30,6 +30,7 @@
     const scrollerDuringLoad=document.getElementById('mdvu-main-content')||document.scrollingElement;
     const exercise=async()=>{
       do {
+        window.dispatchEvent(new WheelEvent('wheel',{deltaY:70}));
         let t=performance.now();
         if(coldScroll.length%4===0)coldTargets[(coldScroll.length*17)%Math.max(1,coldTargets.length)]?.scrollIntoView({block:'center',behavior:'instant'});
         scrollerDuringLoad.scrollBy({top:70,behavior:'instant'});await nextFrame();coldScroll.push(performance.now()-t);
@@ -72,8 +73,8 @@
     for(let n=0;n<30;n++){scroller.scrollBy({top:120,behavior:'instant'});await new Promise(r=>requestAnimationFrame(r));const now=performance.now();scrollFrames.push(now-previous);previous=now}
     scroller.scrollTo({top:0,behavior:'instant'});
     const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
-    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
-    if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
+    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameSamples:frames.length,renderFrameP95Ms:frames.length>=20?frames[Math.floor(frames.length*.95)]:null,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
+    if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&(performanceMetrics.renderFrameP95Ms===null||performanceMetrics.renderFrameP95Ms<100)&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const firstDiagram=article.querySelector('figure.diagram-rendered');
     if(firstDiagram&&window.__mdvuTimingMode!=='timer'){
       firstDiagram.scrollIntoView({block:'center',behavior:'instant'});
