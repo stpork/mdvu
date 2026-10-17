@@ -17,8 +17,9 @@ enum HTMLDocument {
         \(baseTag)
         <meta name="viewport" content="width=device-width,initial-scale=1"><title>\(HTML.escape(title))</title>
         <style>\(ResourceLoader.markdownCSS)</style>
-        <style>@media(max-width:900px){article{padding-left:30px;padding-right:30px}}@media(max-width:700px){article{padding-left:22px;padding-right:22px}}</style></head><body><article>\(body)</article>
-        \(engines)<script nonce="\(nonce)">\(ResourceLoader.appJavaScript)</script></body></html>
+        <style>@media(max-width:900px){article{padding-left:30px;padding-right:30px}}@media(max-width:700px){article{padding-left:22px;padding-right:22px}}</style>
+        <script nonce="\(nonce)">\(ResourceLoader.appJavaScript)</script></head><body><article>\(body)</article>
+        \(engines)</body></html>
         """
     }
 }

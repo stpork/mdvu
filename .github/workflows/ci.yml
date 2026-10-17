@@ -80,10 +80,11 @@ jobs:
           test $SIZE -lt 2097152
 
       - name: Verify all native WebKit fixtures
+        id: native-fixtures
         run: python3 scripts/test-macos-system.py --timer-only --fail-fast --output test-results/native-fixtures-macos
 
       - name: Upload native fixture diagnostics
-        if: always()
+        if: always() && steps.native-fixtures.outcome != 'skipped'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: native-fixtures-macos
@@ -216,11 +217,12 @@ jobs:
           path: target/coverage/
 
       - name: Verify all native WebView2 fixtures
+        id: native-fixtures
         shell: pwsh
         run: ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -TimerOnly -SampleSeconds 1 -BenchmarkRuns 3 -Output test-results/native-fixtures-windows
 
       - name: Upload native Windows fixture diagnostics
-        if: always()
+        if: always() && steps.native-fixtures.outcome != 'skipped'
         uses: actions/upload-artifact@v7.0.2
         with:
           name: native-fixtures-windows
