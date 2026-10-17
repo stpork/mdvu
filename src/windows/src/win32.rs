@@ -659,7 +659,12 @@ pub fn attach_web_message_handler(
 /// The reader must still follow its host after the diagram controller is closed.
 pub fn audit_reader_resize(hwnd: HWND, view: &wry::WebView) -> bool {
     unsafe {
-        let mut outer = windows_sys::Win32::Foundation::RECT::default();
+        let mut outer = windows_sys::Win32::Foundation::RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
         if GetWindowRect(hwnd, &mut outer) == 0 {
             return false;
         }
@@ -669,7 +674,12 @@ pub fn audit_reader_resize(hwnd: HWND, view: &wry::WebView) -> bool {
         if SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, width + 32, height, flags) == 0 {
             return false;
         }
-        let mut client = windows_sys::Win32::Foundation::RECT::default();
+        let mut client = windows_sys::Win32::Foundation::RECT {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
         let passed = GetClientRect(hwnd, &mut client) != 0
             && view.bounds().is_ok_and(|bounds| {
                 let size = bounds.size.to_physical::<i32>(1.0);
