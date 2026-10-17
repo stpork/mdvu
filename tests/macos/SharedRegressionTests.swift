@@ -209,7 +209,9 @@ extension SharedRegressionTests {
             article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await pause();
             result.anchorStable=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
             const deferred=window.__mdvuCaptureReadingAnchor(),started=performance.now();let shifted;const capturedTop=paragraph.getBoundingClientRect().top;
-            setTimeout(()=>{article.style.paddingTop='350px';shifted=performance.now()-started},50);window.__mdvuRestoreReadingAnchor(deferred);
+            // Use the same frame scheduler as deferred layout. A background timer
+            // can fire after the anchor's bounded observation period on CI WebKit.
+            requestAnimationFrame(()=>requestAnimationFrame(()=>{article.style.paddingTop='350px';shifted=performance.now()-started}));window.__mdvuRestoreReadingAnchor(deferred);
             for(let n=0;n<100&&window.__mdvuReadingAnchorSettled!==deferred;n++)await pause();
             result.anchorFollowsDeferredLayout=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
             const deferredState={top:paragraph.getBoundingClientRect().top,scroll:scroller.scrollTop,elapsed:performance.now()-started,settled:window.__mdvuReadingAnchorSettled,overflow:getComputedStyle(scroller).overflowAnchor};
