@@ -80,7 +80,7 @@ jobs:
           test $SIZE -lt 2097152
 
       - name: Verify all native WebKit fixtures
-        run: python3 scripts/test-macos-system.py --timer-only --output test-results/native-fixtures-macos
+        run: python3 scripts/test-macos-system.py --timer-only --fail-fast --output test-results/native-fixtures-macos
 
       - name: Upload native fixture diagnostics
         if: always()

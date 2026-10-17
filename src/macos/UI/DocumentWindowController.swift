@@ -1220,6 +1220,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.name == "documentReady", message.frameInfo.isMainFrame { documentContentReady(); return }
         if message.name == "uiControl", auditScript != nil {
+            if let request = message.body as? [String: Any], let checkpoint = request["checkpoint"] as? String {
+                FileHandle.standardError.write(Data(("mdvu.audit " + checkpoint + "\n").utf8))
+                return
+            }
             if message.body as? String == "zoomIn" { zoomIn(nil) }
             if message.body as? String == "zoomOut" { zoomOut(nil) }
             if let request = message.body as? [String: Any], let id = request["id"] as? Int {

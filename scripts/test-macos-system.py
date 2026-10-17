@@ -6,12 +6,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('binary', nargs='?', default='dist/mdvu.app/Contents/MacOS/mdvu')
 parser.add_argument('--output', default='test-results/macos')
 parser.add_argument('--fixture', help='Optional fixture path relative to tests/fixtures')
+parser.add_argument('--fail-fast', action='store_true', help='Run the largest fixture first and stop on failure')
 parser.add_argument('--timer-only', action='store_true', help='CI correctness checks without animation-frame performance claims')
 args = parser.parse_args()
 os.chdir(root)
 output = pathlib.Path(args.output).resolve(); output.mkdir(parents=True, exist_ok=True)
 binary = pathlib.Path(args.binary).resolve()
 fixtures = [root/'tests/fixtures'/args.fixture] if args.fixture else sorted((root/'tests/fixtures').rglob('*.md'))
+if args.fail_fast: fixtures.sort(key=lambda path: -path.stat().st_size)
 class RUsage(ctypes.Structure):
     _fields_ = [('uuid',ctypes.c_uint8*16)] + [(name,ctypes.c_uint64) for name in ('user','system','idle','interrupt','pageins','wired','resident','footprint','start','exit','childUser','childSystem','childIdle','childInterrupt','childPageins','childElapsed','diskRead','diskWrite')]
 libproc=ctypes.CDLL('/usr/lib/libproc.dylib')
@@ -53,7 +55,11 @@ for fixture in fixtures:
             physical=[footprint(pid) for pid in [process.pid,*webkit]]
             samples.append({'elapsedMs':(time.perf_counter()-start)*1000,'appRssBytes':own.get('rssBytes',0),'appCpuMs':own.get('cpuMs',0),'webkitRssBytes':sum(p['rssBytes'] for p in webkit.values()),'webkitCpuMs':sum(p['cpuMs'] for p in webkit.values()),'webkitProcesses':len(webkit),'physicalFootprintBytes':sum(physical) if all(p is not None for p in physical) else None,'processMemory':{pid:{'rssBytes':p['rssBytes'],'physicalFootprintBytes':physical[i+1]} for i,(pid,p) in enumerate(webkit.items())}})
             time.sleep(.25)
-        if process.poll() is None: process.kill(); process.wait()
+        if process.poll() is None:
+            for pid in [process.pid,*webkit]:
+                try: subprocess.run(['/usr/bin/sample',str(pid),'1','-file',str(output/(stem+f'-timeout-{pid}.txt'))],stdout=log,stderr=log,timeout=10)
+                except subprocess.TimeoutExpired: pass
+            process.kill(); process.wait()
     ui = json.loads(diagnostic.read_text()) if diagnostic.exists() else None
     profile = (output/(stem+'-stderr.log')).read_text()
     phases = {name:float(value) for name,value in re.findall(r'mdvu.profile\s+(\S+)\s+[\d.]+ ms\s+total\s+([\d.]+) ms',profile)}
@@ -64,4 +70,6 @@ for fixture in fixtures:
         with (output/(stem+'-processes.csv')).open('w') as f:
             writer=csv.DictWriter(f,fieldnames=samples[0]);writer.writeheader();writer.writerows(samples)
     print(f"{name}: {'PASS' if result['passed'] else 'FAIL'}; {result['elapsedMs']:.0f} ms",flush=True)
+    if not result['passed']: print(profile[-12000:],flush=True)
+    if args.fail_fast and not result['passed']: break
 raise SystemExit(0 if all(item['passed'] for item in results['fixtures']) else 1)

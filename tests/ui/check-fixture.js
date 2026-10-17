@@ -3,6 +3,9 @@
   if (window.__mdvuAuditRunning) return;
   window.__mdvuAuditRunning = true;
   const start = performance.now(), checks = {}, pause = ms => new Promise(r => setTimeout(r, ms));
+  const checkpoint=stage=>window.webkit?.messageHandlers?.uiControl?.postMessage({checkpoint:stage});
+  window.__mdvuAuditCheckpoint=checkpoint;
+  checkpoint('start '+navigator.userAgent+' contentVisibility='+CSS.supports('content-visibility','auto'));
   const renderTimings=[], frameGaps=[];
   try {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -52,12 +55,14 @@
     // CI's timer mode checks document/control correctness. The default mode
     // additionally stresses native zoom and scrolling throughout cold rendering.
     const interactions=window.__mdvuTimingMode==='timer'?Promise.resolve():exercise();
+    checkpoint('render-all');
     let timer;
     try {
       await Promise.race([window.__mdvuRenderDiagrams?.({all:true}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagram rendering exceeded 90 seconds')),90000)})]);
     } finally { clearTimeout(timer);rendering=false;await interactions }
     for (let n = 0; n < 1200 && document.querySelector('.diagram-pending:not(.diagram-error)'); n++) await pause(50);
     checks.runtimes = !document.querySelector('.diagram-pending:not(.diagram-error),.math-inline:not(.math-rendered):not(.katex-error),.math-display:not(.math-rendered):not(.katex-error)');
+    checkpoint('rendered');
     const renderFinishedMs = performance.now();
     monitor=false;
     const frames=[...frameGaps].sort((a,b)=>a-b);
@@ -65,6 +70,7 @@
 
     const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
     const edge=async key=>{const begin=performance.now(),previous=window.__mdvuReadingEdgeSettled;window.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));if(key==='End')for(let n=0;n<10&&window.__mdvuReadingEdgeSettled===previous;n++)await new Promise(r=>requestAnimationFrame(r));else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return performance.now()-begin};
+    checkpoint('reading-edges');
     const endMs=await edge('End');
     checks.end=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
     const homeMs=await edge('Home');
@@ -104,6 +110,7 @@
       for(let n=0;n<120&&stable<2;n++){await nextFrame();const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect(),top=target.getBoundingClientRect().top-rect.top;const bottom=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;stable=(Math.abs(top)<3||bottom&&top>=-3&&top<rect.height)?stable+1:0}
       checks.fragmentPosition=stable>=2;performanceMetrics.fragmentMs=performance.now()-begin;
     }
+    checkpoint('search');
     const word = (article.textContent.match(/[A-Za-z\p{L}\p{N}]{3,20}/u) || [])[0];
     if (word) {
       const found = window.__mdvuFind.search(word);
@@ -148,7 +155,9 @@
       checks.fullWidth = document.documentElement.classList.contains('full-width') !== full;
       document.getElementById('btn-full-width').click(); await pause(150);
     }
+    checkpoint('controls');
     await window.__mdvuCheckControls({checks,metrics:performanceMetrics,article,nextFrame,pause,fullscreen:window.__mdvuTimingMode!=='timer'});
+    checkpoint('controls-finished');
     await pause(400);
     // Keep the window at its initial reading position for the captured screenshot.
     document.getElementById('mdvu-main-content')?.scrollTo(0,0); window.scrollTo(0,0);

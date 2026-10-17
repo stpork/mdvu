@@ -27,6 +27,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
         branch:folder?folder.nextElementSibling.style.display!=='none':null}};
   };
   const act = async (action,value,expected) => {
+    window.__mdvuAuditCheckpoint?.('control '+action+' '+(value??'')+' #'+samples.length);
     const begin=performance.now(),beforeChanges={...changes};
     if (!windows) await native(action,value);
     else {
