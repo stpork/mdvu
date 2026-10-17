@@ -149,7 +149,7 @@ extension AuditRegressionTests {
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.loadHTMLString(HTMLDocument.make(
-            body: "<h1>A</h1><h2>A</h2><h2>A-1</h2><p id='text'>İstanbul target a.b a+b [x]</p><p id='fold'>Kelvin ſigma 𐐀x ]-^\\</p>",
+            body: "<h1>A</h1><h2>A</h2><h2>A-1</h2><p id='text'>İstanbul target a.b a+b [x]</p><p id='fold'>Kelvin ſigma 𐐀x ]-^\\ ß ẞ µ Μ ᾀ ᾈ</p>",
             title: "Audit", theme: .light), baseURL: nil)
         defer { view.stopLoading() }
         var ready = false
@@ -172,12 +172,16 @@ extension AuditRegressionTests {
             let text = try await view.evaluateJavaScriptValue("document.getElementById('text').textContent")
             #expect(text as? String == "İstanbul target a.b a+b [x]")
         }
-        for (query, expected) in [("kelvin", "Kelvin"), ("sigma", "ſigma"), ("𐐨x", "𐐀x"), ("]-^\\", "]-^\\")] {
+        for (query, expected) in [("kelvin", "Kelvin"), ("sigma 𐐨x", "ſigma 𐐀x"), ("𐐨x", "𐐀x"), ("]-^\\", "]-^\\"), ("ẞ", "ß"), ("μ", "µ"), ("ᾈ", "ᾀ")] {
             let literal = String(data: try JSONSerialization.data(withJSONObject: query, options: .fragmentsAllowed), encoding: .utf8)!
             let matched = try await view.evaluateJavaScriptValue("window.__mdvuFind.search(\(literal)); document.querySelector('#fold mark')?.textContent")
             #expect(matched as? String == expected)
             _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear(); true")
         }
+        let fullFold = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('ss').count") as? Int
+        #expect(fullFold == 0, "Simple folding must not expand ß into ss")
+        let turkicFold = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('ı').count") as? Int
+        #expect(turkicFold == 0, "Default folding must not apply the Turkic I mapping")
     }
 
     @MainActor @Test func scrollToFragmentWorksOnFileURL() async throws {
