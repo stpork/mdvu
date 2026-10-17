@@ -1630,7 +1630,25 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             },
             _ => {}
         }
+        #[cfg(coverage)]
+        if matches!(*control_flow, ControlFlow::ExitWithCode(_)) {
+            dump_coverage_before_exit();
+        }
     });
+}
+
+// Windows process::exit (also used by Tao) calls ExitProcess, bypassing the
+// profiling runtime's C atexit writer. This hook exists only in coverage builds.
+#[cfg(coverage)]
+fn dump_coverage_before_exit() {
+    unsafe extern "C" {
+        fn __llvm_profile_dump() -> std::ffi::c_int;
+    }
+    // SAFETY: instrument-coverage links LLVM's documented, argument-free API.
+    // dump marks the profile as written, preventing a second dump at C exit.
+    if unsafe { __llvm_profile_dump() } != 0 {
+        eprintln!("Cannot write LLVM coverage profile");
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -1641,6 +1659,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(err) => {
             attach_console();
             let _ = err.print();
+            #[cfg(coverage)]
+            dump_coverage_before_exit();
             std::process::exit(err.exit_code());
         }
     };
@@ -1650,15 +1670,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Err(e) = run_headless(args) {
             eprintln!("mdvu error: {e}");
             let _ = io::stderr().flush();
+            #[cfg(coverage)]
+            dump_coverage_before_exit();
             std::process::exit(1);
         }
         let _ = io::stdout().flush();
+        #[cfg(coverage)]
+        dump_coverage_before_exit();
         std::process::exit(0);
     }
 
     if let Err(e) = run_gui(args) {
         attach_console();
         eprintln!("mdvu error: {e}");
+        #[cfg(coverage)]
+        dump_coverage_before_exit();
         std::process::exit(1);
     }
 

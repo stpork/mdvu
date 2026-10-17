@@ -41,6 +41,9 @@ try {
     if (-not (Get-ChildItem $CoverageTarget -Filter '*.profraw' -File)) { throw 'Native execution produced no coverage profiles' }
     & cargo llvm-cov report --lcov --output-path (Join-Path $Output 'windows.lcov')
     if ($LASTEXITCODE -ne 0) { throw 'Native GUI coverage export failed' }
+    if (-not (Select-String -Path (Join-Path $Output 'windows.lcov') -Pattern '^FNDA:[1-9][0-9]*,.*run_gui' -Quiet)) {
+        throw 'GUI executed but its coverage counters are missing; refusing a unit-only report'
+    }
 } finally {
     foreach ($Name in $Saved.Keys) { [Environment]::SetEnvironmentVariable($Name,$Saved[$Name]) }
 }
