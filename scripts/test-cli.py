@@ -48,8 +48,8 @@ class NativeCLI(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn(b'stdin', result.stdout)
         output = self.root / 'export.html'
-        self.run_cli('# Export', '-o', str(output))
-        self.assertIn('<h1>Export</h1>', output.read_text())
+        self.run_cli('# Export Åя中文', '-o', str(output))
+        self.assertIn('<h1>Export Åя中文</h1>', output.read_text(encoding='utf-8'))
     def test_missing_input_fails(self):
         result = subprocess.run([BINARY, str(self.root / 'missing.md'), '--stdout'], capture_output=True, timeout=30)
         self.assertNotEqual(result.returncode, 0)
