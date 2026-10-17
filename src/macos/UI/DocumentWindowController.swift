@@ -29,10 +29,20 @@ enum SidebarSizing {
         let defaultWidth: CGFloat
         let minimumWidth: CGFloat
         let maximumFraction: CGFloat
+        let rowHeight: CGFloat
+        let fontSize: CGFloat
+        let indentation: CGFloat
+        let expandAllLimit: Int
+        let navigatorWidth: CGFloat
     }
     private static let policy = try! JSONDecoder().decode(Policy.self, from: Data(ResourceLoader.sidebarPolicyJSON.utf8))
     static var minimumWidth: CGFloat { policy.minimumWidth }
     static var defaultWidth: CGFloat { policy.defaultWidth }
+    static var rowHeight: CGFloat { policy.rowHeight }
+    static var fontSize: CGFloat { policy.fontSize }
+    static var indentation: CGFloat { policy.indentation }
+    static var expandAllLimit: Int { policy.expandAllLimit }
+    static var navigatorWidth: CGFloat { policy.navigatorWidth }
     static func widths(splitWidth: CGFloat) -> (suggested: CGFloat, maximum: CGFloat) {
         let maximum = max(minimumWidth, floor(splitWidth * policy.maximumFraction))
         return (min(defaultWidth, maximum), maximum)
@@ -231,7 +241,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private(set) var isSidebarVisible: Bool = false
     private(set) var isFileNavigatorVisible: Bool = false
     private var lastSidebarWidth = SidebarSizing.defaultWidth
-    private var lastNavigatorWidth: CGFloat = 240
+    private var lastNavigatorWidth = SidebarSizing.navigatorWidth
     private var hasUserResizedSidebar = false
     private var hasUserResizedNavigator = false
     private var isApplyingSidebarPosition = false
@@ -420,7 +430,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let tocColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("toc")); tocColumn.title = "Table of Contents"
         tocOutline.addTableColumn(tocColumn); tocOutline.outlineTableColumn = tocColumn; tocOutline.headerView = nil
         tocOutline.onRepeatedSelection = { [weak self] in self?.activateSelectedTOCHeading() }
-        tocOutline.delegate = self; tocOutline.dataSource = self; tocOutline.rowHeight = 25; tocOutline.indentationPerLevel = 16
+        tocOutline.delegate = self; tocOutline.dataSource = self; tocOutline.rowHeight = SidebarSizing.rowHeight; tocOutline.indentationPerLevel = SidebarSizing.indentation
         let tocScroll = NSScrollView(); tocScroll.documentView = tocOutline; tocScroll.hasVerticalScroller = true; tocScroll.drawsBackground = false
 
         let header = SidebarHeader.make(title: NSTextField(labelWithString: "Table of Contents"),
@@ -882,7 +892,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let cell = outlineView.makeView(withIdentifier: id, owner: self) as? NSTableCellView ?? NSTableCellView()
         if cell.textField == nil {
             let field = NSTextField(labelWithString: "")
-            field.font = .systemFont(ofSize: 13); field.lineBreakMode = .byTruncatingTail
+            field.font = .systemFont(ofSize: SidebarSizing.fontSize); field.lineBreakMode = .byTruncatingTail
             cell.addSubview(field); field.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([field.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2), field.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4), field.centerYAnchor.constraint(equalTo: cell.centerYAnchor)])
             cell.textField = field; cell.identifier = id
@@ -913,7 +923,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
         tocRoots = roots
         tocOutline.reloadData()
-        if headings.count <= 250 {
+        if headings.count <= SidebarSizing.expandAllLimit {
             tocOutline.expandItem(nil, expandChildren: true)
         } else {
             for root in roots {

@@ -4,6 +4,32 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
+    @Test func windowsTOCTreeMatchesNativeOutlineKeyboardAndExpansion() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: ResourceLoader.tocTreeJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        view.loadHTMLString("<html><body><nav id='tree'></nav></body></html>", baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 where view.isLoading { try await Task.sleep(for: .milliseconds(25)) }
+        _ = try await view.evaluateJavaScriptValue("""
+            window.selected=[];
+            window.__mdvuBuildTOCTree(document.getElementById('tree'),[
+              {id:'root',title:'Root',level:1},{id:'child',title:'Child',level:2},
+              {id:'grandchild',title:'<img src=x onerror=alert(1)>',level:3},{id:'sibling',title:'Sibling',level:1}
+            ],{indentation:16,expandAllLimit:2},id=>selected.push(id));
+            window.key=(id,key)=>document.querySelector('[data-id="'+id+'"]').dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));true
+            """)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('[data-id=child]').getAttribute('aria-expanded')") as? String == "false")
+        #expect(try await view.evaluateJavaScriptValue("!!document.querySelector('img')") as? Bool == false)
+        _ = try await view.evaluateJavaScriptValue("key('root','ArrowLeft');true")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('[data-id=root]').getAttribute('aria-expanded')") as? String == "false")
+        _ = try await view.evaluateJavaScriptValue("key('root','ArrowRight');key('root','ArrowDown');key('child','ArrowRight');key('child','ArrowRight');true")
+        #expect(try await view.evaluateJavaScriptValue("selected.at(-1)") as? String == "grandchild")
+        _ = try await view.evaluateJavaScriptValue("key('grandchild','ArrowLeft');key('child','Home');key('root','End');true")
+        #expect(try await view.evaluateJavaScriptValue("selected.at(-1)") as? String == "sibling")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('[tabindex=\"0\"]').length") as? Int == 1)
+    }
+
     @Test func largeCodePreservesTextSelectionAndSearchAcrossLineGroups() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))

@@ -75,6 +75,18 @@
     const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
     if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const headings = [...article.querySelectorAll('h1,h2,h3,h4,h5,h6')];
+    const tocTree=document.getElementById('mdvu-toc-tree');
+    if(tocTree){
+      checks.tocHierarchy=tocTree.querySelectorAll('[role="treeitem"]').length===headings.length;
+      const branch=tocTree.querySelector('[aria-expanded="true"]');
+      if(branch){
+        branch.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+        checks.tocCollapse=branch.getAttribute('aria-expanded')==='false';
+        branch.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true,cancelable:true}));
+        checks.tocExpand=branch.getAttribute('aria-expanded')==='true';
+      }
+      checks.tocTabStop=tocTree.querySelectorAll('[tabindex="0"]').length===(headings.length?1:0);
+    }
     const ids = headings.map(h => h.id);
     checks.uniqueHeadingTargets = ids.every(Boolean) && new Set(ids).size === ids.length;
     checks.fragment = !headings.length || window.__mdvuScrollToFragment?.(headings.at(-1).id, false) === true;

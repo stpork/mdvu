@@ -35,6 +35,7 @@ pub fn build_gui_html(
     let safe_vault_name = escape_html(vault_name);
     let safe_version = escape_html(VERSION);
 
+    let toc_tree_js = include_str!("../../../assets/toc-tree.js");
     let toc_policy = include_str!("../../../assets/sidebar-policy.json").trim();
     let toc_sizing: serde_json::Value =
         serde_json::from_str(toc_policy).expect("Embedded sidebar policy");
@@ -43,7 +44,7 @@ pub fn build_gui_html(
   --toc-width: __TOC_DEFAULT__px;
   --toc-min-width: __TOC_MIN__px;
   --toc-max-width: max(__TOC_MIN__px, __TOC_MAX__vw);
-  --nav-width: 250px;
+  --nav-width: __NAV_DEFAULT__px;
 }
 #mdvu-app {
   display: flex;
@@ -142,7 +143,7 @@ pub fn build_gui_html(
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 .find-count.no-match {
@@ -198,7 +199,7 @@ pub fn build_gui_html(
   width: 48px;
   text-align: center;
   font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
   outline: none;
@@ -345,34 +346,17 @@ pub fn build_gui_html(
   height: 100%;
   position: relative;
 }
-/* TOC Items */
-.toc-entry {
-  display: block;
-  padding: 4px 8px;
-  margin: 1px 0;
-  border-radius: 4px;
-  color: var(--fg);
-  text-decoration: none;
-  font-size: 12.5px;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-}
-.toc-entry:hover {
-  background: var(--soft);
-  color: var(--accent);
-}
-.toc-entry.active {
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-  font-weight: 600;
-}
-.toc-lvl-1 { font-weight: 600; }
-.toc-lvl-2 { padding-left: 18px; }
-.toc-lvl-3 { padding-left: 30px; font-size: 12px; opacity: 0.92; }
-.toc-lvl-4, .toc-lvl-5, .toc-lvl-6 { padding-left: 42px; font-size: 11.5px; opacity: 0.85; }
+/* Native-style TOC outline, sharing AppKit's metrics and expansion rules. */
+#mdvu-toolbar,.mdvu-sidebar { font-family: system-ui, sans-serif; }
+.toc-row { display:flex;align-items:center;height:__TOC_ROW__px;border-radius:4px;cursor:default; }
+.toc-title { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:__TOC_FONT__px; }
+.toc-expander { flex:0 0 16px;width:16px;height:22px;padding:0;border:0;background:none;color:var(--muted);font-size:20px;line-height:1; }
+.toc-node[aria-expanded="true"]>.toc-row>.toc-expander { transform:rotate(90deg); }
+.toc-row:hover { background:var(--soft); }
+.toc-node[aria-selected="true"]>.toc-row { background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent); }
+.toc-node:focus { outline:none; }
+.toc-node:focus-visible>.toc-row { outline:2px solid var(--accent);outline-offset:-2px; }
+[role="group"][hidden] { display:none; }
 
 /* Navigator Tree & List Items */
 .nav-item {
@@ -529,7 +513,7 @@ pub fn build_gui_html(
         <span class="search-icon">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input id="mdvu-find-input" type="search" placeholder="Find (Ctrl+F)" autocomplete="off" spellcheck="false" />
+        <input id="mdvu-find-input" type="search" placeholder="Find" title="Find (Ctrl+F)" autocomplete="off" spellcheck="false" />
         <span id="mdvu-find-count" class="find-count"></span>
         <button id="btn-find-prev" class="find-nav-btn" title="Previous match (Shift+Enter / Ctrl+Shift+G / Shift+F3)">▲</button>
         <button id="btn-find-next" class="find-nav-btn" title="Next match (Enter / Ctrl+G / F3)">▼</button>
@@ -628,6 +612,7 @@ pub fn build_gui_html(
 </div>
 
 <script nonce="{nonce}">
+{toc_tree_js}
 (()=>{{
   const escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const ICON_FOLDER = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
@@ -646,35 +631,7 @@ pub fn build_gui_html(
   // Setup TOC sidebar
   function renderTOC(entries) {{
     const container = document.getElementById('mdvu-toc-tree');
-    if (!container) return;
-    if (!entries || !entries.length) {{
-      container.innerHTML = '<div style="color:var(--muted);padding:16px 10px;text-align:center;font-size:12px;">No headings found</div>';
-      return;
-    }}
-    let html = '';
-    entries.forEach(e => {{
-      const lvl = Math.min(Math.max(Number(e.level) || 1, 1), 6);
-      const safeId = escHtml(e.id);
-      const safeTitle = escHtml(e.title);
-      html += `<a class="toc-entry toc-lvl-${{lvl}}" href="#${{encodeURIComponent(e.id)}}" data-id="${{safeId}}" title="${{safeTitle}}">${{safeTitle}}</a>`;
-    }});
-    container.innerHTML = html;
-
-    container.querySelectorAll('a').forEach(a => {{
-      a.addEventListener('click', (evt) => {{
-        evt.preventDefault();
-        evt.stopPropagation();
-        const id = a.getAttribute('data-id');
-        if (window.__mdvuScrollToFragment) {{
-          window.__mdvuScrollToFragment(id);
-        }} else {{
-          const el = document.getElementById(id);
-          if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
-        }}
-        container.querySelectorAll('a').forEach(x => x.classList.remove('active'));
-        a.classList.add('active');
-      }});
-    }});
+    if (container) window.__mdvuBuildTOCTree(container, entries || [], {toc_policy}, id => window.__mdvuScrollToFragment?.(id));
   }}
 
   function flattenVault(list, out = []) {{
@@ -1238,6 +1195,9 @@ pub fn build_gui_html(
     let shell_css = shell_css
         .replace("__TOC_DEFAULT__", &toc_sizing["defaultWidth"].to_string())
         .replace("__TOC_MIN__", &toc_sizing["minimumWidth"].to_string())
+        .replace("__TOC_ROW__", &toc_sizing["rowHeight"].to_string())
+        .replace("__TOC_FONT__", &toc_sizing["fontSize"].to_string())
+        .replace("__NAV_DEFAULT__", &toc_sizing["navigatorWidth"].to_string())
         .replace(
             "__TOC_MAX__",
             &(toc_sizing["maximumFraction"].as_f64().unwrap() * 100.0).to_string(),
