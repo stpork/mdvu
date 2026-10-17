@@ -53,33 +53,24 @@ public final class MdvuCoreBridge: @unchecked Sendable {
     }
 
     private func loadLibrary() {
-        // 1. Try RTLD_DEFAULT: if statically linked into the Mach-O binary
-        let rtldDefault = UnsafeMutableRawPointer(bitPattern: -2)!
-        if bindSymbols(handle: rtldDefault) {
-            return
+        let candidates: [String]
+        if let override = ProcessInfo.processInfo.environment["MDVU_CORE_LIB"] {
+            candidates = [override]
+        } else {
+            let root = FileManager.default.currentDirectoryPath
+            #if DEBUG
+            let profiles = ["debug", "release"]
+            #else
+            let profiles = ["release", "debug"]
+            #endif
+            candidates = [AppBundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/libmdvu_core.dylib").path]
+                + profiles.map { "\(root)/target/\($0)/libmdvu_core.dylib" }
         }
-
-        // 2. Try standard search paths
-        let cwd = FileManager.default.currentDirectoryPath
-        var candidates: [String] = []
-        if let envPath = ProcessInfo.processInfo.environment["MDVU_CORE_LIB"] {
-            candidates.append(envPath)
-        }
-        if let res = Bundle.main.resourceURL?.appendingPathComponent("libmdvu_core.dylib").path {
-            candidates.append(res)
-        }
-        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Frameworks/libmdvu_core.dylib").path)
-        candidates.append("\(cwd)/target/release/libmdvu_core.dylib")
-        candidates.append("target/release/libmdvu_core.dylib")
-        candidates.append("../target/release/libmdvu_core.dylib")
-        candidates.append("/opt/homebrew/lib/libmdvu_core.dylib")
-        candidates.append("/usr/local/lib/libmdvu_core.dylib")
 
         for path in candidates where !path.isEmpty && FileManager.default.fileExists(atPath: path) {
             if let h = dlopen(path, RTLD_LAZY | RTLD_LOCAL) {
-                if bindSymbols(handle: h) {
-                    return
-                }
+                if bindSymbols(handle: h) { return }
+                dlclose(h)
             }
         }
     }
@@ -101,6 +92,8 @@ public final class MdvuCoreBridge: @unchecked Sendable {
               let symGetBody = dlsym(handle, "mdvu_document_get_body"),
               let symGetTitle = dlsym(handle, "mdvu_document_get_title"),
               let symGetToc = dlsym(handle, "mdvu_document_get_toc_json"),
+              let symRenderBody = dlsym(handle, "mdvu_render_body_bytes"),
+              let symGetDialect = dlsym(handle, "mdvu_document_get_dialect"),
               let symFreeDoc = dlsym(handle, "mdvu_document_free") else {
             return false
         }
@@ -114,12 +107,8 @@ public final class MdvuCoreBridge: @unchecked Sendable {
         self.fnGetToc = unsafeBitCast(symGetToc, to: GetStrFunc.self)
         self.fnFreeDoc = unsafeBitCast(symFreeDoc, to: FreeDocFunc.self)
 
-        if let sym = dlsym(handle, "mdvu_render_body_bytes") {
-            self.fnRenderBody = unsafeBitCast(sym, to: RenderBodyFunc.self)
-        }
-        if let sym = dlsym(handle, "mdvu_document_get_dialect") {
-            self.fnGetDialect = unsafeBitCast(sym, to: GetStrFunc.self)
-        }
+        self.fnRenderBody = unsafeBitCast(symRenderBody, to: RenderBodyFunc.self)
+        self.fnGetDialect = unsafeBitCast(symGetDialect, to: GetStrFunc.self)
         if let sym = dlsym(handle, "mdvu_get_markdown_css") {
             self.fnGetMarkdownCss = unsafeBitCast(sym, to: AssetStrFunc.self)
         }
@@ -233,12 +222,10 @@ public final class MdvuCoreBridge: @unchecked Sendable {
         embedEngines: Bool = false,
         isDialectExplicit: Bool = false,
         enableDiagrams: Bool = true
-    ) -> (html: String, body: String, title: String?, tocJSON: String)? {
+    ) -> (html: String, tocJSON: String)? {
         guard isAvailable,
               let fnRender = fnRender,
               let fnGetHtml = fnGetHtml,
-              let fnGetBody = fnGetBody,
-              let fnGetTitle = fnGetTitle,
               let fnGetToc = fnGetToc,
               let fnFreeDoc = fnFreeDoc else {
             return nil
@@ -266,11 +253,9 @@ public final class MdvuCoreBridge: @unchecked Sendable {
                             defer { fnFreeDoc(doc) }
 
                             let html = fnGetHtml(doc).map { String(cString: $0) } ?? ""
-                            let body = fnGetBody(doc).map { String(cString: $0) } ?? ""
-                            let docTitle = fnGetTitle(doc).map { String(cString: $0) }
                             let toc = fnGetToc(doc).map { String(cString: $0) } ?? "[]"
 
-                            return (html: html, body: body, title: docTitle, tocJSON: toc)
+                            return (html: html, tocJSON: toc)
                         }
                     }
                 }

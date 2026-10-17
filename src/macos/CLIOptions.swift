@@ -1,7 +1,19 @@
 import Foundation
 
-enum MarkdownDialect: String {
-    case generic, github, obsidian
+enum MarkdownDialect: String, CaseIterable {
+    case generic, github, obsidian, mkdocs, docusaurus, commonmark, hugo
+
+    var menuTitle: String {
+        switch self {
+        case .generic: "Generic (CommonMark)"
+        case .github: "GitHub (GFM)"
+        case .obsidian: "Obsidian"
+        case .mkdocs: "MkDocs"
+        case .docusaurus: "Docusaurus"
+        case .commonmark: "CommonMark"
+        case .hugo: "Hugo"
+        }
+    }
 
     static func from(string: String) -> MarkdownDialect? {
         let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -10,7 +22,8 @@ enum MarkdownDialect: String {
         switch clean {
         case "obsidian": return .obsidian
         case "github", "gfm": return .github
-        case "generic", "commonmark": return .generic
+        case "generic", "default", "auto", "automatic": return .generic
+        case "cm": return .commonmark
         default: return MarkdownDialect(rawValue: clean)
         }
     }
@@ -41,7 +54,7 @@ struct CLIOptions {
           --title <TITLE>      Override document title
 
     Display & Dialect Options:
-      -d, --dialect <DIALECT>  generic, github (gfm), obsidian [default: generic]
+      -d, --dialect <DIALECT>  generic, github (gfm), obsidian, mkdocs, docusaurus, commonmark, hugo
       -t, --theme <THEME>      system, light, dark [default: system]
           --full-width         Enable full-width article view
           --navigator          Open with directory navigator sidebar

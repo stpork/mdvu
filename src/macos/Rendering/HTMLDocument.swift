@@ -26,48 +26,28 @@ enum HTMLDocument {
 enum ResourceLoader {
     static let bundle: Bundle = {
         let candidates: [URL?] = [
-            Bundle.main.resourceURL?.appendingPathComponent("mdvu_mdvu.bundle"),
-            Bundle.main.resourceURL,
-            Bundle.main.bundleURL.appendingPathComponent("mdvu_mdvu.bundle"),
-            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/mdvu_mdvu.bundle"),
-            Bundle.main.bundleURL
+            AppBundle.main.resourceURL?.appendingPathComponent("mdvu_mdvu.bundle"),
+            AppBundle.main.resourceURL,
+            AppBundle.main.bundleURL.appendingPathComponent("mdvu_mdvu.bundle"),
+            AppBundle.main.bundleURL.appendingPathComponent("Contents/Resources/mdvu_mdvu.bundle"),
+            AppBundle.main.bundleURL
         ]
         for candidate in candidates {
-            if let candidate, let b = Bundle(url: candidate), b.url(forResource: "markdown", withExtension: "css") != nil {
+            if let candidate, let b = Bundle(url: candidate), b.url(forResource: "diagram-renderer", withExtension: "js") != nil {
                 return b
             }
         }
         return Bundle.module
     }()
 
-    static let markdownCSS: String = MdvuCoreBridge.shared.markdownCSS ?? text("markdown", "css")
-    static let appJavaScript: String = MdvuCoreBridge.shared.appJavaScript ?? text("app", "js")
+    static let markdownCSS: String = MdvuCoreBridge.shared.markdownCSS ?? ""
+    static let appJavaScript: String = MdvuCoreBridge.shared.appJavaScript ?? ""
     static let tocTreeJavaScript = text("toc-tree", "js")
     static let sidebarPolicyJSON = text("sidebar-policy", "json")
     static let diagramRendererJavaScript = text("diagram-renderer", "js")
-    static var mermaidJavaScript: String {
-        if let script = MdvuCoreBridge.shared.mermaidJavaScript { return script }
-        let source = compressedText("mermaid")
-        let data = try! JSONSerialization.data(withJSONObject: source, options: [.fragmentsAllowed])
-        let literal = String(decoding: data, as: UTF8.self).replacingOccurrences(of: "<", with: "\\u003c")
-        return "(()=>{const load=()=>window.__mdvuLoadMermaid(\(literal));if(window.__mdvuLoadMermaid)load();else document.addEventListener('DOMContentLoaded',load,{once:true})})();"
-    }
-    static var plantumlJavaScript: String { MdvuCoreBridge.shared.plantumlJavaScript ?? compressedText("plantuml") }
-    static var katexJavaScript: String { MdvuCoreBridge.shared.katexJavaScript ?? compressedText("katex") }
-
-    private static func compressedText(_ name: String) -> String {
-        // Keep only the reusable String; promptly drain temporary NSData buffers.
-        autoreleasepool {
-            for format in ["lzma", "lzfse"] {
-                if let url = bundle.url(forResource: name, withExtension: format),
-                   let compressed = try? Data(contentsOf: url, options: .mappedIfSafe),
-                   let data = try? (compressed as NSData).decompressed(using: format == "lzma" ? .lzma : .lzfse) as Data {
-                    return String(decoding: data, as: UTF8.self)
-                }
-            }
-            return ""
-        }
-    }
+    static var mermaidJavaScript: String { MdvuCoreBridge.shared.mermaidJavaScript ?? "" }
+    static var plantumlJavaScript: String { MdvuCoreBridge.shared.plantumlJavaScript ?? "" }
+    static var katexJavaScript: String { MdvuCoreBridge.shared.katexJavaScript ?? "" }
 
     private static func text(_ name: String, _ ext: String) -> String {
         guard let url = bundle.url(forResource: name, withExtension: ext), let value = try? String(contentsOf: url, encoding: .utf8) else { return "" }

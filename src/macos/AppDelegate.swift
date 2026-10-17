@@ -139,9 +139,10 @@ enum AppMenu {
         dialectItem.submenu = dialectMenu
         dialectMenu.addItem(withTitle: "Automatic", action: #selector(DocumentWindowController.selectDialectAuto(_:)), keyEquivalent: "")
         dialectMenu.addItem(.separator())
-        dialectMenu.addItem(withTitle: "Generic (CommonMark)", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
-        dialectMenu.addItem(withTitle: "GitHub (GFM)", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
-        dialectMenu.addItem(withTitle: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")
+        for dialect in MarkdownDialect.allCases {
+            let item = dialectMenu.addItem(withTitle: dialect.menuTitle, action: #selector(DocumentWindowController.selectDialect(_:)), keyEquivalent: "")
+            item.representedObject = dialect.rawValue
+        }
         viewMenu.addItem(dialectItem)
         viewMenu.addItem(.separator())
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(DocumentWindowController.zoomIn(_:)), keyEquivalent: "+")

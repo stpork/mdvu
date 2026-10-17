@@ -8,7 +8,7 @@ struct SharedRegressionTests {
     @Test func crlfFrontmatterAndTruncatedHeader() {
         for nl in ["\n", "\r\n"] {
             let source = "---\(nl)dialect: obsidian\(nl)---\(nl)[[Target]]"
-            #expect(MarkdownDocumentDirective.extractDialect(from: source) == .obsidian)
+            #expect(MarkdownPipeline(dialect: .generic, mermaid: false).render(source).dialect == .obsidian)
             #expect(MarkdownPipeline(dialect: .generic, mermaid: false).render(source).body.contains("Target.md"))
             #expect(!MarkdownPipeline(dialect: .generic, mermaid: false).render("---\(nl)").body.isEmpty)
         }
@@ -37,9 +37,9 @@ struct SharedRegressionTests {
     }
     @Test func bridgePreservesNulAndOptions() throws {
         let bridge = MdvuCoreBridge.shared
-        guard bridge.isAvailable else { return } // Fallback run has no FFI requirement.
+        #expect(bridge.isAvailable)
         let source = "---\ndialect: obsidian\n---\n[[Target]]\n\0\n# After\n```mermaid\ngraph TD\nA-->B\n```"
-        let result = try #require(bridge.render(source: source, dialect: "generic", isDialectExplicit: false, enableDiagrams: false))
+        let result = try #require(bridge.renderBody(source: source, dialect: "generic", isDialectExplicit: false, enableDiagrams: false))
         #expect(result.body.contains("Target.md"))
         #expect(result.body.contains("After"))
         #expect(!result.body.contains("diagram-pending"))
@@ -244,8 +244,9 @@ extension SharedRegressionTests {
             try await Task.sleep(for: .milliseconds(20))
         }
         try #require(anchorReady)
-        let before = try await web.evaluateJavaScriptValue("(()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target').removeAttribute('id');anchor.id='reading-target';return anchor.getBoundingClientRect().top/innerHeight})()")
-        _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{window.auditCapture={picked:document.elementFromPoint(innerWidth/2,innerHeight/2)?.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
+        // Observe the element actually captured by the zoom operation. Lazy
+        // layout can move another paragraph into the centre between IPC calls.
+        _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target')?.removeAttribute('id');anchor.id='reading-target';window.auditCapture={picked:anchor.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:anchor.getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
         controller.applyPageZoom(1.1)
         controller.applyPageZoom(1.2)
         controller.applyPageZoom(1.5)
@@ -256,6 +257,7 @@ extension SharedRegressionTests {
         }
         #expect(abs(web.pageZoom - 1.5) < 0.001)
         #expect(abs(controller.effectiveZoom - 1.5) < 0.001)
+        let before = try await web.evaluateJavaScriptValue("window.auditCapture.target")
         let after = try await web.evaluateJavaScriptValue("document.getElementById('reading-target').getBoundingClientRect().top/innerHeight")
         let diagnostic = try? await web.evaluateJavaScriptValue("JSON.stringify({capture:window.auditCapture,width:innerWidth,height:innerHeight,y:scrollY,settled:window.__mdvuReadingAnchorSettled,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight})")
         #expect(abs((after as? Double ?? -10) - (before as? Double ?? 10)) < 0.02, "\(String(describing: diagnostic))")

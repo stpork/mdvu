@@ -55,7 +55,6 @@ def main():
     binaries = [
         ("Swift macOS binary (GUI & CLI)", ".build/release/mdvu"),
         ("Swift macOS app bundle", "dist/mdvu.app"),
-        ("Rust Core static library", "target/release/libmdvu_core.a"),
         ("Rust Core dylib", "target/release/libmdvu_core.dylib"),
         ("Windows binary (PE32+)", "dist/windows/mdvu.exe"),
     ]

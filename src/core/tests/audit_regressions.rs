@@ -6,6 +6,27 @@ fn body(s: &str) -> RenderedDocument {
 }
 
 #[test]
+fn fast_scans_preserve_unicode_and_literal_tokens() {
+    let text = "Åä 中文 العربية [!NOTE] $math$ ```code```";
+    assert!(FastScan::contains_token(text, "[!"));
+    assert!(FastScan::contains_token(text, "中文"));
+    assert!(FastScan::count_ascii(text, b'$', 2));
+    assert!(!FastScan::contains_ascii(text, b'%'));
+    assert!(!FastScan::contains_token(text, "missing"));
+}
+
+#[test]
+fn combined_inline_pass_preserves_math_code_links_and_attributes() {
+    let rendered = body("{++H~2~O++} {>>t^2^<<} $x^{++y++}$ `H~2~O` [H~2~O](https://example.com/~user)");
+    assert!(rendered.body.contains("<ins class=\"critic-add\">H<sub>2</sub>O</ins>"));
+    assert!(rendered.body.contains("title=\"t^2^\""));
+    assert!(rendered.body.contains("t<sup>2</sup>"));
+    assert!(rendered.body.contains("x^{++y++}"));
+    assert!(rendered.body.contains("<code>H~2~O</code>"));
+    assert!(rendered.body.contains("href=\"https://example.com/~user\">H~2~O</a>"));
+}
+
+#[test]
 fn document_execution_is_nonce_isolated() {
     let a = make_html(
         "<img src=x onerror=alert(1)>",

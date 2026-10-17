@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shared native CLI contract. Run against a packaged macOS binary or Windows exe."""
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -52,5 +53,25 @@ class NativeCLI(unittest.TestCase):
     def test_missing_input_fails(self):
         result = subprocess.run([BINARY, str(self.root / 'missing.md'), '--stdout'], capture_output=True, timeout=30)
         self.assertNotEqual(result.returncode, 0)
+    def test_supported_dialects(self):
+        for dialect in ('generic', 'gfm', 'obsidian', 'mkdocs', 'docusaurus', 'commonmark', 'hugo'):
+            with self.subTest(dialect=dialect):
+                html = self.run_cli('[[Target]]', '--stdout', '--dialect', dialect)
+                self.assertIn('Target.md' if dialect == 'obsidian' else '[[Target]]', html)
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS native core loader')
+    def test_core_override_does_not_fall_back_to_another_build(self):
+        result = subprocess.run([BINARY, '-', '--stdout'], input=b'# Test', cwd=self.root,
+                                env=dict(os.environ, MDVU_CORE_LIB=str(self.root/'missing.dylib')),
+                                capture_output=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(b'mdvu-core', result.stderr)
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS packaged command symlink')
+    def test_packaged_command_symlink_finds_its_core(self):
+        link = self.root/'mdvu'
+        link.symlink_to(BINARY)
+        result = subprocess.run([str(link), '-', '--stdout'], input=b'# Via symlink', cwd=self.root,
+                                capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(b'Via symlink', result.stdout)
 
 unittest.main()

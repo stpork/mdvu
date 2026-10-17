@@ -518,6 +518,7 @@ struct MarkdownParserTests {
         #expect(dialectMenu?.items.contains(where: { $0.title == "Generic (CommonMark)" }) == true)
         #expect(dialectMenu?.items.contains(where: { $0.title == "GitHub (GFM)" }) == true)
         #expect(dialectMenu?.items.contains(where: { $0.title == "Obsidian" }) == true)
+        #expect(dialectMenu?.items.compactMap { $0.representedObject as? String } == MarkdownDialect.allCases.map(\.rawValue))
     }
 
     @MainActor
@@ -825,15 +826,6 @@ struct MarkdownParserTests {
         #expect(doc.body.contains("$10 and $20"))
     }
 
-    @Test func testFastScanTokensAndAscii() {
-        let text = "Hello world with [!NOTE] and $math$ and ```code```"
-        #expect(FastScan.contains(text, token: "[!"))
-        #expect(FastScan.contains(text, token: "```"))
-        #expect(FastScan.contains(text, ascii: UInt8(ascii: "$")))
-        #expect(!FastScan.contains(text, token: "missing"))
-        #expect(!FastScan.contains(text, ascii: UInt8(ascii: "%")))
-    }
-
     @Test func testEagerDocumentLoaderLifecycle() {
         let fixture = Self.fixtureURL("test-light.md")
         EagerDocumentLoader.start(path: fixture.path, options: .default)
@@ -901,9 +893,12 @@ struct MarkdownParserTests {
         #expect(controller.currentDialect == .generic)
 
         let autoItem = NSMenuItem(title: "Automatic", action: #selector(DocumentWindowController.selectDialectAuto(_:)), keyEquivalent: "")
-        let genericItem = NSMenuItem(title: "Generic", action: #selector(DocumentWindowController.selectDialectGeneric(_:)), keyEquivalent: "")
-        let githubItem = NSMenuItem(title: "GitHub", action: #selector(DocumentWindowController.selectDialectGitHub(_:)), keyEquivalent: "")
-        let obsidianItem = NSMenuItem(title: "Obsidian", action: #selector(DocumentWindowController.selectDialectObsidian(_:)), keyEquivalent: "")
+        let genericItem = NSMenuItem(title: "Generic", action: #selector(DocumentWindowController.selectDialect(_:)), keyEquivalent: "")
+        let githubItem = NSMenuItem(title: "GitHub", action: #selector(DocumentWindowController.selectDialect(_:)), keyEquivalent: "")
+        let obsidianItem = NSMenuItem(title: "Obsidian", action: #selector(DocumentWindowController.selectDialect(_:)), keyEquivalent: "")
+        genericItem.representedObject = MarkdownDialect.generic.rawValue
+        githubItem.representedObject = MarkdownDialect.github.rawValue
+        obsidianItem.representedObject = MarkdownDialect.obsidian.rawValue
 
         #expect(controller.validateMenuItem(autoItem) == true)
         #expect(autoItem.state == .on)
@@ -914,7 +909,7 @@ struct MarkdownParserTests {
         #expect(controller.validateMenuItem(obsidianItem) == true)
         #expect(obsidianItem.state == .off)
 
-        controller.selectDialectObsidian(nil)
+        controller.selectDialect(obsidianItem)
         #expect(controller.currentDialect == .obsidian)
         _ = controller.validateMenuItem(autoItem)
         _ = controller.validateMenuItem(genericItem)
@@ -923,7 +918,7 @@ struct MarkdownParserTests {
         #expect(genericItem.state == .off)
         #expect(obsidianItem.state == .on)
 
-        controller.selectDialectGitHub(nil)
+        controller.selectDialect(githubItem)
         #expect(controller.currentDialect == .github)
         _ = controller.validateMenuItem(autoItem)
         _ = controller.validateMenuItem(githubItem)

@@ -24,9 +24,9 @@ SWIFT_RELEASE_FLAGS := -Xswiftc -O -Xswiftc -cross-module-optimization -Xswiftc 
 .PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean rust-all rust-release rust-test windows-build
 print-release-flags:
 	@printf '%s\n' '$(SWIFT_RELEASE_FLAGS)'
-all:
+all: rust-all
 	cd "$(PROJECT_ROOT)" && swift build
-release:
+release: rust-release
 	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
 	@mkdir -p "$(PROJECT_ROOT)/target/swift-ir"
 	@for f in "$(PROJECT_ROOT)"/*.bc; do \
@@ -36,13 +36,13 @@ test: rust-all
 	cd "$(PROJECT_ROOT)" && MDVU_CORE_LIB="$(PROJECT_ROOT)/target/debug/libmdvu_core.dylib" swift test $(TEST_FLAGS) $(SWIFT_TEST_ARGS)
 DYLIB ?= $(PROJECT_ROOT)/target/release/libmdvu_core.dylib
 
-benchmark: rust-release release
+benchmark: release
 	"$(PROJECT_ROOT)/scripts/benchmark.sh"
 update-snapshot: all
 	"$(PROJECT_ROOT)/scripts/update-snapshot.sh"
 visual-test: all
 	"$(PROJECT_ROOT)/scripts/visual-regression.sh"
-app: rust-release release
+app: release
 	$(MAKE) package
 package:
 	test -f "$(DYLIB)"
@@ -54,12 +54,8 @@ package:
 	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
 	test ! -f "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" "$(APP)/Contents/Resources/"
 	cp "$(PROJECT_ROOT)/packaging/macos/Info.plist" "$(APP)/Contents/Info.plist"
-	if [ -f "$(DYLIB)" ]; then \
-		cp "$(DYLIB)" "$(APP)/Contents/Frameworks/libmdvu_core.dylib"; \
-		strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib" 2>/dev/null || true; \
-		rm -f "$(APP)/Contents/Resources/mdvu_mdvu.bundle/Contents/Resources"/*.lzma \
-		      "$(APP)/Contents/Resources/mdvu_mdvu.bundle"/*.lzma; \
-	fi
+	cp "$(DYLIB)" "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
+	strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"
 universal:
@@ -105,7 +101,6 @@ check:
 	cargo test --workspace
 	$(MAKE) rust-release
 	$(MAKE) test
-	MDVU_ENGINE=swift $(MAKE) test
 
 coverage:
 	mkdir -p "$(PROJECT_ROOT)/target/coverage"

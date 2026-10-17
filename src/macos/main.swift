@@ -6,13 +6,26 @@ if arguments.contains("--help") || arguments.contains("-h") {
     exit(EXIT_SUCCESS)
 }
 if arguments.contains("--version") || arguments.contains("-v") {
-    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? MdvuCoreBridge.shared.version ?? "0.5.0"
+    let version = AppBundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? MdvuCoreBridge.shared.version ?? "0.5.0"
     print("mdvu \(version)")
     exit(EXIT_SUCCESS)
 }
-if BenchmarkRunner.runIfRequested(arguments) { exit(EXIT_SUCCESS) }
-
 let options = CLIOptions.parse(arguments)
+guard MdvuCoreBridge.shared.isAvailable else {
+    let message = "mdvu-core is missing or incompatible. Rebuild or reinstall mdvu."
+    if options.isHeadless || arguments.contains("--benchmark") {
+        fputs("mdvu: \(message)\n", stderr)
+    } else {
+        _ = NSApplication.shared
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "Unable to start mdvu"
+        alert.informativeText = message
+        alert.runModal()
+    }
+    exit(EXIT_FAILURE)
+}
+if BenchmarkRunner.runIfRequested(arguments) { exit(EXIT_SUCCESS) }
 
 // Headless CLI execution (no GUI window)
 if options.isHeadless {
@@ -40,8 +53,7 @@ if options.isHeadless {
     let docTitle = options.title ?? defaultTitle
     let dialectStr = options.dialect.rawValue
 
-    if let bridge = MdvuCoreBridge.shared.isAvailable ? MdvuCoreBridge.shared : nil,
-       let rendered = bridge.render(
+    if let rendered = MdvuCoreBridge.shared.render(
            source: inputContent,
            title: docTitle,
            dialect: dialectStr,
@@ -70,35 +82,8 @@ if options.isHeadless {
             exit(EXIT_SUCCESS)
         }
     } else {
-        // Fallback using Swift MarkdownPipeline + HTMLDocument
-        let pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, isDialectExplicit: options.isDialectExplicit)
-        let renderedDoc = pipeline.render(inputContent, diagramTheme: options.theme.rawValue)
-        let html = HTMLDocument.make(
-            body: renderedDoc.body,
-            title: docTitle,
-            theme: options.theme,
-            fullWidth: options.fullWidth ?? false,
-            baseURL: baseURL,
-            embedEngines: options.standalone
-        )
-
-        if options.outputTOC {
-            fputs("mdvu: TOC extraction requires mdvu-core bridge\n", stderr)
-            exit(EXIT_FAILURE)
-        }
-
-        if let outPath = options.outputPath {
-            do {
-                try html.write(toFile: outPath, atomically: true, encoding: .utf8)
-                exit(EXIT_SUCCESS)
-            } catch {
-                fputs("mdvu: error writing output to '\(outPath)': \(error.localizedDescription)\n", stderr)
-                exit(EXIT_FAILURE)
-            }
-        } else {
-            FileHandle.standardOutput.write(Data(html.utf8))
-            exit(EXIT_SUCCESS)
-        }
+        fputs("mdvu: mdvu-core failed to render the document\n", stderr)
+        exit(EXIT_FAILURE)
     }
 }
 

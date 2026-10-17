@@ -54,6 +54,7 @@ if (Test-Path $Loader) { Copy-Item $Loader $Portable -Force }
 try {
  Remove-Item Env:WEBVIEW2_USER_DATA_FOLDER,Env:MDVU_UI_SCRIPT,Env:MDVU_UI_RESULT_FILE -ErrorAction SilentlyContinue
  foreach ($Theme in @('system','light','dark')) {
+  $Window = [IntPtr]::Zero
   $Process = Start-Process $TestExe -ArgumentList @('--theme',$Theme) -PassThru
   try {
    $Watch = [Diagnostics.Stopwatch]::StartNew()
@@ -62,6 +63,12 @@ try {
     $Window = [MdvuStartupFrame]::FindCaptionWindow($Process.Id)
    } while (-not $Process.HasExited -and $Window -eq [IntPtr]::Zero -and $Watch.Elapsed.TotalSeconds -lt 15)
    if ($Process.HasExited -or $Window -eq [IntPtr]::Zero) { throw "No startup window: $Theme" }
+   $ProfilePath = Join-Path $env:LOCALAPPDATA 'MDVu\WebView2\EBWebView'
+   # The responsive native frame appears before WebView2's first environment is
+   # ready. A fresh CI account can take several seconds to create its profile.
+   while (-not (Test-Path $ProfilePath) -and -not $Process.HasExited -and $Watch.Elapsed.TotalSeconds -lt 30) {
+    Start-Sleep -Milliseconds 100; $Process.Refresh()
+   }
    Start-Sleep -Milliseconds 1200
    $Frame = [MdvuStartupFrame+TITLEBARINFO]::new()
    $Frame.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($Frame)
@@ -83,7 +90,7 @@ try {
    }
    if ($DwmResult -eq 0 -and $Dark -ne $ExpectedDark) { throw "Native caption theme mismatch: $Theme ($Dark != $ExpectedDark)" }
    if (Test-Path ($TestExe+'.WebView2')) { throw 'WebView2 profile created beside the executable' }
-   if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'MDVu\WebView2\EBWebView'))) { throw 'WebView2 profile missing from LocalAppData' }
+   if (-not (Test-Path $ProfilePath)) { throw 'WebView2 profile missing from LocalAppData' }
    if ($CaptureScreenshot) {
     Add-Type -AssemblyName System.Drawing
     $Rect = [MdvuStartupFrame+RECT]::new()
@@ -98,8 +105,8 @@ try {
   } finally {
    $Process.Refresh()
    if (-not $Process.HasExited) {
-    [void][MdvuStartupFrame]::PostMessageW($Window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)
-    if (-not $Process.WaitForExit(5000)) { $Process.Kill() }
+    if ($Window -ne [IntPtr]::Zero) { [void][MdvuStartupFrame]::PostMessageW($Window,0x10,[IntPtr]::Zero,[IntPtr]::Zero) }
+    if (-not $Process.WaitForExit(5000)) { $Process.Kill(); $Process.WaitForExit() }
    }
    $Process.Dispose()
   }
@@ -108,5 +115,6 @@ try {
  $env:WEBVIEW2_USER_DATA_FOLDER = $OldProfile
  $env:MDVU_UI_SCRIPT = $OldUIScript
  $env:MDVU_UI_RESULT_FILE = $OldUIResult
+ Remove-Item $Portable -Recurse -Force
  ConvertTo-Json -InputObject $Report -Depth 5 | Set-Content (Join-Path $Output 'results.json') -Encoding UTF8
 }

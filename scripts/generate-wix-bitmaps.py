@@ -157,7 +157,7 @@ def write_bmp24(path, width, height, get_rgb_fn):
 
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    icon_path = os.path.join(root, "packaging", "AppIcon-256.png")
+    icon_path = os.path.join(root, "packaging", "assets", "AppIcon-256.png")
     out_dir = os.path.join(root, "packaging", "windows")
     os.makedirs(out_dir, exist_ok=True)
 

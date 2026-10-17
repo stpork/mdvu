@@ -231,7 +231,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var watcher: FileWatcher?
     private let options: CLIOptions
     private let profiler: StartupProfiler
-    private let cache: DiagramCache
     private let pipeline: MarkdownPipeline
     private var userSelectedDialect: MarkdownDialect?
     private(set) var currentDialect: MarkdownDialect
@@ -325,9 +324,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     init(url: URL, directoryMode: Bool, options: CLIOptions, profiler: StartupProfiler) {
         self.options = options; self.profiler = profiler
-        let cache = DiagramCache()
-        self.cache = cache
-        self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: options.isDialectExplicit)
+        self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, isDialectExplicit: options.isDialectExplicit)
         self.currentDialect = options.dialect
         self.isFullWidth = options.fullWidth ?? (options.snapshotPath != nil ? false : UserDefaults.standard.bool(forKey: "layout.fullWidth"))
         self.isSidebarVisible = options.snapshotPath != nil ? true : (UserDefaults.standard.object(forKey: "layout.sidebarVisible") as? Bool ?? false)
@@ -778,7 +775,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         let operation = BlockOperation()
         let userDialect = self.userSelectedDialect
         let basePipeline = self.pipeline
-        let cache = self.cache
         let options = self.options
         operation.addExecutionBlock { [weak self, weak operation] in
             guard let operation, !operation.isCancelled else { return }
@@ -788,7 +784,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 let source = String(decoding: data, as: UTF8.self)
                 let pipeline: MarkdownPipeline = {
                     if let userDialect {
-                        return MarkdownPipeline(dialect: userDialect, mermaid: options.mermaid, cache: cache, isDialectExplicit: true)
+                        return MarkdownPipeline(dialect: userDialect, mermaid: options.mermaid, isDialectExplicit: true)
                     }
                     return basePipeline
                 }()
@@ -1263,7 +1259,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             return
         }
         if message.name == "diagramCache", let body = message.body as? [String: Any], let key = body["key"] as? String, let svg = body["svg"] as? String {
-            cache.enqueueWrite(key: key, svg: svg)
+            DiagramCache.enqueueWrite(key: key, svg: svg)
             return
         }
         if message.name == "tableOfContents", let body = message.body as? [[String: Any]] {
@@ -1401,16 +1397,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             menuItem.state = userSelectedDialect == nil ? .on : .off
             return true
         }
-        if menuItem.action == #selector(selectDialectGeneric(_:)) {
-            menuItem.state = currentDialect == .generic ? .on : .off
-            return true
-        }
-        if menuItem.action == #selector(selectDialectGitHub(_:)) {
-            menuItem.state = currentDialect == .github ? .on : .off
-            return true
-        }
-        if menuItem.action == #selector(selectDialectObsidian(_:)) {
-            menuItem.state = currentDialect == .obsidian ? .on : .off
+        if menuItem.action == #selector(selectDialect(_:)) {
+            menuItem.state = menuItem.representedObject as? String == currentDialect.rawValue ? .on : .off
             return true
         }
         if menuItem.action == #selector(zoomIn(_:)) { return effectiveZoom < (ZoomPolicy.maximum - 0.005) }
@@ -1429,16 +1417,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         }
     }
 
-    @objc func selectDialectGeneric(_ sender: Any?) {
-        setDialect(.generic)
-    }
-
-    @objc func selectDialectGitHub(_ sender: Any?) {
-        setDialect(.github)
-    }
-
-    @objc func selectDialectObsidian(_ sender: Any?) {
-        setDialect(.obsidian)
+    @objc func selectDialect(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let dialect = MarkdownDialect.from(string: raw) {
+            setDialect(dialect)
+        }
     }
 
     func setDialect(_ newDialect: MarkdownDialect) {

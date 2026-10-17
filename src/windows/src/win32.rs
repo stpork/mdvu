@@ -35,12 +35,17 @@ pub const IDM_VIEW_TOGGLE_TOC: usize = 2002;
 pub const IDM_VIEW_TOGGLE_NAV: usize = 2003;
 pub const IDM_VIEW_FULL_WIDTH: usize = 2004;
 pub const IDM_DIALECT_AUTO: usize = 2100;
-pub const IDM_DIALECT_GENERIC: usize = 2101;
-pub const IDM_DIALECT_GFM: usize = 2102;
-pub const IDM_DIALECT_OBSIDIAN: usize = 2103;
-pub const IDM_DIALECT_MKDOCS: usize = 2104;
-pub const IDM_DIALECT_DOCUSAURUS: usize = 2105;
-pub const IDM_DIALECT_COMMONMARK: usize = 2106;
+const DIALECT_MENU: &[(MarkdownDialect, &str)] = &[
+    (MarkdownDialect::Generic, "&Generic (CommonMark)"),
+    (MarkdownDialect::Gfm, "Git&Hub (GFM)"),
+    (MarkdownDialect::Obsidian, "&Obsidian"),
+    (MarkdownDialect::Mkdocs, "&MkDocs"),
+    (MarkdownDialect::Docusaurus, "&Docusaurus"),
+    (MarkdownDialect::Commonmark, "&CommonMark"),
+    (MarkdownDialect::Hugo, "Hu&go"),
+];
+const IDM_DIALECT_FIRST: usize = 2101;
+const IDM_DIALECT_LAST: usize = IDM_DIALECT_FIRST + DIALECT_MENU.len() - 1;
 
 pub const IDM_THEME_SYSTEM: usize = 2150;
 pub const IDM_THEME_LIGHT: usize = 2151;
@@ -170,46 +175,11 @@ pub unsafe fn create_main_menu(
 
     // --- Dialect Submenu ---
     let d_auto = to_wide_null("&Automatic");
-    let d_generic = to_wide_null("&Generic (CommonMark)");
-    let d_gfm = to_wide_null("Git&Hub (GFM)");
-    let d_obsidian = to_wide_null("&Obsidian");
-    let d_mkdocs = to_wide_null("&MkDocs");
-    let d_docusaurus = to_wide_null("&Docusaurus");
-    let d_commonmark = to_wide_null("&CommonMark");
-
     AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_AUTO, d_auto.as_ptr());
     AppendMenuW(dialect_menu, MF_SEPARATOR, 0, std::ptr::null());
-    AppendMenuW(
-        dialect_menu,
-        MF_STRING,
-        IDM_DIALECT_GENERIC,
-        d_generic.as_ptr(),
-    );
-    AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_GFM, d_gfm.as_ptr());
-    AppendMenuW(
-        dialect_menu,
-        MF_STRING,
-        IDM_DIALECT_OBSIDIAN,
-        d_obsidian.as_ptr(),
-    );
-    AppendMenuW(
-        dialect_menu,
-        MF_STRING,
-        IDM_DIALECT_MKDOCS,
-        d_mkdocs.as_ptr(),
-    );
-    AppendMenuW(
-        dialect_menu,
-        MF_STRING,
-        IDM_DIALECT_DOCUSAURUS,
-        d_docusaurus.as_ptr(),
-    );
-    AppendMenuW(
-        dialect_menu,
-        MF_STRING,
-        IDM_DIALECT_COMMONMARK,
-        d_commonmark.as_ptr(),
-    );
+    for (index, (_, label)) in DIALECT_MENU.iter().enumerate() {
+        AppendMenuW(dialect_menu, MF_STRING, IDM_DIALECT_FIRST + index, to_wide_null(label).as_ptr());
+    }
 
     // --- Theme Submenu ---
     let t_system = to_wide_null("&System");
@@ -326,19 +296,11 @@ pub unsafe fn update_menu_state(
     );
 
     // Dialect radio check
-    let dialect_id = match dialect {
-        MarkdownDialect::Generic => IDM_DIALECT_GENERIC,
-        MarkdownDialect::Gfm => IDM_DIALECT_GFM,
-        MarkdownDialect::Obsidian => IDM_DIALECT_OBSIDIAN,
-        MarkdownDialect::Mkdocs => IDM_DIALECT_MKDOCS,
-        MarkdownDialect::Docusaurus => IDM_DIALECT_DOCUSAURUS,
-        MarkdownDialect::Commonmark => IDM_DIALECT_COMMONMARK,
-        _ => IDM_DIALECT_GENERIC,
-    };
+    let dialect_id = IDM_DIALECT_FIRST + DIALECT_MENU.iter().position(|(value, _)| *value == dialect).unwrap_or(0);
     CheckMenuRadioItem(
         menu,
-        IDM_DIALECT_GENERIC as u32,
-        IDM_DIALECT_COMMONMARK as u32,
+        IDM_DIALECT_FIRST as u32,
+        IDM_DIALECT_LAST as u32,
         dialect_id as u32,
         MF_BYCOMMAND,
     );
@@ -490,28 +452,8 @@ pub unsafe extern "system" fn menu_subclass_proc(
                 let _ = proxy.send_event(UserEvent::SetDialectAuto);
                 return 0;
             }
-            IDM_DIALECT_GENERIC => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Generic));
-                return 0;
-            }
-            IDM_DIALECT_GFM => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Gfm));
-                return 0;
-            }
-            IDM_DIALECT_OBSIDIAN => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Obsidian));
-                return 0;
-            }
-            IDM_DIALECT_MKDOCS => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Mkdocs));
-                return 0;
-            }
-            IDM_DIALECT_DOCUSAURUS => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Docusaurus));
-                return 0;
-            }
-            IDM_DIALECT_COMMONMARK => {
-                let _ = proxy.send_event(UserEvent::SetDialect(MarkdownDialect::Commonmark));
+            IDM_DIALECT_FIRST..=IDM_DIALECT_LAST => {
+                let _ = proxy.send_event(UserEvent::SetDialect(DIALECT_MENU[cmd_id - IDM_DIALECT_FIRST].0));
                 return 0;
             }
 

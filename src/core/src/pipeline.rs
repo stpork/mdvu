@@ -263,6 +263,16 @@ static CRITIC_COMMENT_RE: LazyLock<Regex> =
 
 use crate::parser::escape_html;
 
+fn apply<'a>(value: Cow<'a, str>, stage: impl FnOnce(&str) -> Cow<'_, str>) -> Cow<'a, str> {
+    match value {
+        Cow::Borrowed(s) => stage(s),
+        Cow::Owned(s) => match stage(&s) {
+            Cow::Borrowed(_) => Cow::Owned(s),
+            Cow::Owned(next) => Cow::Owned(next),
+        },
+    }
+}
+
 impl MarkdownPipeline {
     pub fn new(dialect: MarkdownDialect, is_dialect_explicit: bool) -> Self {
         Self {
@@ -287,25 +297,12 @@ impl MarkdownPipeline {
     pub fn preprocess_cow<'a>(&self, source: &'a str) -> (Cow<'a, str>, MarkdownDialect) {
         let dialect = self.effective_dialect(source);
 
-        fn apply<'a>(
-            value: Cow<'a, str>,
-            stage: impl FnOnce(&str) -> Cow<'_, str>,
-        ) -> Cow<'a, str> {
-            match value {
-                Cow::Borrowed(s) => stage(s),
-                Cow::Owned(s) => match stage(&s) {
-                    Cow::Borrowed(_) => Cow::Owned(s),
-                    Cow::Owned(next) => Cow::Owned(next),
-                },
-            }
-        }
         let mut value = Self::preprocess_frontmatter(source);
         value = apply(value, Self::preprocess_gitlab_toc);
         value = apply(value, Self::preprocess_admonitions);
         value = apply(value, |s| Self::preprocess_obsidian(s, dialect));
         value = apply(value, Self::preprocess_math);
-        value = apply(value, Self::preprocess_critic_markup);
-        value = apply(value, Self::preprocess_sub_superscript);
+        value = apply(value, Self::preprocess_inline_markup);
         (value, dialect)
     }
 
@@ -550,70 +547,79 @@ impl MarkdownPipeline {
         })
     }
 
+    fn has_critic_markup(source: &str) -> bool {
+        FastScan::contains_token(source, "{+")
+            || FastScan::contains_token(source, "{-")
+            || FastScan::contains_token(source, "{~")
+            || FastScan::contains_token(source, "{=")
+            || FastScan::contains_token(source, "{>")
+    }
+
     fn preprocess_critic_markup(source: &str) -> Cow<'_, str> {
-        if !FastScan::contains_token(source, "{+")
-            && !FastScan::contains_token(source, "{-")
-            && !FastScan::contains_token(source, "{~")
-            && !FastScan::contains_token(source, "{=")
-            && !FastScan::contains_token(source, "{>")
+        if !Self::has_critic_markup(source) {
+            return Cow::Borrowed(source);
+        }
+
+        let mut text: Cow<'_, str> = Cow::Borrowed(source);
+        if FastScan::contains_token(&text, "{~") {
+            if let Cow::Owned(replaced) = CRITIC_SUB_RE.replace_all(
+                &text,
+                "<del class=\"critic-del\">$1</del><ins class=\"critic-add\">$2</ins>",
+            ) {
+                text = Cow::Owned(replaced);
+            }
+        }
+        if FastScan::contains_token(&text, "{+") {
+            if let Cow::Owned(replaced) =
+                CRITIC_ADD_RE.replace_all(&text, "<ins class=\"critic-add\">$1</ins>")
+            {
+                text = Cow::Owned(replaced);
+            }
+        }
+        if FastScan::contains_token(&text, "{-") {
+            if let Cow::Owned(replaced) =
+                CRITIC_DEL_RE.replace_all(&text, "<del class=\"critic-del\">$1</del>")
+            {
+                text = Cow::Owned(replaced);
+            }
+        }
+        if FastScan::contains_token(&text, "{=") {
+            if let Cow::Owned(replaced) =
+                CRITIC_MARK_RE.replace_all(&text, "<mark class=\"critic-mark\">$1</mark>")
+            {
+                text = Cow::Owned(replaced);
+            }
+        }
+        if FastScan::contains_token(&text, "{>") {
+            if let Cow::Owned(replaced) = CRITIC_COMMENT_RE.replace_all(&text, |caps: &Captures| {
+                let comment = &caps[1];
+                let safe_title = escape_html(comment);
+                format!("<span class=\"critic-comment\" title=\"{safe_title}\">💬 {comment}</span>")
+            }) {
+                text = Cow::Owned(replaced);
+            }
+        }
+        text
+    }
+
+    fn preprocess_inline_markup(source: &str) -> Cow<'_, str> {
+        if !Self::has_critic_markup(source)
+            && !FastScan::count_ascii(source, b'~', 2)
+            && !FastScan::count_ascii(source, b'^', 2)
         {
             return Cow::Borrowed(source);
         }
-
+        // Both transformations protect the same Markdown ranges. Parse them
+        // once, retaining the order and avoiding another full-document copy.
         CodeFenceScanner::process_cow(source, |chunk| {
-            let mut text: Cow<'_, str> = Cow::Borrowed(chunk);
-            if FastScan::contains_token(&text, "{~") {
-                if let Cow::Owned(replaced) = CRITIC_SUB_RE.replace_all(
-                    &text,
-                    "<del class=\"critic-del\">$1</del><ins class=\"critic-add\">$2</ins>",
-                ) {
-                    text = Cow::Owned(replaced);
+            let value = Self::preprocess_critic_markup(chunk);
+            apply(value, |text| {
+                if FastScan::count_ascii(text, b'~', 2) || FastScan::count_ascii(text, b'^', 2) {
+                    Self::scan_sub_sup_underline(text)
+                } else {
+                    Cow::Borrowed(text)
                 }
-            }
-            if FastScan::contains_token(&text, "{+") {
-                if let Cow::Owned(replaced) =
-                    CRITIC_ADD_RE.replace_all(&text, "<ins class=\"critic-add\">$1</ins>")
-                {
-                    text = Cow::Owned(replaced);
-                }
-            }
-            if FastScan::contains_token(&text, "{-") {
-                if let Cow::Owned(replaced) =
-                    CRITIC_DEL_RE.replace_all(&text, "<del class=\"critic-del\">$1</del>")
-                {
-                    text = Cow::Owned(replaced);
-                }
-            }
-            if FastScan::contains_token(&text, "{=") {
-                if let Cow::Owned(replaced) =
-                    CRITIC_MARK_RE.replace_all(&text, "<mark class=\"critic-mark\">$1</mark>")
-                {
-                    text = Cow::Owned(replaced);
-                }
-            }
-            if FastScan::contains_token(&text, "{>") {
-                if let Cow::Owned(replaced) = CRITIC_COMMENT_RE.replace_all(&text, |caps: &Captures| {
-                    let comment = &caps[1];
-                    let safe_title = escape_html(comment);
-                    format!("<span class=\"critic-comment\" title=\"{safe_title}\">💬 {comment}</span>")
-                }) {
-                    text = Cow::Owned(replaced);
-                }
-            }
-            text
-        })
-    }
-
-    fn preprocess_sub_superscript(source: &str) -> Cow<'_, str> {
-        if !FastScan::count_ascii(source, b'~', 2) && !FastScan::count_ascii(source, b'^', 2) {
-            return Cow::Borrowed(source);
-        }
-
-        CodeFenceScanner::process_cow(source, |chunk| {
-            if !FastScan::count_ascii(chunk, b'~', 2) && !FastScan::count_ascii(chunk, b'^', 2) {
-                return Cow::Borrowed(chunk);
-            }
-            Self::scan_sub_sup_underline(chunk)
+            })
         })
     }
 

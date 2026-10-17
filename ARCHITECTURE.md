@@ -92,7 +92,7 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
   * Native window dragging, document proxy icon dragging, and `⌘-click` path hierarchy menu.
 * **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
   * Dynamically loads `libmdvu_core.dylib` using safe scoped C-string closures (`withOptionalCString`), completely eliminating dangling pointers.
-  * Fallback to pure Swift pipeline when Rust core is not loaded.
+  * Markdown processing, dialect rules and diagram cache storage use the same Rust core as Windows. The native host reports a missing or incompatible core instead of maintaining a second parser.
 
 ---
 

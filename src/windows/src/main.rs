@@ -59,7 +59,7 @@ struct Args {
     #[arg(long)]
     title: Option<String>,
 
-    /// Markdown dialect: auto, generic, obsidian, mkdocs, docusaurus, gfm, commonmark
+    /// Markdown dialect: auto, generic, obsidian, mkdocs, docusaurus, gfm, commonmark, hugo
     #[arg(short, long, default_value = "auto")]
     dialect: String,
 

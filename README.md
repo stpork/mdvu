@@ -267,7 +267,7 @@ mdvu --snapshot output.png README.md
 `mdvu` brings unified compatibility across the most popular Markdown flavors in software engineering, technical documentation, and academic writing:
 
 * **CommonMark & GitHub Flavored Markdown (GFM)**:
-  * Reference C AST parsing via `cmark-gfm`.
+  * Shared Rust parsing via `pulldown-cmark` on both operating systems.
   * Tables with column alignment, autolinks, task lists (`- [x]`), and double-tilde strikethrough (`~~deleted~~`).
   * Footnotes support (`[^1]`).
 * **Obsidian Ecosystem**:
@@ -431,7 +431,6 @@ src/core/          Shared Rust renderer and C ABI
 src/macos/         Swift, AppKit and WebKit host
 src/windows/       Rust, Win32 and WebView2 host
 assets/            Shared CSS, JavaScript and compressed runtimes
-vendor/            Upstream runtime distributions
 tests/fixtures/   Shared Markdown fixtures and local assets
 tests/macos/      Swift and WebKit regression tests
 tests/ui/         Browser checks used on both platforms
@@ -458,7 +457,6 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 * [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) — MIT / Apache-2.0 (c) Raph Levien and pulldown-cmark contributors.
 * [wry](https://github.com/tauri-apps/wry) & [tao](https://github.com/tauri-apps/tao) — MIT / Apache-2.0 (c) The Tauri Programme within The Commons Conservancy.
 * [lzma-rs](https://github.com/gendx/lzma-rs) — MIT / Apache-2.0 (c) Corentin Henry.
-* [swift-cmark](https://github.com/swiftlang/swift-cmark) — BSD-2-Clause / MIT (c) John MacFarlane, GitHub, Apple.
 * [Mermaid.js 11.17.2](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
 * [ZenUML Plugin 0.2.3](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
 * [PlantUML Core 1.2026.7](https://github.com/plantuml/plantuml-core) — GPL / LGPL / Apache-2.0 / MIT (c) PlantUML Team.

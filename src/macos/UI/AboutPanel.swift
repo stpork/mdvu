@@ -168,7 +168,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
 
         let iconImageView = NSImageView()
         let icon: NSImage = {
-            if let path = Bundle.main.path(forResource: "mdvu", ofType: "icns"),
+            if let path = AppBundle.main.path(forResource: "mdvu", ofType: "icns"),
                let img = NSImage(contentsOfFile: path) {
                 return img
             }
@@ -183,7 +183,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
             if let img = NSImage(named: NSImage.applicationIconName) {
                 return img
             }
-            return NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
+            return NSWorkspace.shared.icon(forFile: AppBundle.main.bundlePath)
         }()
         iconImageView.image = icon
         iconImageView.imageScaling = .scaleProportionallyUpOrDown
@@ -196,7 +196,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
         stack.setCustomSpacing(16, after: iconImageView)
 
         let version: String = {
-            if let str = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String, !str.isEmpty {
+            if let str = AppBundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String, !str.isEmpty {
                 return str
             }
             let plistPath = URL(fileURLWithPath: #filePath)
