@@ -97,13 +97,16 @@ jobs:
 
       - name: Test Headless CLI Functionality
         run: |
+          set -o pipefail
           CLI="dist/mdvu.app/Contents/MacOS/mdvu"
           $CLI --help
           $CLI --version
           $CLI README.md -o /tmp/cli-output.html --standalone
           test -f /tmp/cli-output.html
-          $CLI README.md --toc | grep -q "why-mdvu"
-          cat README.md | $CLI - --stdout | grep -q "MDVu"
+          $CLI README.md --toc > /tmp/cli-toc.json
+          grep -q "why-mdvu" /tmp/cli-toc.json
+          $CLI - --stdout < README.md > /tmp/cli-stdout.html
+          grep -q "MDVu" /tmp/cli-stdout.html
 
       - name: Run cross-platform CLI contract
         run: python3 scripts/test-cli.py dist/mdvu.app/Contents/MacOS/mdvu

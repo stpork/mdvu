@@ -3,6 +3,7 @@
 import json
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 import tempfile
@@ -53,6 +54,22 @@ class NativeCLI(unittest.TestCase):
     def test_missing_input_fails(self):
         result = subprocess.run([BINARY, str(self.root / 'missing.md'), '--stdout'], capture_output=True, timeout=30)
         self.assertNotEqual(result.returncode, 0)
+    def test_closed_stdout_does_not_crash(self):
+        source = self.root / 'pipe.md'
+        source.write_text('# Pipe\n\n' + ('A paragraph.\n\n' * 20000))
+        # Python ignores SIGPIPE, as some CI launchers do; preserve that inherited state.
+        with subprocess.Popen([BINARY, str(source), '--stdout'], stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, restore_signals=False) as process:
+            self.assertTrue(process.stdout.read(1))
+            process.stdout.close()
+            process.stdout = None
+            _, diagnostic = process.communicate(timeout=30)
+        self.assertNotEqual(process.returncode, 0)
+        self.assertNotIn(b'NSFileHandleOperationException', diagnostic)
+        self.assertNotIn(b'panicked', diagnostic)
+        if sys.platform == 'darwin':
+            self.assertEqual(process.returncode, -signal.SIGPIPE, diagnostic)
+            self.assertEqual(diagnostic, b'')
     def test_supported_dialects(self):
         for dialect in ('generic', 'gfm', 'obsidian', 'mkdocs', 'docusaurus', 'commonmark', 'hugo'):
             with self.subTest(dialect=dialect):

@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 if arguments.contains("--help") || arguments.contains("-h") {
@@ -29,6 +30,8 @@ if BenchmarkRunner.runIfRequested(arguments) { exit(EXIT_SUCCESS) }
 
 // Headless CLI execution (no GUI window)
 if options.isHeadless {
+    // A closed consumer should terminate a Unix pipeline, not raise an Objective-C exception.
+    signal(SIGPIPE, SIG_DFL)
     let inputContent: String
     let baseURL: URL?
     let defaultTitle: String
