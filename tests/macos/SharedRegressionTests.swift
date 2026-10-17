@@ -231,6 +231,7 @@ extension SharedRegressionTests {
         try await ready(view)
         let facts = try await view.callAsyncJavaScript("""
             const pause=()=>new Promise(r=>setTimeout(r,50));
+            const settle=async token=>{for(let n=0;n<100&&window.__mdvuReadingAnchorSettled!==token;n++)await pause()};
             const key=(target,name)=>target.dispatchEvent(new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true}));
             const result={};
             key(window,'End');await pause();
@@ -247,13 +248,13 @@ extension SharedRegressionTests {
             scroller.scrollTop=250;
             const token=window.__mdvuCaptureReadingAnchor();
             const paragraph=article.querySelector('p'),before=paragraph.getBoundingClientRect().top;
-            article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await pause();
+            article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await settle(token);
             result.anchorStable=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
             const deferred=window.__mdvuCaptureReadingAnchor(),started=performance.now();let shifted;const capturedTop=paragraph.getBoundingClientRect().top;
             // Use the same frame scheduler as deferred layout. A background timer
             // can fire after the anchor's bounded observation period on CI WebKit.
             requestAnimationFrame(()=>requestAnimationFrame(()=>{article.style.paddingTop='350px';shifted=performance.now()-started}));window.__mdvuRestoreReadingAnchor(deferred);
-            for(let n=0;n<100&&window.__mdvuReadingAnchorSettled!==deferred;n++)await pause();
+            await settle(deferred);
             result.anchorFollowsDeferredLayout=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
             const deferredState={top:paragraph.getBoundingClientRect().top,scroll:scroller.scrollTop,elapsed:performance.now()-started,settled:window.__mdvuReadingAnchorSettled,overflow:getComputedStyle(scroller).overflowAnchor};
             const interrupted=window.__mdvuCaptureReadingAnchor();
