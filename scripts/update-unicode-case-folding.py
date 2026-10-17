@@ -34,7 +34,11 @@ for point in parents:
 classes = ' ' + ' '.join(''.join(map(chr, sorted(group))) for group in sorted(groups.values(), key=min)) + ' '
 path = Path(__file__).resolve().parents[1] / 'assets/app.js'
 before = path.read_text()
-after, count = re.subn(r'^const findCaseClasses=.*;$', lambda _: 'const findCaseClasses=' + json.dumps(classes, ensure_ascii=False) + ';', before, flags=re.MULTILINE)
+notice = '/* Unicode case folding license (generated)\n' + Path(__file__).with_name('unicode-LICENSE.txt').read_text() + '*/'
+after, count = re.subn(r'/\* Unicode case folding license \(generated\)\n.*?\*/', lambda _: notice, before, flags=re.DOTALL)
+if count != 1:
+    raise SystemExit('Expected one generated Unicode license notice')
+after, count = re.subn(r'^const findCaseClasses=.*;$', lambda _: 'const findCaseClasses=' + json.dumps(classes, ensure_ascii=False) + ';', after, flags=re.MULTILINE)
 if count != 1:
     raise SystemExit('Expected one generated findCaseClasses constant')
 if args.check:
