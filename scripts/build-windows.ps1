@@ -9,8 +9,15 @@ Write-Host "==> Building MDVu Windows ($Configuration)..." -ForegroundColor Cyan
 
 $BuildArgs = @('build', '--message-format=json-render-diagnostics', '-p', 'mdvu-windows', '--bin', 'mdvu')
 if ($Configuration -eq "release") { $BuildArgs += '--release' }
-$BuildMessages = & cargo @BuildArgs
-if ($LASTEXITCODE -ne 0) { throw "cargo build failed with exit code $LASTEXITCODE" }
+$PreviousErrorAction = $ErrorActionPreference
+try {
+    # Windows PowerShell 5 treats redirected native stderr as ErrorRecords.
+    # Cargo writes successful progress there; its exit code determines failure.
+    $ErrorActionPreference = 'Continue'
+    $BuildMessages = & cargo @BuildArgs
+    $BuildExitCode = $LASTEXITCODE
+} finally { $ErrorActionPreference = $PreviousErrorAction }
+if ($BuildExitCode -ne 0) { throw "cargo build failed with exit code $BuildExitCode" }
 $ExeSource = $BuildMessages | ForEach-Object { $_ | ConvertFrom-Json } |
     Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'mdvu' -and $_.executable } |
     Select-Object -Last 1 -ExpandProperty executable
