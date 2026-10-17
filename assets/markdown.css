@@ -8,4 +8,4 @@ pre>code.mdvu-chunked{display:block}.mdvu-code-chunk{display:block;content-visib
 
 .mdvu-code-virtual{height:var(--mdvu-chunk-height)}
 
-.mdvu-legacy-code pre>code:not(.mdvu-code-ready){display:none}
+.mdvu-code-pending pre>code{display:none}

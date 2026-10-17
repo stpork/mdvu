@@ -59,7 +59,7 @@ window.__mdvuOnTOC?.(entries);
 const wrapTables=()=>document.querySelectorAll('article table').forEach(table=>{if(table.parentElement?.classList.contains('table-wrap'))return;const wrapper=document.createElement('div');wrapper.className='table-wrap';table.replaceWith(wrapper);wrapper.append(table)});
 let highlightObserver=null,legacyCodeObserver=null;
 const needsCodeVisibilityFallback=!CSS.supports('content-visibility','auto')&&'IntersectionObserver'in window;
-if(needsCodeVisibilityFallback)document.documentElement.classList.add('mdvu-legacy-code');
+document.documentElement.classList.add('mdvu-code-pending');
 const revealCodeChunk=node=>{const chunk=node.closest?.('.mdvu-code-virtual');if(chunk)chunk.firstElementChild.hidden=false};
 // Older WebKit cannot skip offscreen line groups. Keep their text in the DOM
 // for find/ranges, with a fixed-height placeholder until the group is visible.
@@ -72,7 +72,7 @@ if(needsCodeVisibilityFallback){
 }
 const scheduleHighlight=()=>{
 highlightObserver?.disconnect();legacyCodeObserver?.disconnect();
-if(needsCodeVisibilityFallback)document.documentElement.classList.add('mdvu-legacy-code');
+document.documentElement.classList.add('mdvu-code-pending');
 // A single Unicode corpus can force seconds of font shaping on every zoom.
 // Keep its text intact, but give the browser independent line groups to skip.
 document.querySelectorAll('pre>code:not(.mdvu-chunked)').forEach(code=>{
@@ -93,7 +93,7 @@ if(needsCodeVisibilityFallback&&'IntersectionObserver'in window){
  legacyCodeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{const chunk=entry.target;if(entry.isIntersecting)chunk.firstElementChild.hidden=false;else if(window.getSelection()?.isCollapsed!==false&&!chunk.querySelector('.find-current'))chunk.firstElementChild.hidden=true}),{rootMargin:'800px 0px'});
  document.querySelectorAll('.mdvu-code-virtual').forEach(chunk=>legacyCodeObserver.observe(chunk));
 }
-if(needsCodeVisibilityFallback)document.querySelectorAll('pre>code').forEach(code=>code.classList.add('mdvu-code-ready'));
+document.documentElement.classList.remove('mdvu-code-pending');
 const blocks=document.querySelectorAll('pre>code:not(.mdvu-chunked),.mdvu-code-chunk:not(.mdvu-code-virtual),.mdvu-code-content');
 if(!('IntersectionObserver'in window)){blocks.forEach(highlightOne);return}
 const observer=highlightObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){observer.unobserve(entry.target);highlightOne(entry.target)}}),{rootMargin:'800px 0px'});
