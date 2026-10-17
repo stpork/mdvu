@@ -203,10 +203,15 @@ extension SharedRegressionTests {
             const paragraph=article.querySelector('p'),before=paragraph.getBoundingClientRect().top;
             article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);await pause();
             result.anchorStable=Math.abs(paragraph.getBoundingClientRect().top-before)<2;
+            const interrupted=window.__mdvuCaptureReadingAnchor();
+            article.style.paddingTop='400px';
+            window.dispatchEvent(new WheelEvent('wheel'));scroller.scrollTop=800;
+            window.__mdvuRestoreReadingAnchor(interrupted);await pause();
+            result.userScrollCancelsAnchor=Math.abs(scroller.scrollTop-800)<2;
             return result;
             """, arguments: [:], in: nil, contentWorld: .page)
         let checks = try #require(facts as? [String: Bool])
-        #expect(checks.count == 7)
+        #expect(checks.count == 8)
         #expect(checks.values.allSatisfy { $0 }, "\(checks)")
     }
 }

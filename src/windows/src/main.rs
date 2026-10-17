@@ -1611,7 +1611,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     modifiers = new_mods;
                 }
                 WindowEvent::KeyboardInput { event: key_event, .. } if key_event.state == ElementState::Pressed => {
-                        let is_ctrl = modifiers.control_key() || modifiers.super_key();
+                        let is_ctrl = modifiers.control_key();
                         let is_shift = modifiers.shift_key();
                         let is_alt = modifiers.alt_key();
 
@@ -1650,9 +1650,6 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = proxy.send_event(UserEvent::Find);
                             }
                             KeyCode::KeyB if is_ctrl && !is_shift => {
-                                let _ = proxy.send_event(UserEvent::ToggleTOC);
-                            }
-                            KeyCode::KeyS if is_ctrl && is_shift => {
                                 let _ = proxy.send_event(UserEvent::ToggleTOC);
                             }
                             KeyCode::KeyD if is_ctrl && is_shift => {

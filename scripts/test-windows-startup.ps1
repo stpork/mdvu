@@ -21,6 +21,22 @@ public static class MdvuStartupFrame {
  [DllImport("user32.dll", EntryPoint="GetWindowLongW")] public static extern uint GetStyle(IntPtr window, int index);
  [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr window, uint attribute, out int value, int size);
  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr window, out RECT rect);
+ [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindow callback, IntPtr data);
+ delegate bool EnumWindow(IntPtr window, IntPtr data);
+ [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+ [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
+ [DllImport("user32.dll")] public static extern bool PostMessageW(IntPtr window, uint message, IntPtr wparam, IntPtr lparam);
+ public static IntPtr FindCaptionWindow(int process) {
+  IntPtr found = IntPtr.Zero;
+  EnumWindows((window, data) => {
+   uint owner; GetWindowThreadProcessId(window, out owner);
+   if (owner == process && IsWindowVisible(window) && (GetStyle(window,-16) & 0xC00000) == 0xC00000) {
+    found = window; return false;
+   }
+   return true;
+  }, IntPtr.Zero);
+  return found;
+ }
 }
 '@
 }
@@ -41,15 +57,17 @@ try {
   $Process = Start-Process $TestExe -ArgumentList @('--theme',$Theme) -PassThru
   try {
    $Watch = [Diagnostics.Stopwatch]::StartNew()
-   do { Start-Sleep -Milliseconds 100; $Process.Refresh() }
-   while (-not $Process.HasExited -and $Process.MainWindowHandle -eq [IntPtr]::Zero -and $Watch.Elapsed.TotalSeconds -lt 15)
-   if ($Process.HasExited -or $Process.MainWindowHandle -eq [IntPtr]::Zero) { throw "No startup window: $Theme" }
+   do {
+    Start-Sleep -Milliseconds 100; $Process.Refresh()
+    $Window = [MdvuStartupFrame]::FindCaptionWindow($Process.Id)
+   } while (-not $Process.HasExited -and $Window -eq [IntPtr]::Zero -and $Watch.Elapsed.TotalSeconds -lt 15)
+   if ($Process.HasExited -or $Window -eq [IntPtr]::Zero) { throw "No startup window: $Theme" }
    Start-Sleep -Milliseconds 1200
    $Frame = [MdvuStartupFrame+TITLEBARINFO]::new()
    $Frame.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($Frame)
    $Frame.states = [uint32[]]::new(6)
-   if (-not [MdvuStartupFrame]::GetTitleBarInfo($Process.MainWindowHandle,[ref]$Frame)) { throw 'GetTitleBarInfo failed' }
-   $Style = [MdvuStartupFrame]::GetStyle($Process.MainWindowHandle,-16)
+   if (-not [MdvuStartupFrame]::GetTitleBarInfo($Window,[ref]$Frame)) { throw 'GetTitleBarInfo failed' }
+   $Style = [MdvuStartupFrame]::GetStyle($Window,-16)
    # WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX.
    if (($Style -band 0xCF0000) -ne 0xCF0000) { throw "Missing native caption styles: $Theme ($Style)" }
    foreach ($Index in @(2,3,5)) {
@@ -57,7 +75,7 @@ try {
     if (($Frame.states[$Index] -band 0x18001) -ne 0) { throw "Caption button $Index unavailable: $Theme" }
    }
    $Dark = 0
-   $DwmResult = [MdvuStartupFrame]::DwmGetWindowAttribute($Process.MainWindowHandle,20,[ref]$Dark,4)
+   $DwmResult = [MdvuStartupFrame]::DwmGetWindowAttribute($Window,20,[ref]$Dark,4)
    $ExpectedDark = switch ($Theme) {
     'light' { 0 }
     'dark' { 1 }
@@ -69,7 +87,7 @@ try {
    if ($CaptureScreenshot) {
     Add-Type -AssemblyName System.Drawing
     $Rect = [MdvuStartupFrame+RECT]::new()
-    if ([MdvuStartupFrame]::GetWindowRect($Process.MainWindowHandle,[ref]$Rect)) {
+    if ([MdvuStartupFrame]::GetWindowRect($Window,[ref]$Rect)) {
      $Image = [Drawing.Bitmap]::new($Rect.Right-$Rect.Left,$Rect.Bottom-$Rect.Top)
      $Graphics = [Drawing.Graphics]::FromImage($Image)
      try { $Graphics.CopyFromScreen($Rect.Left,$Rect.Top,0,0,$Image.Size); $Image.Save((Join-Path $Output ($Theme+'.png'))) }
@@ -79,7 +97,10 @@ try {
    $Report += @{theme=$Theme;darkCaption=$Dark;dwmResult=$DwmResult;styles=$Style;buttonStates=$Frame.states;passed=$true}
   } finally {
    $Process.Refresh()
-   if (-not $Process.HasExited) { [void]$Process.CloseMainWindow(); if (-not $Process.WaitForExit(5000)) { $Process.Kill() } }
+   if (-not $Process.HasExited) {
+    [void][MdvuStartupFrame]::PostMessageW($Window,0x10,[IntPtr]::Zero,[IntPtr]::Zero)
+    if (-not $Process.WaitForExit(5000)) { $Process.Kill() }
+   }
    $Process.Dispose()
   }
  }

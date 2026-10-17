@@ -222,7 +222,7 @@ pub unsafe fn create_main_menu(
 
     // --- View Menu ---
     let v_reload = to_wide_null("&Reload\tCtrl+R");
-    let v_toc = to_wide_null("Table of &Contents\tCtrl+Shift+S");
+    let v_toc = to_wide_null("Table of &Contents\tCtrl+B");
     let v_nav = to_wide_null("File &Navigator\tCtrl+Shift+D");
     let v_fw = to_wide_null("Full &Width\tCtrl+Shift+W");
     let v_dialect = to_wide_null("&Dialect");

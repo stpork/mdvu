@@ -25,14 +25,9 @@ if (-not $ExeSource -or -not (Test-Path $ExeSource)) { throw 'Cargo did not retu
 
 $DistDir = "dist/windows"
 if (Test-Path $DistDir) {
-    # Retain old runtime profiles outside the distributable directory. They are
-    # generated data, not release assets; current builds use LocalAppData.
-    foreach ($Profile in @(Get-ChildItem -Path $DistDir -Directory -Filter '*.WebView2')) {
-        $Retired = Join-Path 'target/legacy-webview2' ([Guid]::NewGuid().ToString())
-        New-Item -ItemType Directory -Force $Retired | Out-Null
-        Move-Item $Profile.FullName $Retired
-        Write-Host "  [OK] Retained legacy browser profile in $Retired"
-    }
+    # Old versions created disposable browser data beside the EXE. A release
+    # directory contains deliverables only; current profiles use LocalAppData.
+    Get-ChildItem -Path $DistDir -Directory -Filter '*.WebView2' | Remove-Item -Recurse -Force
     Get-ChildItem -Path $DistDir -File | Remove-Item -Force
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null

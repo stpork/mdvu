@@ -115,7 +115,7 @@ if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)recor
 }));
 const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
 if(entry.isIntersecting)mountDiagram(entry.target);else unmountDiagram(entry.target);
-}),{rootMargin:'1200px 0px'});
+}),{rootMargin:'400px 0px'});
 window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
@@ -127,7 +127,7 @@ const ratio=box&&Number(box[2])>0?String(Number(box[1])/Number(box[2])):'auto';
 diagramSVGs.set(node,{svg,ratio});host.style.aspectRatio=ratio;
 const width=header.match(/max-width:\s*([\d.]+)px/i)||header.match(/\bwidth=["']([\d.]+)(?:px)?["']/);
 host.style.maxWidth=width?width[1]+'px':'';host.style.marginInline='auto';
-if(!diagramVisibilityObserver||isElementInViewport(node))mountDiagram(node);
+if(!diagramVisibilityObserver)mountDiagram(node);
 diagramSizeObserver?.observe(host);diagramVisibilityObserver?.observe(node);
 };
 const diagramQueue=[];let isProcessingQueue=false,lastReadingInput=-Infinity;
@@ -194,7 +194,7 @@ node.querySelector('small').textContent=String(e.message||e);
 delete node.__mdvuRendering;
 }
 };
-const isElementInViewport=(el,margin=1200)=>{
+const isElementInViewport=(el,margin=400)=>{
 const rect=el.getBoundingClientRect(),vh=window.innerHeight||document.documentElement.clientHeight||800;
 return rect.top<=vh+margin&&rect.bottom>=-margin;
 };
@@ -233,7 +233,7 @@ diagramObserver.unobserve(entry.target);
 enqueueDiagram(entry.target);
 }
 });
-},{rootMargin:'1200px 0px'});
+},{rootMargin:'400px 0px'});
 return diagramObserver;
 };
 const isRendererReady=r=>!!nativeDiagrams()||(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
@@ -252,7 +252,7 @@ return;
 }
 const initialBatch=[];
 pendingNodes.forEach(node=>{
-if(isElementInViewport(node,1200)){
+if(isElementInViewport(node,400)){
 initialBatch.push(node);
 }else{
 observer.observe(node);
@@ -399,9 +399,9 @@ panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.cla
 window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;readingAnchor=null;readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
-for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++},{passive:true});
+for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;readingAnchor=null},{passive:true});
 window.addEventListener('keydown',e=>{
-readingEdgeGeneration++;
+readingEdgeGeneration++;readingAnchor=null;
 if(e.key==='Escape')document.getElementById('mdvu-toc-panel')?.classList.remove('visible');
 if(e.defaultPrevented||e.shiftKey||e.altKey||e.target?.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])'))return;
 const end=e.key==='End'||(e.metaKey&&e.key==='ArrowDown'),home=e.key==='Home'||(e.metaKey&&e.key==='ArrowUp');

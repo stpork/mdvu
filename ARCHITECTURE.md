@@ -100,10 +100,10 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
 
 The Windows frontend is a lightweight standalone binary leveraging native Win32 controls and the Evergreen WebView2 runtime:
 
-* **WebView2**: Uses the installed Microsoft Edge WebView2 runtime and reports a missing runtime with a download link.
+* **WebView2**: Uses the installed Microsoft Edge WebView2 runtime and reports a missing runtime with a download link. Its profile lives in `%LOCALAPPDATA%\MDVu\WebView2` (or the explicit `WEBVIEW2_USER_DATA_FOLDER` override), outside the release directory. Packaging removes obsolete adjacent profiles and archives only the four release files.
 * **Single Executable**: Produces `mdvu.exe` with embedded offline diagram engines; packaging records the built executable's size and checksum.
 * **Native Win32 Chrome**:
-  * **DWM Dark Mode**: Activates Windows 11 immersive dark mode window frames via `DwmSetWindowAttribute(hwnd, 20)`.
+  * **Window themes**: Tao owns native caption theming from window creation through theme changes. `system` follows Windows; explicit light/dark preferences use the same window API. No competing DWM override is applied.
   * **Win32 Menus & Status Bar**: Native top menu bar (`File`, `View`) and bottom status bar (`CommonControlsEx`).
 * **Live File Watcher**:
   * Powered by `notify`, monitors the document's parent directory with atomic save tracking (surviving file replacements and renames by editors like VS Code, Notepad++, and Vim).

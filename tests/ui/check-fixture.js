@@ -74,6 +74,14 @@
     const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
     const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
     if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
+    const firstDiagram=article.querySelector('figure.diagram-rendered');
+    if(firstDiagram&&window.__mdvuTimingMode!=='timer'){
+      firstDiagram.scrollIntoView({block:'center',behavior:'instant'});
+      const surface=()=>firstDiagram.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
+      for(let n=0;n<60&&!surface();n++)await nextFrame();
+      const picture=surface();
+      checks.visibleDiagram=!!picture&&picture.getBoundingClientRect().width>0&&picture.getBoundingClientRect().height>0;
+    }
     const headings = [...article.querySelectorAll('h1,h2,h3,h4,h5,h6')];
     const tocTree=document.getElementById('mdvu-toc-tree');
     if(tocTree){
@@ -121,6 +129,14 @@
       document.getElementById('btn-toc').click(); await pause(150);
       checks.tocToggle = toc.classList.contains('hidden') !== hidden;
       document.getElementById('btn-toc').click(); await pause(150);
+      const contentsKey=new KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true});
+      window.dispatchEvent(contentsKey);await pause(150);
+      checks.contentsShortcut=contentsKey.defaultPrevented&&toc.classList.contains('hidden')!==hidden;
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true}));await pause(150);
+      const windowsKey=new KeyboardEvent('keydown',{key:'b',metaKey:true,bubbles:true,cancelable:true});
+      const saveAs=new KeyboardEvent('keydown',{key:'S',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true});
+      window.dispatchEvent(windowsKey);window.dispatchEvent(saveAs);await pause(150);
+      checks.reservedShortcuts=!windowsKey.defaultPrevented&&!saveAs.defaultPrevented&&toc.classList.contains('hidden')===hidden;
       const full = document.documentElement.classList.contains('full-width');
       document.getElementById('btn-full-width').click(); await pause(150);
       checks.fullWidth = document.documentElement.classList.contains('full-width') !== full;

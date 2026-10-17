@@ -501,7 +501,7 @@ pub fn build_gui_html(
       <button id="btn-forward" class="toolbar-btn" title="Go forward (Alt+Right / Ctrl+])" {fwd_disabled}>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </button>
-      <button id="btn-toc" class="toolbar-btn {toc_active}" title="Toggle Table of Contents (Ctrl+Shift+S / Ctrl+B)">
+      <button id="btn-toc" class="toolbar-btn {toc_active}" title="Toggle Table of Contents (Ctrl+B)">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="13" y1="8" x2="18" y2="8"></line><line x1="13" y1="12" x2="18" y2="12"></line><line x1="13" y1="16" x2="18" y2="16"></line></svg>
       </button>
     </div>
@@ -548,7 +548,7 @@ pub fn build_gui_html(
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
           <span>Table of Contents</span>
         </span>
-        <button id="btn-toc-close" class="sidebar-close" title="Hide Table of Contents (Ctrl+Shift+S)">×</button>
+        <button id="btn-toc-close" class="sidebar-close" title="Hide Table of Contents (Ctrl+B)">×</button>
       </div>
       <nav id="mdvu-toc-tree" class="sidebar-content"></nav>
       <div id="mdvu-toc-resizer" class="sidebar-resizer sidebar-resizer-left"></div>
@@ -988,7 +988,7 @@ pub fn build_gui_html(
   // Ctrl + Mouse Wheel smooth zoom & Mouse Side Buttons (Back/Forward)
   let wheelZoomDelta = 0, wheelZoomFrame = 0;
   window.addEventListener('wheel', (e) => {{
-    if (e.ctrlKey || e.metaKey) {{
+    if (e.ctrlKey) {{
       wheelZoomDelta += e.deltaY;
       if (!wheelZoomFrame) wheelZoomFrame = requestAnimationFrame(() => {{
         if (wheelZoomDelta) window.ipc?.postMessage(wheelZoomDelta < 0 ? 'zoom_in' : 'zoom_out');
@@ -1088,7 +1088,7 @@ pub fn build_gui_html(
 
   // Keyboard shortcut listener in webview
   window.addEventListener('keydown', (e) => {{
-    const ctrl = e.ctrlKey || e.metaKey;
+    const ctrl = e.ctrlKey;
     if (e.key === 'Escape' && aboutBackdrop?.classList.contains('visible')) {{
       e.preventDefault();
       window.__mdvuHideAbout();
@@ -1111,9 +1111,6 @@ pub fn build_gui_html(
     }} else if (ctrl && (e.key === 'r' || e.key === 'R')) {{
       e.preventDefault();
       window.ipc?.postMessage('reload');
-    }} else if (ctrl && e.shiftKey && (e.key === 's' || e.key === 'S')) {{
-      e.preventDefault();
-      window.ipc?.postMessage('toggle_toc');
     }} else if (ctrl && !e.shiftKey && (e.key === 'b' || e.key === 'B')) {{
       e.preventDefault();
       window.ipc?.postMessage('toggle_toc');
