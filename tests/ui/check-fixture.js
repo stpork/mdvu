@@ -2,6 +2,7 @@
 (async () => {
   if (window.__mdvuAuditRunning) return;
   window.__mdvuAuditRunning = true;
+  const fullControls=window.__mdvuFullControlAudit!==false;
   const start = performance.now(), checks = {}, pause = ms => new Promise(r => setTimeout(r, ms));
   const checkpoint=stage=>window.webkit?.messageHandlers?.uiControl?.postMessage({checkpoint:stage});
   window.__mdvuAuditCheckpoint=checkpoint;
@@ -54,7 +55,7 @@
     };
     // CI's timer mode checks document/control correctness. The default mode
     // additionally stresses native zoom and scrolling throughout cold rendering.
-    const interactions=window.__mdvuTimingMode==='timer'?Promise.resolve():exercise();
+    const interactions=window.__mdvuTimingMode==='timer'||!fullControls?Promise.resolve():exercise();
     checkpoint('render-all');
     let timer;
     try {
@@ -76,7 +77,8 @@
     const homeMs=await edge('Home');
     checks.home=scroller.scrollTop<3;
     const scrollFrames=[],warmPasses=[],passes=window.__mdvuWarmPasses||1;let previous=performance.now();
-    for(let pass=0;pass<passes;pass++){
+    const scrollable=scroller.scrollHeight>scroller.clientHeight+3;
+    for(let pass=0;scrollable&&pass<passes;pass++){
       if(pass){scroller.scrollTo({top:0,behavior:'instant'});await nextFrame();await nextFrame();previous=performance.now()}
       const gaps=pass?[]:scrollFrames;
       for(let n=0;n<30;n++){scroller.scrollBy({top:120,behavior:'instant'});await nextFrame();const now=performance.now();gaps.push(now-previous);previous=now}
@@ -84,8 +86,8 @@
     }
     scroller.scrollTo({top:0,behavior:'instant'});
     const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
-    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameSamples:frames.length,renderFrameP95Ms:frames.length>=20?frames[Math.floor(frames.length*.95)]:null,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)],scrollWarmPasses:passes>1?warmPasses:undefined};
-    if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
+    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:fullControls?Math.max(...coldScroll,0):null,coldZoomMaxMs:fullControls?Math.max(...coldZoom,0):null,homeMs,endMs,renderFrameSamples:frames.length,renderFrameP95Ms:frames.length>=20?frames[Math.floor(frames.length*.95)]:null,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:scrollable?[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]:null,scrollWarmPasses:passes>1?warmPasses:undefined};
+    if(fullControls&&window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const firstDiagram=article.querySelector('figure.diagram-rendered');
     if(firstDiagram&&window.__mdvuTimingMode!=='timer'){
       firstDiagram.scrollIntoView({block:'center',behavior:'instant'});
@@ -125,7 +127,7 @@
       window.__mdvuFind.clear();
       checks.findClear = roots().every(root=>!root.querySelector('.find-match'));
     }
-    if (document.getElementById('btn-zoom-in')) {
+    if (fullControls && document.getElementById('btn-zoom-in')) {
       const zoom = document.getElementById('mdvu-zoom-val');
       let zoomStart=performance.now();
       document.getElementById('btn-zoom-in').click();
@@ -161,7 +163,7 @@
       document.getElementById('btn-full-width').click(); await pause(150);
     }
     checkpoint('controls');
-    await window.__mdvuCheckControls({checks,metrics:performanceMetrics,article,nextFrame,pause,fullscreen:window.__mdvuTimingMode!=='timer'});
+    if(fullControls)await window.__mdvuCheckControls({checks,metrics:performanceMetrics,article,nextFrame,pause,fullscreen:window.__mdvuTimingMode!=='timer'});
     checkpoint('controls-finished');
     await pause(400);
     // Keep the window at its initial reading position for the captured screenshot.
@@ -173,7 +175,7 @@
     checks.diagrams=[...article.querySelectorAll('figure.diagram')].every(n=>n.classList.contains('diagram-error')||window.__mdvuHasDiagramSVG?.(n));
     if(window.__mdvuAuditIdleProbe)await pause(5500);
     const timerOnly=window.__mdvuTimingMode==='timer';
-    const result = {checks, timingMode:timerOnly?'timer-correctness-only':'animation-frame', idleProbe:!!window.__mdvuAuditIdleProbe, performance:timerOnly?null:performanceMetrics, diagnosticTimers:timerOnly?performanceMetrics:undefined, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
+    const result = {checks, controlScope:fullControls?'full':'render', scrollable, timingMode:timerOnly?'timer-correctness-only':'animation-frame', idleProbe:!!window.__mdvuAuditIdleProbe, performance:timerOnly?null:performanceMetrics, diagnosticTimers:timerOnly?performanceMetrics:undefined, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
       diagrams:diagramCount(),
       diagramErrors,
       mathErrors:article.querySelectorAll('.katex-error').length,

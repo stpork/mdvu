@@ -30,15 +30,15 @@ def load(path):
         if ui.get('timingMode') != 'animation-frame':
             raise ValueError('Only native animation-frame results establish UI performance')
         perf = ui['performance']
-        zoom = [c['ms'] for c in perf['controls'] if c['action'].startswith('zoom')]
+        zoom = [c['ms'] for c in perf.get('controls', []) if c['action'].startswith('zoom')]
         memory_key = 'physicalFootprintBytes' if platform == 'macOS' else 'privateBytes'
         memory = [s[memory_key] / 2**20 for s in row['samples'] if s.get(memory_key) is not None]
         fixtures[name] = {
             'documentReadyMs': row.get('phases', {}).get('webview.firstContent') if platform == 'macOS' else row.get('documentReady', {}).get('documentReadyMs'),
-            **{key: perf[key] for key in ['renderFrameMaxMs', 'coldScrollMaxMs', 'coldZoomMaxMs', 'zoomRangeMaxMs', 'paneMaxMs', 'scrollFrameP95Ms', 'homeMs', 'endMs']},
-            'zoomMedianMs': statistics.median(zoom),
-            'zoomP95Ms': sorted(zoom)[int(len(zoom) * .95)],
-            'fullscreenMaxMs': max((c['ms'] for c in perf['controls'] if c['action'] == 'fullscreen'), default=None),
+            **{key: perf.get(key) for key in ['renderFrameMaxMs', 'coldScrollMaxMs', 'coldZoomMaxMs', 'zoomRangeMaxMs', 'paneMaxMs', 'scrollFrameP95Ms', 'homeMs', 'endMs']},
+            'zoomMedianMs': statistics.median(zoom) if zoom else None,
+            'zoomP95Ms': sorted(zoom)[int(len(zoom) * .95)] if zoom else None,
+            'fullscreenMaxMs': max((c['ms'] for c in perf.get('controls', []) if c['action'] == 'fullscreen'), default=None),
             'peakMiB': max(memory) if memory else None,
             'tailMedianMiB': statistics.median(memory[-10:]) if memory else None,
         }
@@ -62,7 +62,8 @@ with args.output.open('w', encoding='utf-8', newline='') as stream:
             writer.writerow([platform, fixture, metric, old, new, change])
 print(f'{platform}: {len(before)} matched fixtures; {args.output}')
 for metric in next(iter(before.values())):
-    old = [row[metric] for row in before.values() if row[metric] is not None]
-    new = [row[metric] for row in after.values() if row[metric] is not None]
+    paired = [(before[name][metric], after[name][metric]) for name in before if before[name][metric] is not None and after[name][metric] is not None]
+    old = [pair[0] for pair in paired]
+    new = [pair[1] for pair in paired]
     if old and new:
         print(f'{metric}: maximum {max(old):.1f} -> {max(new):.1f}; median {statistics.median(old):.1f} -> {statistics.median(new):.1f}')

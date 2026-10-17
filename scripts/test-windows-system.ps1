@@ -8,6 +8,7 @@ param(
     [switch]$SkipUI,
     [switch]$TimerOnly,
     [ValidateRange(1,20)][int]$WarmPasses = 1,
+    [ValidateSet('representative','all','none')][string]$ControlScope = 'representative',
     [int]$SampleSeconds = 12,
     [int]$BenchmarkRuns = 10,
     [string]$Output = "test-results/windows"
@@ -126,6 +127,7 @@ public static class MdvuCapture {
         $UISource = "window.__mdvuWarmPasses=$WarmPasses;" + [Environment]::NewLine + $UISource
         if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
+        $ControlFixtures = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/control-fixtures.json').Path) | ConvertFrom-Json
         foreach ($Fixture in $Fixtures) {
             $Profile = Join-Path $Temp ('webview-' + [Guid]::NewGuid())
             $OldMetrics = $env:MDVU_METRICS_FILE
@@ -141,7 +143,8 @@ public static class MdvuCapture {
             if (-not $ExpectedJSON.StartsWith('[')) { throw 'Expected diagram errors must serialize as a JSON array' }
             $CheckScript = Join-Path $Profile 'check.js'
             $IdleProbe = if ($Fixture.Name -eq 'test-heavy.md') { 'true' } else { 'false' }
-            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuAuditIdleProbe=' + $IdleProbe + ';window.__mdvuExpectedDiagramErrors=' + $ExpectedJSON + ';' + [Environment]::NewLine + $UISource))
+            $FullControls = if ($ControlScope -eq 'all' -or ($ControlScope -eq 'representative' -and $FixtureKey -in $ControlFixtures)) { 'true' } else { 'false' }
+            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuFullControlAudit=' + $FullControls + ';window.__mdvuAuditIdleProbe=' + $IdleProbe + ';window.__mdvuExpectedDiagramErrors=' + $ExpectedJSON + ';' + [Environment]::NewLine + $UISource))
             $env:MDVU_UI_SCRIPT = $CheckScript
             $UIResult = Join-Path $Output ($Fixture.BaseName+'-ui.json')
             Remove-Item $UIResult -ErrorAction SilentlyContinue

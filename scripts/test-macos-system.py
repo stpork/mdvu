@@ -9,6 +9,8 @@ parser.add_argument('--fixture', help='Optional fixture path relative to tests/f
 parser.add_argument('--fail-fast', action='store_true', help='Run the largest fixture first and stop on failure')
 parser.add_argument('--timer-only', action='store_true', help='CI correctness checks without animation-frame performance claims')
 parser.add_argument('--warm-passes', type=int, default=1, choices=range(1,21), help='Repeat scrolling to separate first-use layout from steady warm frames')
+parser.add_argument('--controls', choices=['representative','all','none'], default='representative', help='Full UI matrix on representative documents, every fixture, or none')
+parser.add_argument('--resume', action='store_true', help='Preserve passed fixtures from the same executable and Rust library')
 args = parser.parse_args()
 os.chdir(root)
 output = pathlib.Path(args.output).resolve(); output.mkdir(parents=True, exist_ok=True)
@@ -34,17 +36,28 @@ def processes():
         result[int(pid)] = {'parent':int(parent),'rssBytes':int(rss)*1024,'cpuMs':seconds*1000,'command':command}
     return result
 expected_errors=json.loads((root/'tests/ui/expected-diagram-errors.json').read_text())
+control_fixtures=json.loads((root/'tests/ui/control-fixtures.json').read_text())
 ui_source=f'window.__mdvuWarmPasses={args.warm_passes};\n'+(root/'tests/ui/check-controls.js').read_text()+'\n'+(root/'tests/ui/check-fixture.js').read_text()
 if args.timer_only:
     ui_source="window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);\n"+ui_source
 results = {'binary':str(binary),'binarySha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'macOS':platform.mac_ver()[0],'machine':platform.machine(),'warmPasses':args.warm_passes,'fixtures':[], 'memoryNote':'App RSS is sampled directly. WebKit RSS includes only processes newly created during this isolated fixture run; XPC services may have parent PID 1. Shared pages can be counted more than once.'}
+core = binary.parent.parent/'Frameworks/libmdvu_core.dylib'
+results['coreSha256'] = hashlib.sha256(core.read_bytes()).hexdigest() if core.exists() else None
+results['runtimeManifest'] = json.loads((root/'scripts/runtime-assets/manifest.json').read_text())
+if args.resume and (output/'results.json').exists():
+    previous = json.loads((output/'results.json').read_text())
+    if any(previous.get(key) != results[key] for key in ('binarySha256','coreSha256','runtimeManifest','warmPasses')):
+        raise SystemExit('Cannot resume: build or benchmark settings changed')
+    results['fixtures'] = [item for item in previous['fixtures'] if item['passed'] and item.get('fixtureSha256') == hashlib.sha256((root/'tests/fixtures'/item['fixture']).read_bytes()).hexdigest()]
 for fixture in fixtures:
     name = fixture.relative_to(root/'tests/fixtures').as_posix()
+    if any(item['fixture'] == name for item in results['fixtures']): continue
     stem = name[:-3].replace('/','__')
     image, diagnostic = output/(stem+'.png'), output/(stem+'-ui.json')
     for path in [image,diagnostic]: path.unlink(missing_ok=True)
     check_script=output/(stem+'-check.js')
-    check_script.write_text('window.__mdvuAuditIdleProbe='+json.dumps(name=='test-heavy.md')+';window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
+    full_controls = args.controls == 'all' or args.controls == 'representative' and name in control_fixtures
+    check_script.write_text('window.__mdvuFullControlAudit='+json.dumps(full_controls)+';window.__mdvuAuditIdleProbe='+json.dumps(name=='test-heavy.md')+';window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
     before = set(processes()); start = time.perf_counter()
     cache = output/(stem+'-cache')
     if cache.exists(): shutil.rmtree(cache)
@@ -66,7 +79,7 @@ for fixture in fixtures:
     ui = json.loads(diagnostic.read_text()) if diagnostic.exists() else None
     profile = (output/(stem+'-stderr.log')).read_text()
     phases = {name:float(value) for name,value in re.findall(r'mdvu.profile\s+(\S+)\s+[\d.]+ ms\s+total\s+([\d.]+) ms',profile)}
-    result = {'fixture':name,'bytes':fixture.stat().st_size,'exit':process.returncode,'elapsedMs':(time.perf_counter()-start)*1000,'phases':phases,'ui':ui,'screenshot':str(image) if image.exists() else None,'samples':samples,'passed':process.returncode==0 and image.exists() and bool(ui and ui.get('passed'))}
+    result = {'fixture':name,'fixtureSha256':hashlib.sha256(fixture.read_bytes()).hexdigest(),'bytes':fixture.stat().st_size,'exit':process.returncode,'elapsedMs':(time.perf_counter()-start)*1000,'phases':phases,'ui':ui,'screenshot':str(image) if image.exists() else None,'samples':samples,'passed':process.returncode==0 and image.exists() and bool(ui and ui.get('passed'))}
     results['fixtures'].append(result)
     (output/'results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
     if samples:
