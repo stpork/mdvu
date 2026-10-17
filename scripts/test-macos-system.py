@@ -8,6 +8,7 @@ parser.add_argument('--output', default='test-results/macos')
 parser.add_argument('--fixture', help='Optional fixture path relative to tests/fixtures')
 parser.add_argument('--fail-fast', action='store_true', help='Run the largest fixture first and stop on failure')
 parser.add_argument('--timer-only', action='store_true', help='CI correctness checks without animation-frame performance claims')
+parser.add_argument('--warm-passes', type=int, default=1, choices=range(1,21), help='Repeat scrolling to separate first-use layout from steady warm frames')
 args = parser.parse_args()
 os.chdir(root)
 output = pathlib.Path(args.output).resolve(); output.mkdir(parents=True, exist_ok=True)
@@ -33,10 +34,10 @@ def processes():
         result[int(pid)] = {'parent':int(parent),'rssBytes':int(rss)*1024,'cpuMs':seconds*1000,'command':command}
     return result
 expected_errors=json.loads((root/'tests/ui/expected-diagram-errors.json').read_text())
-ui_source=(root/'tests/ui/check-controls.js').read_text()+'\n'+(root/'tests/ui/check-fixture.js').read_text()
+ui_source=f'window.__mdvuWarmPasses={args.warm_passes};\n'+(root/'tests/ui/check-controls.js').read_text()+'\n'+(root/'tests/ui/check-fixture.js').read_text()
 if args.timer_only:
     ui_source="window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);\n"+ui_source
-results = {'binary':str(binary),'binarySha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'macOS':platform.mac_ver()[0],'machine':platform.machine(),'fixtures':[], 'memoryNote':'App RSS is sampled directly. WebKit RSS includes only processes newly created during this isolated fixture run; XPC services may have parent PID 1. Shared pages can be counted more than once.'}
+results = {'binary':str(binary),'binarySha256':hashlib.sha256(binary.read_bytes()).hexdigest(),'macOS':platform.mac_ver()[0],'machine':platform.machine(),'warmPasses':args.warm_passes,'fixtures':[], 'memoryNote':'App RSS is sampled directly. WebKit RSS includes only processes newly created during this isolated fixture run; XPC services may have parent PID 1. Shared pages can be counted more than once.'}
 for fixture in fixtures:
     name = fixture.relative_to(root/'tests/fixtures').as_posix()
     stem = name[:-3].replace('/','__')

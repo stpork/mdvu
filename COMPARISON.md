@@ -49,4 +49,6 @@ cargo test --workspace
 
 The default system-test mode uses real animation frames and tests native fullscreen after the primary controls. CI uses an explicit timer mode to verify content and controls on hosted runners; its synthetic frames are not a performance measurement and it skips desktop fullscreen transitions. Performance ceilings are regression limits, not a guarantee of immediate response or a fixed frame rate.
 
+The original `scrollFrameP95Ms` records the first traversal after diagram generation. Fonts and skipped text can still require their first layout during that pass. Use `--warm-passes 5` on macOS or `-WarmPasses 5` on Windows to retain five separate frame arrays in `scrollWarmPasses`: the first-pass metric stays unchanged, and subsequent passes measure already visited content. Compare the same mode and fixture on both revisions; keep first-use spikes visible rather than averaging them into the warm passes.
+
 Distribution sizes must be reported for a named commit and architecture. Measure the complete `.app`, not just its launcher: macOS ships the Swift executable, Rust library and resources. A universal bundle contains both architectures. Windows publishes a portable executable/archive and MSI; its writable WebView2 profile belongs in `%LOCALAPPDATA%`, outside `dist`.

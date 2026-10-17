@@ -7,6 +7,7 @@ param(
     [switch]$Install,
     [switch]$SkipUI,
     [switch]$TimerOnly,
+    [ValidateRange(1,20)][int]$WarmPasses = 1,
     [int]$SampleSeconds = 12,
     [int]$BenchmarkRuns = 10,
     [string]$Output = "test-results/windows"
@@ -17,7 +18,7 @@ $Output = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPat
 New-Item -ItemType Directory -Force $Output | Out-Null
 $Fixtures = @(Get-ChildItem 'tests/fixtures' -Recurse -File -Filter $FixtureFilter | Sort-Object FullName)
 $Failures = [Collections.Generic.List[string]]::new()
-$Results = [ordered]@{started=(Get-Date).ToString('o'); computer=$env:COMPUTERNAME; user=$env:USERNAME; os=(Get-CimInstance Win32_OperatingSystem).Caption; cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name); logicalCPUs=[Environment]::ProcessorCount; session=(Get-Process -Id $PID).SessionId; tests=@(); benchmarks=@(); metrics=@()}
+$Results = [ordered]@{started=(Get-Date).ToString('o'); computer=$env:COMPUTERNAME; user=$env:USERNAME; os=(Get-CimInstance Win32_OperatingSystem).Caption; cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name); logicalCPUs=[Environment]::ProcessorCount; session=(Get-Process -Id $PID).SessionId; warmPasses=$WarmPasses; tests=@(); benchmarks=@(); metrics=@()}
 $OldBrowserArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
 # Keep the RDP client being covered on the Mac from throttling native UI measurements.
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = ($OldBrowserArguments + ' --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling --disable-features=CalculateNativeWinOcclusion').Trim()
@@ -122,6 +123,7 @@ public static class MdvuCapture {
 '@
         }
         $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-controls.js').Path) + [Environment]::NewLine + [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
+        $UISource = "window.__mdvuWarmPasses=$WarmPasses;" + [Environment]::NewLine + $UISource
         if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
         foreach ($Fixture in $Fixtures) {

@@ -75,11 +75,16 @@
     checks.end=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
     const homeMs=await edge('Home');
     checks.home=scroller.scrollTop<3;
-    const scrollFrames=[];let previous=performance.now();
-    for(let n=0;n<30;n++){scroller.scrollBy({top:120,behavior:'instant'});await new Promise(r=>requestAnimationFrame(r));const now=performance.now();scrollFrames.push(now-previous);previous=now}
+    const scrollFrames=[],warmPasses=[],passes=window.__mdvuWarmPasses||1;let previous=performance.now();
+    for(let pass=0;pass<passes;pass++){
+      if(pass){scroller.scrollTo({top:0,behavior:'instant'});await nextFrame();await nextFrame();previous=performance.now()}
+      const gaps=pass?[]:scrollFrames;
+      for(let n=0;n<30;n++){scroller.scrollBy({top:120,behavior:'instant'});await nextFrame();const now=performance.now();gaps.push(now-previous);previous=now}
+      if(passes>1)warmPasses.push(gaps);
+    }
     scroller.scrollTo({top:0,behavior:'instant'});
     const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
-    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameSamples:frames.length,renderFrameP95Ms:frames.length>=20?frames[Math.floor(frames.length*.95)]:null,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
+    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameSamples:frames.length,renderFrameP95Ms:frames.length>=20?frames[Math.floor(frames.length*.95)]:null,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)],scrollWarmPasses:passes>1?warmPasses:undefined};
     if(window.__mdvuTimingMode!=='timer')checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const firstDiagram=article.querySelector('figure.diagram-rendered');
     if(firstDiagram&&window.__mdvuTimingMode!=='timer'){
