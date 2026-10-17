@@ -143,10 +143,16 @@ if(!record||!host?.shadowRoot.firstChild||record.findActive)return;
 // to lay itself out. Its lightweight placeholder keeps the scroll position.
 host.style.aspectRatio=record.ratio||'auto';host.shadowRoot.replaceChildren();
 };
-const diagramSizeObserver=typeof ResizeObserver==='undefined'?null:new ResizeObserver(entries=>entries.forEach(entry=>{
+const layoutObserver=typeof ResizeObserver==='undefined'?null:new ResizeObserver(entries=>{
+entries.forEach(entry=>{
 const record=diagramSVGs.get(entry.target.parentElement);
 if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)record.ratio=String(entry.contentRect.width/entry.contentRect.height);
-}));
+});
+const anchor=readingAnchor;
+if(anchor?.restore&&entries.some(entry=>entry.target===anchor.scroller)){
+layoutObserver.unobserve(anchor.scroller);anchor.restore();
+}
+});
 // Read every bound before changing SVG DOM; interleaving them forces layout per diagram.
 const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.filter(entry=>entry.isIntersecting&&!hasDiagramDOM(entry.target)&&isElementInViewport(entry.target)).forEach(entry=>mountDiagram(entry.target)),{rootMargin:diagramViewportMargin+'px 0px'});
 // Separate enter/leave bounds prevent repeated SVG parsing when reflow moves a
@@ -164,7 +170,7 @@ diagramSVGs.set(node,{svg,ratio});host.style.aspectRatio=ratio;
 const width=header.match(/max-width:\s*([\d.]+)px/i)||header.match(/\bwidth=["']([\d.]+)(?:px)?["']/);
 host.style.maxWidth=width?width[1]+'px':'';host.style.marginInline='auto';
 if(!diagramVisibilityObserver)mountDiagram(node);
-diagramSizeObserver?.observe(host);diagramVisibilityObserver?.observe(node);diagramRetentionObserver?.observe(node);
+layoutObserver?.observe(host);diagramVisibilityObserver?.observe(node);diagramRetentionObserver?.observe(node);
 };
 const diagramQueue=[];let isProcessingQueue=false,lastReadingInput=-Infinity;
 ['wheel','touchmove','keydown'].forEach(type=>window.addEventListener(type,event=>{if(event.isTrusted)lastReadingInput=performance.now()},{passive:true}));
@@ -309,7 +315,7 @@ node.textContent=tex;
 };
 window.__mdvuRenderMath=renderMath;
 let readingAnchor=null,readingAnchorSeq=0;
-const cancelReadingAnchor=()=>{if(readingAnchor){const {scroller,overflowAnchor,overflowAnchorPriority}=readingAnchor;scroller.style.setProperty('overflow-anchor',overflowAnchor,overflowAnchorPriority)}readingAnchor=null};
+const cancelReadingAnchor=()=>{if(readingAnchor){const {scroller,overflowAnchor,overflowAnchorPriority}=readingAnchor;layoutObserver?.unobserve(scroller);scroller.style.setProperty('overflow-anchor',overflowAnchor,overflowAnchorPriority)}readingAnchor=null};
 window.__mdvuCaptureReadingAnchor=(target=null,anchorOffset)=>{
 cancelReadingAnchor();
 const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
@@ -322,11 +328,15 @@ readingAnchor={token,scroller,el,overflowAnchor,overflowAnchorPriority,viewportW
 return token;
 };
 window.__mdvuRestoreReadingAnchor=(token,viewportScale=null)=>{
+if(readingAnchor?.token!==token)return;
 let frames=0,start,stable=0;
+// Re-observing requests a post-layout callback even when the box size is unchanged.
+// Measuring in rAF forces layout before content-visibility has caught up with zoom.
+const schedule=()=>{if(readingAnchor?.token!==token)return;if(layoutObserver&&document.visibilityState==='visible')layoutObserver.observe(readingAnchor.scroller);else restore()};
 const restore=()=>{
 if(readingAnchor?.token!==token)return;
 const {scroller,el,offset,ratio,viewportWidth}=readingAnchor;
-if(viewportScale!==null&&Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){requestAnimationFrame(restore);return}
+if(viewportScale!==null&&Math.abs(innerWidth-viewportWidth*viewportScale)>2&&frames++<4){requestAnimationFrame(schedule);return}
 start??=performance.now();
 const rect=scroller===document.scrollingElement?{top:0,height:innerHeight}:scroller.getBoundingClientRect();
 const delta=el?.isConnected?el.getBoundingClientRect().top-rect.top-offset*rect.height:ratio*Math.max(1,scroller.scrollHeight-scroller.clientHeight)-scroller.scrollTop;
@@ -334,10 +344,10 @@ if(Math.abs(delta)>.5){scroller.scrollBy({top:delta,behavior:'instant'});stable=
 // Lazy layout can move a block without resizing it or the article. Keep checking
 // through the deferred layout frames, with one bounded task cancelled by input.
 const elapsed=performance.now()-start;
-if(elapsed<300||stable<2&&elapsed<1000)requestAnimationFrame(restore);
+if(elapsed<300||stable<2&&elapsed<1000)requestAnimationFrame(schedule);
 else{cancelReadingAnchor();window.__mdvuReadingAnchorSettled=token}
 };
-requestAnimationFrame(restore);
+readingAnchor.restore=restore;requestAnimationFrame(schedule);
 };
 window.__mdvuPreserveReadingAnchor=mutate=>{const token=window.__mdvuCaptureReadingAnchor();mutate();window.__mdvuRestoreReadingAnchor(token)};
 const scrollToReadingTarget=(target,offset)=>{revealCodeChunk(target);const token=window.__mdvuCaptureReadingAnchor(target,offset);target.scrollIntoView({block:offset===0?'start':'center',behavior:'instant'});window.__mdvuRestoreReadingAnchor(token)};
@@ -483,7 +493,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;codeVisibilityObserver?.disconnect();codeVisibilityObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams()?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;cancelReadingAnchor();readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;codeVisibilityObserver?.disconnect();codeVisibilityObserver=null;diagramObserver?.disconnect();diagramObserver=null;layoutObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramRetentionObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
 for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++;cancelReadingAnchor()},{passive:true});

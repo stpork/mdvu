@@ -176,6 +176,47 @@ extension SharedRegressionTests {
 }
 
 extension SharedRegressionTests {
+    @MainActor @Test func readingAnchorMeasuresAfterLayoutWithoutAResize() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: """
+            // Drive the two rendering phases explicitly; detached test WebViews
+            // have no display clock. DOM geometry still comes from real WebKit.
+            window.anchorFrames=[];window.observers=[];window.beforeLayoutReads=0;let inFrame=false;
+            Object.defineProperty(document,'visibilityState',{get:()=> 'visible'});
+            window.requestAnimationFrame=callback=>anchorFrames.push(callback);
+            window.flushFrames=()=>{inFrame=true;try{anchorFrames.splice(0).forEach(cb=>cb(performance.now()))}finally{inFrame=false}};
+            window.ResizeObserver=class {
+                constructor(callback){this.callback=callback;this.targets=new Set();observers.push(this)}
+                observe(target){this.targets.add(target)} unobserve(target){this.targets.delete(target)} disconnect(){this.targets.clear()}
+            };
+            window.flushLayout=()=>observers.forEach(observer=>{const entries=[...observer.targets].map(target=>({target,contentRect:{width:target.clientWidth,height:target.clientHeight}}));if(entries.length)observer.callback(entries)});
+            const bounds=Element.prototype.getBoundingClientRect;
+            Element.prototype.getBoundingClientRect=function(...args){if(inFrame)beforeLayoutReads++;return bounds.apply(this,args)};
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        view.loadHTMLString(HTMLDocument.make(body: "<div id='mdvu-main-content' style='height:500px;overflow:auto'><article><h2>Reading</h2><p style='height:4000px'>Keep this paragraph in view</p></article></div>", title: "Post-layout anchor", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        try await ready(view)
+        let facts = try await view.evaluateJavaScriptValue("""
+            (()=>{
+                const scroller=document.getElementById('mdvu-main-content'),article=scroller.querySelector('article'),paragraph=article.querySelector('p');
+                scroller.scrollTop=250;
+                const before=paragraph.getBoundingClientRect().top,height=scroller.clientHeight,token=window.__mdvuCaptureReadingAnchor();
+                article.style.paddingTop='200px';window.__mdvuRestoreReadingAnchor(token);
+                flushFrames();flushLayout();const firstDrift=Math.abs(paragraph.getBoundingClientRect().top-before);
+                article.style.paddingTop='350px';flushFrames();flushLayout();const secondDrift=Math.abs(paragraph.getBoundingClientRect().top-before);
+                window.dispatchEvent(new WheelEvent('wheel'));flushFrames();
+                return {reads:beforeLayoutReads,unchangedSize:scroller.clientHeight===height,firstDrift,secondDrift,pending:observers.some(observer=>observer.targets.has(scroller))};
+            })()
+            """)
+        let payload = try #require(facts as? [String: Any])
+        #expect(payload["reads"] as? Int == 0, "\(payload)")
+        #expect(payload["unchangedSize"] as? Bool == true)
+        #expect(payload["pending"] as? Bool == false)
+        #expect((payload["firstDrift"] as? Double ?? 100) < 2, "\(payload)")
+        #expect((payload["secondDrift"] as? Double ?? 100) < 2, "\(payload)")
+    }
+
     @MainActor @Test func readingShortcutsAndLayoutAnchorUseTheActiveScroller() async throws {
         let configuration = WKWebViewConfiguration()
         if #available(macOS 14.0, *) { configuration.preferences.inactiveSchedulingPolicy = .none }
