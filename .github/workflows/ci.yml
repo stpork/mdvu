@@ -149,9 +149,7 @@ jobs:
         shell: pwsh
         run: |
           cargo install cargo-llvm-cov --locked
-          New-Item -ItemType Directory -Force target/coverage | Out-Null
-          cargo llvm-cov --workspace --lcov --output-path target/coverage/windows.lcov
-          if ($LASTEXITCODE -ne 0) { throw "Coverage tests failed" }
+          ./scripts/coverage-windows.ps1 -TimerOnly
 
       - name: Build Windows Release Binary
         run: cargo build --release -p mdvu-windows --bin mdvu

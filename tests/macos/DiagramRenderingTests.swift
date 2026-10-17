@@ -4,6 +4,27 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
+    @Test func nativeTransportCanArriveAfterTheReaderScript() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,16)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        view.loadHTMLString(HTMLDocument.make(body: "<figure id='late' class='diagram diagram-pending' data-renderer='mermaid'><pre>graph TD; A-->B</pre></figure>", title: "Late bridge", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("typeof window.__mdvuRenderDiagrams==='function'") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        _ = try await view.evaluateJavaScriptValue("""
+            window.__mdvuNativeDiagramTransport={post:job=>setTimeout(()=>window.__mdvuDiagramResult({id:job.id,svg:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 10"><text>A</text></svg>'}),0),cancel:()=>{}};
+            window.__mdvuRenderDiagrams({all:true});true
+            """)
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("document.getElementById('late').classList.contains('diagram-rendered')") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("!!window.__mdvuHasDiagramSVG(document.getElementById('late')) && !window.mermaid") as? Bool == true)
+    }
+
     @Test func invalidRequestsNeverStartAWebProcess() {
         let service = DiagramRenderingService()
         var reply: [String: Any]?

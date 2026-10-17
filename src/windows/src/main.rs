@@ -1090,10 +1090,6 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             }
             false
         });
-    #[cfg(windows)]
-    let builder = builder.with_initialization_script(
-        "window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};window.__mdvuNativeDiagramTransport={post:job=>window.ipc.postMessage('diagram_render:'+JSON.stringify(job)),cancel:()=>window.ipc.postMessage('diagram_cancel')};",
-    );
     #[cfg(not(windows))]
     let builder = builder.with_ipc_handler(move |request| handle_message(request.body()));
     let webview = match builder.with_devtools(cfg!(debug_assertions)).build(&window) {
@@ -1885,6 +1881,15 @@ mod tests {
         assert!(shell.contains("\\u003c/script\\u003e"));
         assert!(!shell.contains("<script>window.auditExecuted"));
         assert!(!shell.contains("<script>"));
+        #[cfg(windows)]
+        {
+            let bridge = shell.find("window.__mdvuNativeDiagramTransport=").unwrap();
+            let reader = shell.find("const nativeDiagrams=").unwrap();
+            assert!(bridge < reader, "The native bridge must precede the reader");
+            assert!(shell[..bridge].ends_with(
+                "window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};"
+            ));
+        }
         if let Some(path) = std::env::var_os("MDVU_TEST_SHELL_OUTPUT") {
             std::fs::write(path, shell).unwrap();
         }

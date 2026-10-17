@@ -332,10 +332,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             let config = WKWebViewConfiguration()
             config.defaultWebpagePreferences.allowsContentJavaScript = true
             config.userContentController = WKUserContentController()
+            if auditScript != nil, #available(macOS 14.0, *) { config.preferences.inactiveSchedulingPolicy = .none }
             webView = WKWebView(frame: .zero, configuration: config)
-        }
-        if auditScript != nil, #available(macOS 14.0, *) {
-            webView.configuration.preferences.inactiveSchedulingPolicy = .none
         }
         webView.configuration.userContentController.addUserScript(WKUserScript(source: "window.__mdvuNativeDiagramTransport={post:job=>window.webkit.messageHandlers.diagramRender.postMessage(job),cancel:()=>window.webkit.messageHandlers.diagramCancel.postMessage(true)};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         webView.configuration.userContentController.addUserScript(WKUserScript(source: "if(document.querySelector('article'))window.webkit.messageHandlers.documentReady.postMessage(true);", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
@@ -831,7 +829,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 """, arguments: ["html": html], in: nil, in: .page) { [weak self] result in
                     guard let self, self.renderGeneration == generation else { return }
                     switch result {
-                    case .success: self.webView(self.webView, didFinish: nil)
+                    case .success: self.documentContentReady()
                     case .failure:
                         self.hasLoadedDocument = false
                         self.loadRenderedHTML(html, baseURL: baseURL)
@@ -1148,10 +1146,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 hasUserResizedNavigator = true
             }
         }
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        documentContentReady()
     }
 
     private func documentContentReady() {
@@ -2024,6 +2018,7 @@ enum WebKitPrewarmer {
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.userContentController = WKUserContentController()
+        if ProcessInfo.processInfo.environment["MDVU_UI_SCRIPT"] != nil, #available(macOS 14.0, *) { config.preferences.inactiveSchedulingPolicy = .none }
         let prewarmed = WKWebView(frame: .zero, configuration: config)
         prewarmed.allowsMagnification = true
         prewarmed.loadHTMLString("", baseURL: nil)

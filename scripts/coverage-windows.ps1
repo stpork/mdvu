@@ -1,7 +1,7 @@
 <# Run native unit coverage, then include an instrumented WebView2 session.
    Prerequisites: cargo install cargo-llvm-cov --locked; rustup component add llvm-tools-preview.
    Run in an interactive Windows user session. Performance reports use the separate release runner. #>
-param([string]$Output = 'target/coverage')
+param([string]$Output = 'target/coverage', [switch]$TimerOnly)
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $Output = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Output)
@@ -37,7 +37,7 @@ try {
         Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'mdvu' -and $_.executable } |
         Select-Object -Last 1 -ExpandProperty executable
     if (-not $Binary) { throw 'Cargo did not return the instrumented executable' }
-    & "$PSScriptRoot/test-windows-system.ps1" -Exe $Binary -FixtureFilter test-onescreen.md -BenchmarkRuns 1 -SampleSeconds 1 -Output (Join-Path $Output 'gui')
+    & "$PSScriptRoot/test-windows-system.ps1" -Exe $Binary -TimerOnly:$TimerOnly -FixtureFilter test-onescreen.md -BenchmarkRuns 1 -SampleSeconds 1 -Output (Join-Path $Output 'gui')
     if (-not (Get-ChildItem $CoverageTarget -Filter '*.profraw' -File)) { throw 'Native execution produced no coverage profiles' }
     & cargo llvm-cov report --lcov --output-path (Join-Path $Output 'windows.lcov')
     if ($LASTEXITCODE -ne 0) { throw 'Native GUI coverage export failed' }

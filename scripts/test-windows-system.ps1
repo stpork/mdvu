@@ -108,7 +108,7 @@ try {
             Assert-Test 'Native WebView2: >2MB, local images, CSP, TOC' $true
         } catch { Assert-Test 'Native WebView2: >2MB, local images, CSP, TOC' $false; Write-Warning $_ }
         Add-Type -AssemblyName System.Drawing
-        Add-Type @'
+        if (-not ('MdvuCapture' -as [type])) { Add-Type @'
 using System; using System.Runtime.InteropServices;
 public static class MdvuCapture {
  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left,Top,Right,Bottom; }
@@ -116,6 +116,7 @@ public static class MdvuCapture {
  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
 }
 '@
+        }
         $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
         if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
@@ -155,6 +156,7 @@ public static class MdvuCapture {
                     if ($null -eq $FirstWindowMs -and $Process.MainWindowHandle -ne [IntPtr]::Zero) { $FirstWindowMs=$Clock.Elapsed.TotalMilliseconds }
                     $Tree = @(Get-ProcessTree $Process.Id)
                     $Samples += [PSCustomObject]@{elapsedMs=$Clock.Elapsed.TotalMilliseconds; processCount=$Tree.Count; privateBytes=($Tree | Measure-Object PrivateMemorySize64 -Sum).Sum; workingSet=($Tree | Measure-Object WorkingSet64 -Sum).Sum; cpuMs=($Tree | ForEach-Object {$_.TotalProcessorTime.TotalMilliseconds} | Measure-Object -Sum).Sum; appPrivateBytes=$Process.PrivateMemorySize64; appWorkingSet=$Process.WorkingSet64}
+                    foreach ($SampledProcess in $Tree) { $SampledProcess.Dispose() }
                     Start-Sleep -Milliseconds 500
                 } while ($Clock.Elapsed.TotalSeconds -lt $SampleSeconds -or (-not (Test-Path $UIResult) -and $Clock.Elapsed.TotalSeconds -lt 100))
                 $Samples | Export-Csv (Join-Path $Output ($Fixture.BaseName+'-process-tree.csv')) -NoTypeInformation

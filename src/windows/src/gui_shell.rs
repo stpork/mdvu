@@ -1221,11 +1221,19 @@ pub fn build_gui_html(
         fw_active = if is_full_width { "active" } else { "" },
     );
 
+    // Install the bridge before the reader script. WebView2 initialization scripts
+    // may be registered after the first file navigation has already started.
+    #[cfg(windows)]
+    let native_bridge = format!(
+        r#"<script nonce="{nonce}">window.ipc={{postMessage:message=>window.chrome.webview.postMessage(message)}};window.__mdvuNativeDiagramTransport={{post:job=>window.ipc.postMessage('diagram_render:'+JSON.stringify(job)),cancel:()=>window.ipc.postMessage('diagram_cancel')}};</script>"#
+    );
+    #[cfg(not(windows))]
+    let native_bridge = "";
     let with_css = if let Some(pos) = document_html.find("</head>") {
         let (head, rest) = document_html.split_at(pos);
-        format!("{head}<style>{shell_css}</style>{rest}")
+        format!("{head}{native_bridge}<style>{shell_css}</style>{rest}")
     } else {
-        format!("<style>{shell_css}</style>{document_html}")
+        format!("{native_bridge}<style>{shell_css}</style>{document_html}")
     };
 
     if let (Some(art_start), Some(art_end)) =

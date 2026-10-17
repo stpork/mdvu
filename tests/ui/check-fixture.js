@@ -6,6 +6,7 @@
   const renderTimings=[], frameGaps=[];
   try {
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    window.__mdvuInitArticle?.();
     const article = document.querySelector('article');
     const roots=()=>[article,...[...article.querySelectorAll('figure.diagram')].map(n=>n.querySelector('.diagram-content')?.shadowRoot).filter(Boolean)];
     const diagramCount=()=>[...article.querySelectorAll('figure.diagram')].filter(n=>window.__mdvuHasDiagramSVG?.(n)).length;
