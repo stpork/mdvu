@@ -1,12 +1,12 @@
 # Architecture of mdvu
 
-`mdvu` is a high-performance, ultra-compact native Markdown viewer for **macOS** and **Windows**, powered by a unified cross-platform **Rust Core** (`mdvu-core`) and 100% native platform user interfaces.
+`mdvu` is a Markdown viewer for **macOS** and **Windows** with a shared **Rust core** (`mdvu-core`). AppKit provides the macOS controls; Windows uses a native Win32 frame and menus with document controls inside WebView2. Both render the document through the system browser runtime.
 
 ---
 
 ## 1. Architectural Philosophy
 
-Most modern cross-platform Markdown tools bundle 150+ MB of Chromium and Node.js runtimes (Electron), consuming 300+ MB of RAM just to display formatted text. MDVu takes the polar opposite approach:
+The application shares parsing, dialect handling, reader JavaScript/CSS and offline engines across platforms. Platform hosts implement window management, menus, shortcuts, file access and browser integration. No Electron or Node.js runtime is bundled; browser processes still contribute to GUI memory use.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -39,7 +39,7 @@ The shared core parses Markdown locally. The system runners measure native windo
 The core repository logic lives in `src/core` and is shared across all frontends:
 
 ### A. High-Throughput Markdown Parsing & GFM
-* Powered by `pulldown-cmark`, an event-driven pull-parser with zero heap allocations during tokenization.
+* Powered by `pulldown-cmark`, an event-driven pull-parser. HTML output and dialect transforms allocate storage as needed.
 * Full GitHub Flavored Markdown (GFM) compliance: tables, strikethrough, autolinks, task lists, and footnotes.
 * Strict GFM Security Tagfilter: disarms malicious `<script>`, `<iframe>`, `<textarea>`, `<title>`, `<xmp>`, `<noembed>`, `<noframes>`, and `<plaintext>` tags across block and inline HTML, while explicitly preserving user-defined `<style>` blocks per the MDVu specification.
 
@@ -63,6 +63,7 @@ All engine assets are compressed with **LZMA Ultra** and compiled into the core 
 * **Bounded reading DOM and cache writes**: offscreen diagrams retain SVG text and a size placeholder; SVG nodes are restored near the viewport or for matching search results. Cache writes run away from the UI thread through a bounded queue; slow storage can skip an optional cache write instead of delaying input.
 * **Regression checks**: both native CI jobs render every Markdown fixture. Their explicit timer mode checks correctness and renderer cleanup without claiming display-frame performance. The system runners' default mode measures actual animation frames while scrolling and zooming during cold rendering.
 * **Large code blocks**: line groups keep their original text while `content-visibility` limits font shaping and highlighting to nearby groups. This prevents a Unicode corpus from monopolizing the reading process on the first zoom. Regression checks preserve text, selection, search, and repeated initialization.
+* **Deferred geometry and headings**: initial diagram discovery registers the existing intersection observer without reading every diagram rectangle. This lets the browser establish offscreen layout containment before geometry is requested. Heading text has its own containment span so zoom/reflow can skip offscreen glyph shaping while the heading ID, original markup and outer anchor remain usable.
 * **Shared application UI**: `assets/sidebar-policy.json` defines TOC widths, row height, indentation, text size, initial expansion threshold, and the navigator's initial width for both frontends. Both TOCs expose a hierarchy with disclosure controls, truncated labels with full titles, and keyboard navigation. The Windows outline uses ARIA tree semantics; macOS uses `NSOutlineView`.
 * **Platform conventions**: AppKit owns the macOS title bar, toolbar, menus, search control, and window management. Windows retains its standard Win32 title bar and menu, with equivalent document controls below them. Shortcuts use Cmd on macOS and Ctrl/Alt/F-keys on Windows. Icons share meanings and placement while retaining platform rendering; window controls and system menus are not imitated.
 
@@ -104,7 +105,7 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
 * **Single Executable**: Produces `mdvu.exe` with embedded offline diagram engines; packaging records the built executable's size and checksum.
 * **Native Win32 Chrome**:
   * **Window themes**: Tao owns native caption theming from window creation through theme changes. `system` follows Windows; explicit light/dark preferences use the same window API. No competing DWM override is applied.
-  * **Win32 Menus & Status Bar**: Native top menu bar (`File`, `View`) and bottom status bar (`CommonControlsEx`).
+  * **Win32 menus**: Native `File`, `Edit`, `View`, `Go` and `Help` menus; the reader toolbar and sidebars are WebView2 content.
 * **Live File Watcher**:
   * Powered by `notify`, monitors the document's parent directory with atomic save tracking (surviving file replacements and renames by editors like VS Code, Notepad++, and Vim).
   * Trailing debounce (150 ms) reloads the view while seamlessly preserving the user's vertical scroll ratio.
@@ -117,9 +118,9 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
 
 ---
 
-## 5. Unified Single-Binary Mode (GUI & Headless CLI)
+## 5. GUI and Headless CLI Entry Points
 
-MDVu follows a unified single-binary philosophy across all platforms:
+Each platform uses the same frontend executable for GUI and CLI. The macOS bundle also contains the Rust shared library and resources; Windows links the core into its executable:
 * **Interactive Mode (GUI)**: When invoked without CLI export flags (`mdvu document.md` or via Desktop/Finder/Explorer), MDVu launches its full hardware-accelerated GUI viewport.
 * **Headless Mode (CLI)**: When invoked with export or batch flags (`-o`, `--stdout`, `--toc`, `-s`, stdin `-`), MDVu skips window creation, directly invokes the `mdvu-core` rendering pipeline, streams the result to the target file or stdout, and exits with code 0.
 * **Windows Console Integration (`AttachConsole`)**: On Windows, the binary is compiled with `windows_subsystem = "windows"` to ensure clean launches from File Explorer without terminal flashing. When CLI flags are detected, it dynamically calls Win32 `AttachConsole(ATTACH_PARENT_PROCESS)` to pipe standard I/O directly to the caller's console (Windows Terminal, PowerShell, Git Bash, cmd).
@@ -144,7 +145,7 @@ mdvu document.md --toc
   * `make app`: Builds native macOS `.app` bundle.
   * `make universal`: Builds dual-architecture `arm64` + `x86_64` bundle.
   * `make archive`: Creates signed ZIP archives and DMG installer with SHA-256 sidecars.
-  * `make test`: Runs 64 native Swift regression and performance tests.
+  * `make test`: Runs the native Swift regression suite against the shared Rust library.
 * **Unified Script**:
   * `./build.sh app` / `./build.sh universal` / `./build.sh archive` / `./build.sh test`
   * `./build.sh windows`: Cross-compiles or packages the Windows release.
@@ -157,5 +158,4 @@ mdvu document.md --toc
 * **Command Prompt**: `build.cmd` (`build`, `build release`, `build test`).
 
 ### C. Continuous Integration (`.github/workflows/`)
-* **macOS Pipeline (`ci.yml`)**: Automates Xcode build, 64-test validation suite, and universal binary verification on macOS runners.
-* **Windows Pipeline (`windows.yml`)**: Automates MSVC compilation, Rust test suite, standalone packaging, and release artifact generation on Windows runners.
+* **Shared workflow (`ci.yml`)**: Linux tests the Rust core. macOS runs Swift/core tests and coverage, native fixture correctness checks, release and universal builds. Windows runs workspace tests and coverage, native fixture correctness checks, CLI checks and release packaging. Hosted fixture tests use timer mode; physical desktop measurements use the default system runners described in [COMPARISON.md](COMPARISON.md).

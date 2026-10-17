@@ -43,6 +43,12 @@ while(usedIDs.has(id)){count++;id=`${base}-${count}`}
 counts.set(base,count+1);usedIDs.add(id);
 heading.id=id;if(!explicit)heading.dataset.mdvuGeneratedId=id;
 entries.push({level:Number(heading.tagName.slice(1)),title,id:heading.id});
+// Skip offscreen heading text on reflow, keeping the anchor outside paint
+// containment so its negative margin remains visible and clickable.
+if(!heading.querySelector(':scope>.mdvu-heading-content')){
+const content=document.createElement('span');content.className='mdvu-heading-content';
+content.append(...heading.childNodes);heading.append(content);
+}
 const anchor=document.createElement('a');
 anchor.className='heading-anchor';
 anchor.href=`#${heading.id}`;
@@ -275,17 +281,9 @@ await enqueueDiagram(node);
 }
 return;
 }
-const initialBatch=[];
-pendingNodes.forEach(node=>{
-if(isElementInViewport(node)){
-initialBatch.push(node);
-}else{
-observer.observe(node);
-}
-});
-for(const node of initialBatch){
-await enqueueDiagram(node);
-}
+// Let layout establish content-visibility before measuring any diagram. Reading
+// every rectangle here forces offscreen text through synchronous font shaping.
+pendingNodes.forEach(node=>observer.observe(node));
 };
 window.__mdvuRestoreScroll=()=>{if(window.__mdvuRestore)requestAnimationFrame(()=>scrollTo(0,document.documentElement.scrollHeight*window.__mdvuRestore.ratio))};
 window.__mdvuRenderDiagrams=renderDiagrams;

@@ -9,3 +9,5 @@ pre>code.mdvu-chunked{display:block}.mdvu-code-chunk{display:block;content-visib
 .mdvu-code-virtual{height:var(--mdvu-chunk-height)}
 
 .mdvu-code-pending pre>code{display:none}
+
+.mdvu-heading-content{display:block;content-visibility:auto;contain-intrinsic-size:auto 1.23em}

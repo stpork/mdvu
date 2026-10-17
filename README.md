@@ -374,7 +374,7 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-For a detailed side-by-side benchmark comparison against rivals (Obsidian, Typora, MarkText, Marked 2, VS Code), complete throughput curves, startup latency measurements, and compressed asset breakdowns, see **[COMPARISON.md](COMPARISON.md)**.
+See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. No controlled comparison with competing applications has been performed.
 
 Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
@@ -384,7 +384,7 @@ Measurements vary with architecture, OS, document, and cache state. `make benchm
 | Compiler | `-O`, cross-module optimization, linker dead stripping, stripped Mach-O |
 | Resources | Lazy LZMA decompression off the UI queue; reused for later documents |
 | Cache | Shared Rust SVG cache: at most 128 entries / 16 MiB; persistent disk cache |
-| Zoom | Native WebKit magnification and page zoom; display/document dependent |
+| Zoom | 10%–500%; native WebKit page zoom on macOS, document zoom on Windows; trackpad magnification follows macOS conventions |
 
 For the previous measured build, `-Osize` saved less than 1% of the entire app while reducing parser throughput in that run, so the speed-oriented flags are retained. No formatting or parser capabilities have been removed to reduce size.
 
@@ -419,7 +419,7 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 
 `mdvu` uses a unified cross-platform hybrid architecture:
 * **Core (`src/core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
-* **Unified Binary Design**: Single executable on both platforms that functions seamlessly as an interactive GUI viewer and as a headless CLI renderer when options (`-o`, `--stdout`, `--toc`) or pipes are used.
+* **Shared GUI / CLI Entry Point**: The same frontend executable opens the GUI or exports HTML/TOC through CLI flags (`-o`, `--stdout`, `--toc`) and stdin. The macOS app also ships the Rust shared library and resources; Windows links the core into `mdvu.exe`.
 * **macOS (`src/macos`)**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
 * **Windows (`src/windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
 

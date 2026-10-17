@@ -4,6 +4,52 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
+    @Test func articleInitializationDefersDiagramGeometryUntilIntersection() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: """
+            window.__mdvuNativeDiagramTransport={post:()=>{},cancel:()=>{}};
+            const measure=Element.prototype.getBoundingClientRect;
+            let initializing=false;
+            Element.prototype.getBoundingClientRect=function(...args){
+                if(initializing)window.initializationGeometryReads++;
+                return measure.apply(this,args);
+            };
+            document.addEventListener('DOMContentLoaded',()=>{
+                window.initializationGeometryReads=0;initializing=true;
+                try{window.__mdvuInitArticle()}finally{initializing=false}
+            });
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        let diagrams = String(repeating: "<figure class='diagram diagram-pending' data-renderer='mermaid'><pre>graph TD; A--&gt;B</pre></figure>", count: 20)
+        view.loadHTMLString(HTMLDocument.make(body: "<h1>Reading</h1><div style='height:10000px'></div>" + diagrams, title: "Deferred geometry", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("typeof window.initializationGeometryReads==='number'") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("window.initializationGeometryReads") as? Int == 0)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.diagram-pending').length") as? Int == 20)
+    }
+
+    @Test func headingContainmentPreservesMarkupLinksAndRepeatedInitialization() async throws {
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        view.loadHTMLString(HTMLDocument.make(body: "<h2 id='reading'>Read <em id='original'>Åä 中文</em> <code>needle</code></h2>", title: "Heading", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("!!document.querySelector('.mdvu-heading-content')") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('.mdvu-heading-content').textContent") as? String == "Read Åä 中文 needle")
+        _ = try await view.evaluateJavaScriptValue("window.originalHeadingChild=document.getElementById('original');window.__mdvuInitArticle();window.__mdvuInitArticle();true")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelectorAll('.mdvu-heading-content').length") as? Int == 1)
+        #expect(try await view.evaluateJavaScriptValue("document.getElementById('original')===window.originalHeadingChild") as? Bool == true)
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('h2>.heading-anchor').getAttribute('href')") as? String == "#reading")
+        #expect(try await view.evaluateJavaScriptValue("(() => {const a=document.querySelector('.heading-anchor'),r=a.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===a})()") as? Bool == true)
+        #expect(try await view.evaluateJavaScriptValue("window.__mdvuFind.search('needle').count") as? Int == 1)
+        _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear();true")
+        #expect(try await view.evaluateJavaScriptValue("document.querySelector('.mdvu-heading-content').textContent") as? String == "Read Åä 中文 needle")
+    }
+
     @Test func windowsTOCTreeMatchesNativeOutlineKeyboardAndExpansion() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: ResourceLoader.tocTreeJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
