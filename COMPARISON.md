@@ -22,7 +22,7 @@ macOS records physical footprint across the app and WebKit processes created dur
 
 ## Reproducing measurements
 
-Build and run from an unlocked, interactive desktop. Avoid concurrent builds, browser launches and other benchmarks. Each fixture uses a fresh diagram cache; the harness saves checks, screenshots, timings and process samples. Preserve the output directory and the source commit before testing another revision.
+Build and run from an unlocked, interactive desktop. Avoid concurrent builds, browser launches and other benchmarks. Each fixture starts with an empty diagram cache (including repeated runs into the same output directory); the harness saves checks, screenshots, timings and process samples. Preserve the output directory and the source commit before testing another revision.
 
 ```sh
 # macOS: native unit tests, release build, all Markdown fixtures

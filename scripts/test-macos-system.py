@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the native macOS UI on every Markdown fixture; retain checks, profiles and screenshots."""
-import argparse, csv, ctypes, hashlib, json, os, pathlib, platform, re, subprocess, time
+import argparse, csv, ctypes, hashlib, json, os, pathlib, platform, re, shutil, subprocess, time
 root = pathlib.Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument('binary', nargs='?', default='dist/mdvu.app/Contents/MacOS/mdvu')
@@ -45,7 +45,9 @@ for fixture in fixtures:
     check_script=output/(stem+'-check.js')
     check_script.write_text('window.__mdvuAuditIdleProbe='+json.dumps(name=='test-heavy.md')+';window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
     before = set(processes()); start = time.perf_counter()
-    env = dict(os.environ, MDVU_PROFILE='1', MDVU_CACHE_DIR=str(output/(stem+'-cache')), MDVU_UI_SCRIPT=str(check_script), MDVU_UI_RESULT_FILE=str(diagnostic))
+    cache = output/(stem+'-cache')
+    if cache.exists(): shutil.rmtree(cache)
+    env = dict(os.environ, MDVU_PROFILE='1', MDVU_CACHE_DIR=str(cache), MDVU_UI_SCRIPT=str(check_script), MDVU_UI_RESULT_FILE=str(diagnostic))
     samples = []
     with (output/(stem+'-stderr.log')).open('w') as log:
         process = subprocess.Popen([str(binary),'--theme','light','--snapshot',str(image),str(fixture)], stdout=log, stderr=log, env=env)

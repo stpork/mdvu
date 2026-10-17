@@ -56,7 +56,7 @@ The core repository logic lives in `src/core` and is shared across all frontends
 ### C. Embedded Offline Diagram & Math Engines
 All engine assets are compressed with **LZMA Ultra** and compiled into the core binary:
 * **Mermaid 11.17.2 + ZenUML 0.2.3** (`mermaid.lzma`, ~1.33 MB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
-* **PlantUML Core 1.2026.7 + Viz.js 3.24.0** (`plantuml.lzma`, ~1.20 MB): Complete client-side WebAssembly execution with Graphviz 14.1.1. **Zero Java runtime (JVM/JRE) requirement.**
+* **PlantUML Core 1.2026.7 + Viz.js 3.24.0** (`plantuml.lzma`, ~1.20 MB): Offline TeaVM/Viz.js execution with Graphviz 14.1.1. **Zero Java runtime (JVM/JRE) requirement.**
 * **KaTeX MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
 * **Deterministic Diagram Caching**: SHA-256 / 64-bit SipHash cache keys (`compute_diagram_cache_key`) prevent diagram collisions across themes and documents.
 * **Native diagram isolation**: macOS shares one lazy, nonpersistent renderer WebView between document windows. Windows uses an isolated renderer origin within the same WebView2 environment, sharing its browser and GPU. Jobs run serially, obsolete work is cancelled, each job has a 30-second deadline, and the renderer is released after five idle seconds. Diagram engines never enter the reading document. Standalone HTML retains its browser fallback.

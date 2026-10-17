@@ -30,7 +30,7 @@ Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
-* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, frame-budgeted execution, and SHA-256 disk caching.
+* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 11.17.2**, **ZenUML 0.2.3**, and **PlantUML Core 1.2026.7** + **Viz.js 3.24.0** (Graphviz 14.1.1) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and SHA-256 disk caching.
 * **Native Zoom & Window Management**:
   * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, titlebar quick-open, and 3-pane split view with Vault Navigator (`⌥⌘D`).
   * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, status bar, and live atomic-save file watcher (`notify`).
@@ -320,7 +320,7 @@ mdvu --snapshot output.png README.md
 * **Isolated Diagram Execution**:
   * Native builds generate diagrams in a separate renderer and attach SVGs near the reading viewport. The renderer is released after inactivity; a bounded queue and cache limit retained work.
 * **On-Demand Lazy Decompression**:
-  * Documents without diagrams incur **zero CPU/memory overhead**; the LZMA archives are never accessed.
+  * Documents without diagrams do not load the diagram engines; their LZMA archives remain compressed.
   * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.33 MB).
   * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.20 MB).
 * **SHA-256 SVG Disk Cache**:
@@ -390,7 +390,7 @@ For the previous measured build, `-Osize` saved less than 1% of the entire app w
 
 ### TOC navigation and installed copies
 
-Click a heading in the Contents pane to scroll to it, including clicking the same selected row again after scrolling away. Local `file://` navigation tolerates WebKit history API restrictions and uses native Back/Forward history. If a fix appears absent, verify the version in **About mdvu**: `/Applications/mdvu.app` and `~/Applications/mdvu.app` can contain different builds. Launch the newly installed 0.4.1 copy explicitly.
+Click a heading in the Contents pane to scroll to it, including clicking the same selected row again after scrolling away. Local `file://` navigation tolerates WebKit history API restrictions and uses native Back/Forward history. If a fix appears absent, verify the version in **About mdvu**: `/Applications/mdvu.app` and `~/Applications/mdvu.app` can contain different builds. Launch the newly installed copy explicitly.
 
 ---
 
