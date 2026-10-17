@@ -46,7 +46,7 @@ app: rust-release release
 	$(MAKE) package
 package:
 	test -f "$(DYLIB)"
-	@for arch in $$(lipo -archs "$(BINARY)"); do lipo -verify_arch "$$arch" "$(DYLIB)" || exit 1; done
+	@for arch in $$(lipo -archs "$(BINARY)"); do lipo "$(DYLIB)" -verify_arch "$$arch" || exit 1; done
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle" "$(APP)/Contents/Frameworks"
 	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdvu"
