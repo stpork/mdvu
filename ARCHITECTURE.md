@@ -159,3 +159,5 @@ mdvu document.md --toc
 
 ### C. Continuous Integration (`.github/workflows/`)
 * **Shared workflow (`ci.yml`)**: Linux tests the Rust core. macOS runs Swift/core tests and coverage, native fixture correctness checks, release and universal builds. Windows runs workspace tests and coverage, native fixture correctness checks, CLI checks and release packaging. Hosted fixture tests use timer mode; physical desktop measurements use the default system runners described in [COMPARISON.md](COMPARISON.md).
+
+* **Release publication**: A version tag must match `version.txt`. After all three CI jobs pass, a dedicated job downloads that run's macOS and Windows artifacts. `scripts/release-assets.py` requires six packages and valid SHA-256 sidecars, uploads them to a draft, verifies the remote asset set and only then publishes it. Public releases are immutable; the manifest identifies the tested source commit. `scripts/publish-release.sh` orchestrates tagging from clean, green `develop`, Homebrew and the website refresh.

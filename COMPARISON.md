@@ -52,3 +52,28 @@ The default system-test mode uses real animation frames and tests native fullscr
 The original `scrollFrameP95Ms` records the first traversal after diagram generation. Fonts and skipped text can still require their first layout during that pass. Use `--warm-passes 5` on macOS or `-WarmPasses 5` on Windows to retain five separate frame arrays in `scrollWarmPasses`: the first-pass metric stays unchanged, and subsequent passes measure already visited content. Compare the same mode and fixture on both revisions; keep first-use spikes visible rather than averaging them into the warm passes.
 
 Distribution sizes must be reported for a named commit and architecture. Measure the complete `.app`, not just its launcher: macOS ships the Swift executable, Rust library and resources. A universal bundle contains both architectures. Windows publishes a portable executable/archive and MSI; its writable WebView2 profile belongs in `%LOCALAPPDATA%`, outside `dist`.
+
+## Recorded build: 0.5.0 / 40892c5 / 17 October 2026
+
+[Public measurements and downloadable fixture data](https://stpork.github.io/mdvu/#performance) identify the measured revision independently of the latest published release. [CI run 39052275911](https://github.com/stpork/mdvu/actions/runs/39052275911) supplied the distribution packages below.
+
+| Package | Bytes | MiB |
+| --- | ---: | ---: |
+| macOS Universal DMG | 7,773,160 | 7.41 |
+| macOS ARM portable ZIP | 3,710,489 | 3.54 |
+| macOS Universal portable ZIP | 7,417,369 | 7.07 |
+| macOS Intel portable ZIP | 3,804,494 | 3.63 |
+| Windows x64 MSI | 4,714,496 | 4.50 |
+| Windows x64 portable ZIP | 4,293,241 | 4.09 |
+
+The native ARM app bundle was 4,797,484 bytes (4.58 MiB); the Windows executable was 5,775,872 bytes (5.51 MiB), excluding its loader and system WebView2 runtime. These are different artifacts from the compressed installers.
+
+37 fixtures per platform, 4,676 control checks per platform, zoom 10–500–10%, panels and native fullscreen were exercised. Five scroll traversals per fixture retained their frame arrays; the last four traversals provide the warm-scroll values below. Apple M1 / 8 GiB / macOS 27.0.1 and Intel i7-7700K / Windows 10 IoT Enterprise through RDP were used. Before: `b8b55f1`; after: `40892c5`.
+
+| Recorded measurement | macOS before → after | Windows before → after |
+| --- | ---: | ---: |
+| Warm frame interval, pooled p95 | 18 → 19 ms | 32.2 → 32.2 ms |
+| Warm frame interval, maximum | 25 → 22 ms | 62.8 → 62.8 ms |
+| Maximum zoom control duration, all fixtures | 331 → 254 ms | 333 → 293.7 ms |
+
+These results do not establish a universal speedup. macOS `test-complete.md` zoom maximum increased from 183 to 254 ms and peak footprint from 992.8 to 1,074.24 MiB. Windows `test-heavy.md` tail private bytes increased from 499.9 to 529.2 MiB. First-use layout and fullscreen transitions remain distinct from warm scrolling. The full published data retains fixture-level regressions as well as improvements.

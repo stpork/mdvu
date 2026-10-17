@@ -24,7 +24,7 @@
 
 ## Why mdvu?
 
-Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just to display formatted text. **mdvu** takes the opposite approach:
+**Less app. More document.** Read Markdown, diagrams and math in a compact native app for Mac and Windows. The rendering engines are included; a separate browser runtime is not bundled. See [measured sizes and UI performance](COMPARISON.md) and the [website](https://stpork.github.io/mdvu/#performance).
 * **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS and native **Win32 & WebView2** on Windows. Both run on the shared `mdvu-core` Rust engine with zero Electron, Node, or JVM.
 * **Responsive Reading**: Diagram execution uses a separate renderer so scrolling and zoom can continue while a diagram is being generated. Native fixture tests measure cold interaction latency and process memory.
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
@@ -40,7 +40,7 @@ Modern Markdown tools often bundle 150+ MB of Chromium and Node.js runtimes just
 
 ## Installation
 
-### 1. Homebrew Cask (Recommended)
+### 1. Homebrew Cask (macOS)
 
 Install directly via the official `stpork` tap:
 
@@ -76,7 +76,7 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-Pre-compiled binaries, installers, and archives are available on the [GitHub Releases](https://github.com/stpork/mdvu/releases) page:
+Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Others** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
 
 | Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
@@ -109,17 +109,15 @@ Pre-compiled binaries, installers, and archives are available on the [GitHub Rel
    * Automatically configures `mdvu` in `PATH` (user `PATH` for per-user, system `PATH` for all users).
    * Creates a Start Menu shortcut (`MDVu`) and registers `.md`, `.markdown`, `.mdown`, `.mkd` in Explorer's **Open with** menu.
 
-#### Option B: Scoop / WinGet / Chocolatey
+#### Option B: Package manager manifests
+
+When the release includes `mdvu.json`, Scoop can install the portable package:
+
 ```powershell
-# Scoop (direct manifest or bucket):
 scoop install https://github.com/stpork/mdvu/releases/latest/download/mdvu.json
-
-# WinGet:
-winget install stpork.mdvu
-
-# Chocolatey:
-choco install mdvu
 ```
+
+The build also generates WinGet and Chocolatey submission templates. Generation does **not** publish them to the public registries; use MSI or ZIP unless a registry listing has been verified.
 
 #### Option C: Portable ZIP Archive
 1. Download **`mdvu-X.Y.Z-windows-x86_64.zip`** from [Releases](https://github.com/stpork/mdvu/releases).
@@ -162,7 +160,7 @@ cargo build --release -p mdvu-windows --bin mdvu
 
 ---
 
-### 3. Build & Install From Source
+### 5. Build & Install From Source
 
 Requirements: macOS 13.0+, Swift 6 / Xcode Command Line Tools (`xcode-select --install`).
 
@@ -184,7 +182,7 @@ make install         # Install locally
 
 ---
 
-### 4. Direct Swift Package Manager (CLI Only)
+### 6. Direct Swift Package Manager (CLI Only)
 
 If you only need the command-line rendering tool without the `.app` bundle:
 ```sh
@@ -465,3 +463,16 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 * [PlantUML Core 1.2026.7](https://github.com/plantuml/plantuml-core) — GPL / LGPL / Apache-2.0 / MIT (c) PlantUML Team.
 * [Viz.js 3.24.0 (Graphviz 14.1.1)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.
 * [KaTeX 0.16.21](https://github.com/KaTeX/KaTeX) — MIT (c) Emily Eisenberg, Sophie Alpert, and KaTeX Contributors.
+
+## Publishing a release
+
+From a clean `develop` branch with a successful CI run for its exact commit:
+
+```sh
+./build.sh publish         # Download and validate all six CI packages; preview only
+./build.sh publish --yes   # Merge, tag, wait for tested publication; update Homebrew/site
+```
+
+Set `version.txt`, `Info.plist` and the matching `CHANGELOG.md` section before pushing the release candidate. The helper never replaces an existing tag or public release. Tag CI tests Linux, macOS and Windows, builds all six packages, verifies SHA-256, uploads to a draft, checks the uploaded set, then makes it public. A failed or incomplete upload stays a draft. `release-manifest.json` records the exact source commit, package sizes and hashes.
+
+The helper then updates Homebrew from the published cask, refreshes the website download links, and increments the development minor version. If tagging manually, dispatch **Deploy MDVu website** after successful publication and update Homebrew using the published `mdvu.rb`. Website measurements name their own tested revision; they are not silently relabelled as measurements of a new release.

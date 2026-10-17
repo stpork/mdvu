@@ -17,7 +17,7 @@ Commands:
   test       Run unit tests
   check      Run unit and visual regression tests
   install    Install a local optimized app into ~/Applications
-  publish    Publish release from develop to GitHub and Homebrew (-y|--yes)
+  publish    Validate six CI packages; publish from develop with --yes
   windows    Build and package Windows release (mdvu.exe)
   clean      Remove build and distribution products
 

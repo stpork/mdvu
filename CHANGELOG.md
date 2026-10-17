@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2026-10-15
 
+### Release distribution
+- Publish the universal macOS DMG, ARM/Universal/Intel portable ZIPs, Windows x64 MSI and portable ZIP together, with SHA-256 sidecars and a source-commit manifest.
+- Keep releases as drafts until the complete upload is verified; reuse tested CI builds and never replace public release assets.
+- Document installer availability and measured UI/size results separately from marketing claims.
+
+
 ### Added
 - **Cross-Platform Rust Core (`crates/mdvu-core`)**:
   - High-throughput pull parser powered by `pulldown-cmark` with full GitHub Flavored Markdown (GFM) support.
@@ -27,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-Platform Build & CI/CD Tooling**:
   - Added root `build.ps1` and `build.cmd` scripts for native Windows compilation and release packaging.
   - Added `windows` command to `build.sh` and created standalone POSIX `scripts/build-windows.sh`.
-  - Added automated GitHub Actions Windows CI/CD pipeline (`.github/workflows/windows.yml`) producing release zip archives with SHA-256 sidecars.
+  - Added automated GitHub Actions Windows CI/CD pipeline (`.github/workflows/ci.yml`) producing release zip archives with SHA-256 sidecars.
 
 ### Security & Performance
 - **GFM Security Tagfilter**:

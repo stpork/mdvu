@@ -1,257 +1,88 @@
 #!/bin/bash
 set -euo pipefail
-
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
-
-AUTO_APPROVE=0
+LIVE=0
 for arg in "$@"; do
     case "$arg" in
-        -y|--yes) AUTO_APPROVE=1 ;;
+        -y|--yes) LIVE=1 ;;
         -h|--help)
             cat <<'USAGE'
 Usage: ./build.sh publish [-y|--yes]
 
-Modes:
-  ./build.sh publish          Dry run: runs tests, compiles all release bundles
-                             (arm64, x86_64, universal, dmg), verifies checksums,
-                             and displays preview without pushing or uploading.
-  ./build.sh publish -y       Full release: tests, builds, commits on develop,
-                             merges into main, tags, pushes upstream to GitHub,
-                             uploads GitHub release assets, updates stpork/homebrew-tap,
-                             and bumps version Y-counter on develop.
+Without --yes: validate all six packages from successful CI for the current
+clean develop commit and preview publication. No tag or release is created.
+With --yes: merge develop into main, push a new version tag, wait for CI to
+build/test both platforms and publish all six packages, update Homebrew and
+the website, then bump develop's minor version. Existing tags are never replaced.
 USAGE
-            exit 0
-            ;;
-        *)
-            echo "Unknown argument: $arg" >&2
-            echo "Run './build.sh publish --help' for usage." >&2
-            exit 2
-            ;;
+            exit 0 ;;
+        *) echo "Unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
-
-echo "=================================================="
-if [ "$AUTO_APPROVE" -eq 1 ]; then
-    echo "       mdvu Release Publication (LIVE MODE)       "
-else
-    echo "       mdvu Release Publication (DRY RUN)         "
-fi
-echo "=================================================="
-
-# 1. Branch validation
-CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "develop" ]; then
-    echo "ERROR: Release publication must be initiated from the 'develop' branch." >&2
-    echo "Current branch: '$CURRENT_BRANCH'" >&2
-    exit 1
-fi
-
-# 2. Check tools
-if ! command -v gh >/dev/null 2>&1; then
-    echo "ERROR: 'gh' (GitHub CLI) is required but not installed." >&2
-    exit 1
-fi
-
-if ! gh auth status >/dev/null 2>&1; then
-    echo "ERROR: 'gh' is not authenticated. Run 'gh auth login' first." >&2
-    exit 1
-fi
-
-# 3. Read and validate current version format X.Y.Z
-if [ ! -f "$ROOT/version.txt" ]; then
-    echo "ERROR: version.txt not found in project root." >&2
-    exit 1
-fi
-VERSION=$(tr -d '[:space:]' < "$ROOT/version.txt")
-
-if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "ERROR: version.txt must follow semantic version format X.Y.Z (e.g. 0.2.0). Found: '$VERSION'" >&2
-    exit 1
-fi
-
+[ "$(git branch --show-current)" = develop ] || { echo "Release from develop." >&2; exit 1; }
+[ -z "$(git status --porcelain)" ] || { echo "Commit or stash changes before releasing." >&2; exit 1; }
+gh auth status >/dev/null
+VERSION=$(tr -d '[:space:]' < version.txt)
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version: $VERSION" >&2; exit 1; }
 TAG="v$VERSION"
-echo "Target Version: $VERSION"
-echo "Target Tag:     $TAG"
-
-# 4. Extract release notes from CHANGELOG.md
-NOTES_FILE=$(mktemp /tmp/mdvu-notes.XXXXXX)
-awk -v ver="$VERSION" '
-  $0 ~ "^## \\[" ver "\\]" { found=1; next }
-  found && /^## \[/ { exit }
-  found { print }
-' "$ROOT/CHANGELOG.md" > "$NOTES_FILE"
-
-if [ ! -s "$NOTES_FILE" ]; then
-    echo "ERROR: No release notes found for version '$VERSION' in CHANGELOG.md" >&2
-    echo "Please add a '## [$VERSION]' section to CHANGELOG.md before releasing." >&2
-    rm -f "$NOTES_FILE"
-    exit 1
-fi
-
-echo ""
-echo "--- Release Notes from CHANGELOG.md ($TAG) ---"
-cat "$NOTES_FILE"
-echo "--------------------------------------------------"
-echo ""
-
-# 5. Run test suite
-echo "==> Step 1/4: Running automated test suite..."
-make test
-
-# 6. Build release bundles (arm64, x86_64, universal, dmg)
-echo "==> Step 2/4: Compiling and packaging release bundles..."
-make archive
-
-DIST="$ROOT/dist"
-ARM_ZIP="$DIST/mdvu-${VERSION}-macos-arm64.zip"
-X86_ZIP="$DIST/mdvu-${VERSION}-macos-x86_64.zip"
-UNI_ZIP="$DIST/mdvu-${VERSION}-macos-universal.zip"
-DMG_FILE="$DIST/mdvu-${VERSION}-macos.dmg"
-
-for required_file in "$ARM_ZIP" "$X86_ZIP" "$UNI_ZIP" "$DMG_FILE"; do
-    if [ ! -f "$required_file" ]; then
-        echo "ERROR: Expected release artifact '$required_file' was not generated." >&2
-        rm -f "$NOTES_FILE"
-        exit 1
-    fi
-done
-
-echo "==> Step 3/4: Verifying bundle integrity and checksums..."
-ls -lh "$ARM_ZIP" "$X86_ZIP" "$UNI_ZIP" "$DMG_FILE"
-echo ""
-
-# Calculate next version by always bumping Y (minor): X.(Y+1).0
-bump_y_counter() {
-    local v="$1"
-    if [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-        local maj="${BASH_REMATCH[1]}"
-        local min="${BASH_REMATCH[2]}"
-        echo "$maj.$((min + 1)).0"
-    else
-        echo "ERROR: Invalid version format for bump: $v" >&2
-        exit 1
-    fi
-}
-NEXT_VERSION=$(bump_y_counter "$VERSION")
-
-# If this is DRY RUN mode, stop here and show preview
-if [ "$AUTO_APPROVE" -ne 1 ]; then
-    rm -f "$NOTES_FILE"
-    echo "=================================================="
-    echo "           DRY RUN COMPLETED SUCCESSFULLY         "
-    echo "=================================================="
-    echo "All tests passed and release bundles were generated:"
-    echo "  - arm64 zip:     $ARM_ZIP"
-    echo "  - x86_64 zip:    $X86_ZIP"
-    echo "  - universal zip: $UNI_ZIP"
-    echo "  - dmg:           $DMG_FILE"
-    echo "  - Homebrew Cask: $DIST/mdvu.rb"
-    echo ""
-    echo "In LIVE mode (-y | --yes), the following actions will be executed:"
-    echo "  1. Stage and commit pending develop branch changes ('chore(release): prepare $TAG')"
-    echo "  2. Switch to 'main', merge 'develop' (--no-ff), and create git tag '$TAG'"
-    echo "  3. Push 'main', 'develop', and '$TAG' to https://github.com/stpork/mdvu.git"
-    echo "  4. Create GitHub Release '$TAG' with release notes and upload all 4 bundles + sha256"
-    echo "  5. Clone and update 'stpork/homebrew-tap' (Casks/mdvu.rb), run brew audit, commit & push"
-    echo "  6. Switch back to 'develop', bump version to '$NEXT_VERSION', commit and push to remote"
-    echo ""
-    echo "To execute publication, re-run with:"
-    echo "    ./build.sh publish -y"
-    echo "=================================================="
+SOURCE_COMMIT=$(git rev-parse HEAD)
+TEMP=$(mktemp -d /tmp/mdvu-release.XXXXXX)
+trap 'rm -rf "$TEMP"' EXIT
+awk -v ver="$VERSION" '$0 ~ "^## \\[" ver "\\]" {found=1;next} found && /^## \[/ {exit} found {print}' CHANGELOG.md > "$TEMP/notes.md"
+[ -s "$TEMP/notes.md" ] || { echo "Missing CHANGELOG notes for $VERSION" >&2; exit 1; }
+RUN=$(gh run list --repo stpork/mdvu --workflow ci.yml --commit "$SOURCE_COMMIT" --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+[ -n "$RUN" ] || { echo "Push develop and wait for successful CI on $SOURCE_COMMIT first." >&2; exit 1; }
+gh run download "$RUN" --repo stpork/mdvu --name mdvu-macos-release --name mdvu-windows-x86_64 --dir "$TEMP/artifacts"
+mkdir "$TEMP/packages"
+cp "$TEMP/artifacts/mdvu-macos-release/"* "$TEMP/packages/"
+cp "$TEMP/artifacts/mdvu-windows-x86_64/"*.zip* "$TEMP/artifacts/mdvu-windows-x86_64/"*.msi* "$TEMP/packages/"
+python3 scripts/release-assets.py "$TEMP/packages" "$VERSION"
+cat "$TEMP/notes.md"
+echo "Validated all six packages from CI run $RUN for $SOURCE_COMMIT."
+if [ "$LIVE" -eq 0 ]; then
+    echo "Preview complete. Run ./build.sh publish --yes to publish $TAG through tag CI."
     exit 0
 fi
 
-# =======================================================
-# LIVE PUBLICATION (when -y or --yes was provided)
-# =======================================================
-echo "==> Step 4/4: Executing Live Publication..."
-
-# 1. Commit pending changes on develop
-echo "--> Finalizing commit on develop branch..."
-git add -A
-if [ -n "$(git status --porcelain)" ]; then
-    git commit -m "chore(release): prepare $TAG"
+git fetch origin main develop --tags
+[ "$(git rev-parse main)" = "$(git rev-parse origin/main)" ] || { echo "Local main must match origin/main." >&2; exit 1; }
+git merge-base --is-ancestor main develop || { echo "Merge main into develop and rerun CI first." >&2; exit 1; }
+if git show-ref --verify --quiet "refs/tags/$TAG"; then
+    echo "$TAG already exists; use a new version." >&2; exit 1
 fi
-
-# 2. Merge develop into main and create tag
-echo "--> Merging develop into main and creating tag $TAG..."
-git checkout main
+git switch main
 git merge --no-ff develop -m "Release $TAG"
-git tag -d "$TAG" 2>/dev/null || true
 git tag -a "$TAG" -m "mdvu release $TAG"
+git push --atomic origin main "$TAG"
+RELEASE_HEAD=$(git rev-parse HEAD)
+RUN=''
+for attempt in {1..40}; do
+    RUN=$(gh run list --repo stpork/mdvu --workflow ci.yml --branch "$TAG" --commit "$RELEASE_HEAD" --event push --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+    [ -n "$RUN" ] && break
+    sleep 3
+done
+[ -n "$RUN" ] || { echo "Tag pushed; check GitHub Actions for publication progress." >&2; exit 1; }
+gh run watch "$RUN" --repo stpork/mdvu --exit-status
+[ "$(gh release view "$TAG" --repo stpork/mdvu --json isDraft --jq .isDraft)" = false ]
 
-# 3. Push to upstream repository
-echo "--> Pushing branches and tags to https://github.com/stpork/mdvu..."
-REMOTE_URL="https://github.com/stpork/mdvu.git"
-git remote add origin "$REMOTE_URL" 2>/dev/null || git remote set-url origin "$REMOTE_URL"
-git push origin main
-git push origin develop
-git push origin "$TAG"
-
-# 4. Create/update GitHub Release and upload assets
-echo "--> Creating GitHub Release $TAG and uploading bundle assets..."
-if gh release view "$TAG" --repo stpork/mdvu >/dev/null 2>&1; then
-    echo "Release $TAG already exists on GitHub. Updating release notes..."
-    gh release edit "$TAG" --repo stpork/mdvu --title "mdvu $TAG" --notes-file "$NOTES_FILE"
-else
-    gh release create "$TAG" \
-        --repo stpork/mdvu \
-        --title "mdvu $TAG" \
-        --notes-file "$NOTES_FILE"
+# Use the cask from the published build; its checksum must match that archive.
+gh release download "$TAG" --repo stpork/mdvu --pattern mdvu.rb --dir "$TEMP/published"
+gh repo clone stpork/homebrew-tap "$TEMP/tap"
+mkdir -p "$TEMP/tap/Casks"
+cp "$TEMP/published/mdvu.rb" "$TEMP/tap/Casks/mdvu.rb"
+git -C "$TEMP/tap" add Casks/mdvu.rb
+if ! git -C "$TEMP/tap" diff --cached --quiet; then
+    git -C "$TEMP/tap" commit -m "Update mdvu to $TAG"
+    git -C "$TEMP/tap" push
 fi
+gh workflow run 'Deploy MDVu website' --repo stpork/stpork.github.io
 
-gh release upload "$TAG" \
-    --repo stpork/mdvu \
-    --clobber \
-    "$ARM_ZIP" "$ARM_ZIP.sha256" \
-    "$X86_ZIP" "$X86_ZIP.sha256" \
-    "$UNI_ZIP" "$UNI_ZIP.sha256" \
-    "$DMG_FILE" "$DMG_FILE.sha256"
-
-rm -f "$NOTES_FILE"
-
-# 5. Update Homebrew tap
-echo "--> Updating Homebrew tap stpork/homebrew-tap..."
-TAP_DIR=$(mktemp -d /tmp/stpork-tap.XXXXXX)
-if ! gh repo clone stpork/homebrew-tap "$TAP_DIR" 2>/dev/null; then
-    git clone https://github.com/stpork/homebrew-tap.git "$TAP_DIR" || true
-fi
-
-cd "$TAP_DIR"
-mkdir -p Casks
-cp "$DIST/mdvu.rb" Casks/mdvu.rb
-
-if command -v brew >/dev/null 2>&1; then
-    echo "Running brew audit..."
-    brew audit --cask "$TAP_DIR/Casks/mdvu.rb" 2>&1 || brew audit --cask mdvu 2>&1 || true
-fi
-
-git add Casks/mdvu.rb
-if [ -n "$(git status --porcelain)" ]; then
-    git commit -m "Update mdvu to $TAG"
-    git branch -M main 2>/dev/null || true
-    git push -u origin main
-    echo "Homebrew tap updated successfully."
-else
-    echo "Homebrew tap formula already up-to-date."
-fi
-rm -rf "$TAP_DIR"
-
-cd "$ROOT"
-
-# 6. Switch back to develop and bump Y-counter
-echo "--> Switching back to develop and bumping version counter to v$NEXT_VERSION..."
-git checkout develop
-echo "$NEXT_VERSION" > "$ROOT/version.txt"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEXT_VERSION" "$ROOT/packaging/macos/Info.plist" 2>/dev/null || true
-
-git add "$ROOT/version.txt" "$ROOT/packaging/macos/Info.plist"
+git switch develop
+NEXT_VERSION=$(python3 -c 'import sys; a,b,_=map(int,sys.argv[1].split(".")); print(f"{a}.{b+1}.0")' "$VERSION")
+printf '%s\n' "$NEXT_VERSION" > version.txt
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEXT_VERSION" packaging/macos/Info.plist
+git add version.txt packaging/macos/Info.plist
 git commit -m "chore: bump version to $NEXT_VERSION"
 git push origin develop
-
-echo ""
-echo "=================================================="
-echo "      mdvu $TAG published successfully!           "
-echo "      develop branch bumped to v$NEXT_VERSION     "
-echo "=================================================="
+echo "Published $TAG with all six packages. Website refresh requested; develop is $NEXT_VERSION."
