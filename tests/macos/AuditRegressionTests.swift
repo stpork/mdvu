@@ -154,7 +154,7 @@ extension AuditRegressionTests {
         defer { view.stopLoading() }
         var ready = false
         for _ in 0..<100 {
-            if let value = try? await view.evaluateJavaScript("typeof window.__mdvuFind === 'object' && document.querySelectorAll('.heading-anchor').length === 3"), value as? Bool == true {
+            if let value = try? await view.evaluateJavaScriptValue("typeof window.__mdvuFind === 'object' && document.querySelectorAll('.heading-anchor').length === 3"), value as? Bool == true {
                 ready = true
                 break
             }
@@ -162,14 +162,14 @@ extension AuditRegressionTests {
         }
         #expect(ready)
         guard ready else { return }
-        let unique = try await view.evaluateJavaScript("new Set([...document.querySelectorAll('h1,h2')].map(h=>h.id)).size")
+        let unique = try await view.evaluateJavaScriptValue("new Set([...document.querySelectorAll('h1,h2')].map(h=>h.id)).size")
         #expect(unique as? Int == 3)
         for query in ["target", "a.b", "a+b", "[x]"] {
             let literal = String(data: try JSONSerialization.data(withJSONObject: query, options: .fragmentsAllowed), encoding: .utf8)!
-            let matched = try await view.evaluateJavaScript("window.__mdvuFind.search(\(literal)); (document.querySelector('#text mark')?.textContent ?? '')")
+            let matched = try await view.evaluateJavaScriptValue("window.__mdvuFind.search(\(literal)); (document.querySelector('#text mark')?.textContent ?? '')")
             #expect(matched as? String == query)
-            _ = try await view.evaluateJavaScript("window.__mdvuFind.clear(); true")
-            let text = try await view.evaluateJavaScript("document.getElementById('text').textContent")
+            _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear(); true")
+            let text = try await view.evaluateJavaScriptValue("document.getElementById('text').textContent")
             #expect(text as? String == "İstanbul target a.b a+b [x]")
         }
     }
@@ -190,7 +190,7 @@ extension AuditRegressionTests {
         defer { view.stopLoading() }
         var ready = false
         for _ in 0..<100 {
-            if let ok = try? await view.evaluateJavaScript("typeof window.__mdvuScrollToFragment === 'function' && document.getElementById('target') !== null"), ok as? Bool == true {
+            if let ok = try? await view.evaluateJavaScriptValue("typeof window.__mdvuScrollToFragment === 'function' && document.getElementById('target') !== null"), ok as? Bool == true {
                 ready = true; break
             }
             try await Task.sleep(nanoseconds: 50_000_000)
@@ -198,15 +198,15 @@ extension AuditRegressionTests {
         #expect(ready)
         guard ready else { return }
         // A boolean alone does not prove the requested heading was reached.
-        _ = try await view.evaluateJavaScript("document.documentElement.style.scrollBehavior='auto'; true")
+        _ = try await view.evaluateJavaScriptValue("document.documentElement.style.scrollBehavior='auto'; true")
         for push in [true, false] {
-            _ = try await view.evaluateJavaScript("scrollTo(0,0); true")
-            let result = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('target', \(push))")
+            _ = try await view.evaluateJavaScriptValue("scrollTo(0,0); true")
+            let result = try await view.evaluateJavaScriptValue("window.__mdvuScrollToFragment('target', \(push))")
             #expect(result as? Bool == true)
-            let reached = try await view.evaluateJavaScript("scrollY > 0 && Math.abs(document.getElementById('target').getBoundingClientRect().top) < 2")
+            let reached = try await view.evaluateJavaScriptValue("scrollY > 0 && Math.abs(document.getElementById('target').getBoundingClientRect().top) < 2")
             #expect(reached as? Bool == true)
         }
-        let missing = try await view.evaluateJavaScript("window.__mdvuScrollToFragment('missing')")
+        let missing = try await view.evaluateJavaScriptValue("window.__mdvuScrollToFragment('missing')")
         #expect(missing as? Bool == false)
     }
 }

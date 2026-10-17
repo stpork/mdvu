@@ -46,7 +46,7 @@ struct SharedRegressionTests {
     }
     @MainActor private func ready(_ view: WKWebView) async throws {
         for _ in 0..<100 {
-            if let ok = try? await view.evaluateJavaScript("typeof window.__mdvuInitArticle === 'function'"), ok as? Bool == true { return }
+            if let ok = try? await view.evaluateJavaScriptValue("typeof window.__mdvuInitArticle === 'function'"), ok as? Bool == true { return }
             try await Task.sleep(for: .milliseconds(30))
         }
         Issue.record("Document runtime failed to load")
@@ -60,9 +60,9 @@ struct SharedRegressionTests {
         defer { view.stopLoading() }
         try await ready(view)
         try await Task.sleep(for: .milliseconds(100))
-        let safe = try await view.evaluateJavaScript("window.auditExecuted !== true && typeof window.__mdvuFind === 'object'")
+        let safe = try await view.evaluateJavaScriptValue("window.auditExecuted !== true && typeof window.__mdvuFind === 'object'")
         #expect(safe as? Bool == true)
-        #expect(try await view.evaluateJavaScript("getComputedStyle(document.getElementById('audit-style')).color") as? String == "rgb(1, 2, 3)")
+        #expect(try await view.evaluateJavaScriptValue("getComputedStyle(document.getElementById('audit-style')).color") as? String == "rgb(1, 2, 3)")
     }
     @MainActor @Test func articleReplacementReleasesObserversAndPreservesIDs() async throws {
         let config = WKWebViewConfiguration()
@@ -81,7 +81,7 @@ struct SharedRegressionTests {
         view.loadHTMLString(HTMLDocument.make(body: "<h1>Start</h1>", title: "Replace", theme: .light), baseURL: nil)
         defer { view.stopLoading() }
         try await ready(view)
-        let result = try await view.evaluateJavaScript("""
+        let result = try await view.evaluateJavaScriptValue("""
             (()=>{
                 for(let i=0;i<20;i++){
                     window.__mdvuDisposeArticle();
@@ -106,8 +106,8 @@ struct SharedRegressionTests {
         view.loadHTMLString(html, baseURL: nil)
         defer { view.stopLoading() }
         try await ready(view)
-        _ = try await view.evaluateJavaScript("window.__mdvuRenderMath(); true")
-        let rendered = try await view.evaluateJavaScript("document.querySelector('.math-rendered math') !== null")
+        _ = try await view.evaluateJavaScriptValue("window.__mdvuRenderMath(); true")
+        let rendered = try await view.evaluateJavaScriptValue("document.querySelector('.math-rendered math') !== null")
         #expect(rendered as? Bool == true)
     }
 }
@@ -128,20 +128,20 @@ extension SharedRegressionTests {
         }
         let web = try #require(controller.window?.contentView.flatMap(findWebView))
         for _ in 0..<150 {
-            if !web.isLoading, let text = try? await web.evaluateJavaScript("document.querySelector('article h1')?.textContent"), (text as? String)?.contains("First") == true { break }
+            if !web.isLoading, let text = try? await web.evaluateJavaScriptValue("document.querySelector('article h1')?.textContent"), (text as? String)?.contains("First") == true { break }
             try await Task.sleep(for: .milliseconds(30))
         }
-        _ = try await web.evaluateJavaScript("window.auditRetained = 42; true")
+        _ = try await web.evaluateJavaScriptValue("window.auditRetained = 42; true")
         controller.openDocument(second)
         var changed = false
         for _ in 0..<150 {
-            if let text = try? await web.evaluateJavaScript("document.querySelector('article h1')?.textContent"), (text as? String)?.contains("Second") == true { changed = true; break }
+            if let text = try? await web.evaluateJavaScriptValue("document.querySelector('article h1')?.textContent"), (text as? String)?.contains("Second") == true { changed = true; break }
             try await Task.sleep(for: .milliseconds(30))
         }
         #expect(changed)
-        #expect(try await web.evaluateJavaScript("window.auditRetained") as? Int == 42)
+        #expect(try await web.evaluateJavaScriptValue("window.auditRetained") as? Int == 42)
         let original = web.url
-        _ = try? await web.evaluateJavaScript("location.href='data:text/html,<h1>Untrusted navigation</h1>'; true")
+        _ = try? await web.evaluateJavaScriptValue("location.href='data:text/html,<h1>Untrusted navigation</h1>'; true")
         try await Task.sleep(for: .milliseconds(100))
         #expect(web.url == original)
     }
@@ -161,17 +161,17 @@ extension SharedRegressionTests {
         _ = try await view.callAsyncJavaScript("await Promise.all([window.__mdvuRenderDiagrams({all:true}),window.__mdvuRenderDiagrams({all:true}),window.__mdvuRenderDiagrams({all:true})]); return true", arguments: [:], in: nil, contentWorld: .page)
         var count = 0
         for _ in 0..<200 {
-            count = (try? await view.evaluateJavaScript("[...document.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length")) as? Int ?? 0
+            count = (try? await view.evaluateJavaScriptValue("[...document.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length")) as? Int ?? 0
             if count == 2 { break }
             try await Task.sleep(for: .milliseconds(50))
         }
-        let diagnostics = try? await view.evaluateJavaScript("JSON.stringify({runtime:!!window.mermaid,error:window.__mdvuMermaidError,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.srcdoc.length,url:f.contentDocument?.URL}))})")
+        let diagnostics = try? await view.evaluateJavaScriptValue("JSON.stringify({runtime:!!window.mermaid,error:window.__mdvuMermaidError,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.srcdoc.length,url:f.contentDocument?.URL}))})")
         #expect(count == 2, "\(String(describing: diagnostics))")
-        let errors = try await view.evaluateJavaScript("[...document.querySelectorAll('.diagram-error')].map(n=>n.textContent).join(' | ')")
+        let errors = try await view.evaluateJavaScriptValue("[...document.querySelectorAll('.diagram-error')].map(n=>n.textContent).join(' | ')")
         #expect(errors as? String == "")
-        let found = try await view.evaluateJavaScript("window.__mdvuFind.search('Hello').count")
+        let found = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('Hello').count")
         #expect(found as? Int == 1)
-        _ = try await view.evaluateJavaScript("window.__mdvuFind.clear(); true")
+        _ = try await view.evaluateJavaScriptValue("window.__mdvuFind.clear(); true")
     }
 }
 
@@ -226,27 +226,27 @@ extension SharedRegressionTests {
         controller.window?.contentView?.layoutSubtreeIfNeeded()
         let web = try #require(controller.window?.contentView.flatMap { webView(in: $0) })
         for _ in 0..<150 {
-            if !web.isLoading, let ready = try? await web.evaluateJavaScript("!!window.__mdvuCaptureReadingAnchor"), ready as? Bool == true { break }
+            if !web.isLoading, let ready = try? await web.evaluateJavaScriptValue("!!window.__mdvuCaptureReadingAnchor"), ready as? Bool == true { break }
             try await Task.sleep(for: .milliseconds(30))
         }
-        _ = try await web.evaluateJavaScript("window.requestAnimationFrame=cb=>setTimeout(cb,0);document.documentElement.style.scrollBehavior='auto';const target=document.querySelectorAll('h2')[20];target.id='reading-target';target.scrollIntoView({block:'center',behavior:'instant'});window.auditRuntime=42;true")
+        _ = try await web.evaluateJavaScriptValue("window.requestAnimationFrame=cb=>setTimeout(cb,0);document.documentElement.style.scrollBehavior='auto';const target=document.querySelectorAll('h2')[20];target.id='reading-target';target.scrollIntoView({block:'center',behavior:'instant'});window.auditRuntime=42;true")
         try await Task.sleep(for: .milliseconds(100))
-        let before = try await web.evaluateJavaScript("(()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target').removeAttribute('id');anchor.id='reading-target';return anchor.getBoundingClientRect().top/innerHeight})()")
-        _ = try await web.evaluateJavaScript("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{window.auditCapture={picked:document.elementFromPoint(innerWidth/2,innerHeight/2)?.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
+        let before = try await web.evaluateJavaScriptValue("(()=>{const anchor=document.elementFromPoint(innerWidth/2,innerHeight/2).closest('p,h2');document.getElementById('reading-target').removeAttribute('id');anchor.id='reading-target';return anchor.getBoundingClientRect().top/innerHeight})()")
+        _ = try await web.evaluateJavaScriptValue("window.auditCaptureNative=window.__mdvuCaptureReadingAnchor;window.__mdvuCaptureReadingAnchor=()=>{window.auditCapture={picked:document.elementFromPoint(innerWidth/2,innerHeight/2)?.outerHTML.slice(0,180),width:innerWidth,height:innerHeight,y:scrollY,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight};return window.auditCaptureNative()};true")
         controller.applyPageZoom(1.1)
         controller.applyPageZoom(1.2)
         controller.applyPageZoom(1.5)
         for _ in 0..<100 where abs(web.pageZoom - 1.5) > 0.001 { try await Task.sleep(for: .milliseconds(20)) }
         for _ in 0..<100 {
-            if let settled = try? await web.evaluateJavaScript("window.__mdvuReadingAnchorSettled > 0"), settled as? Bool == true { break }
+            if let settled = try? await web.evaluateJavaScriptValue("window.__mdvuReadingAnchorSettled > 0"), settled as? Bool == true { break }
             try await Task.sleep(for: .milliseconds(20))
         }
         #expect(abs(web.pageZoom - 1.5) < 0.001)
         #expect(abs(controller.effectiveZoom - 1.5) < 0.001)
-        let after = try await web.evaluateJavaScript("document.getElementById('reading-target').getBoundingClientRect().top/innerHeight")
-        let diagnostic = try? await web.evaluateJavaScript("JSON.stringify({capture:window.auditCapture,width:innerWidth,height:innerHeight,y:scrollY,settled:window.__mdvuReadingAnchorSettled,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight})")
+        let after = try await web.evaluateJavaScriptValue("document.getElementById('reading-target').getBoundingClientRect().top/innerHeight")
+        let diagnostic = try? await web.evaluateJavaScriptValue("JSON.stringify({capture:window.auditCapture,width:innerWidth,height:innerHeight,y:scrollY,settled:window.__mdvuReadingAnchorSettled,target:document.getElementById('reading-target').getBoundingClientRect().top/innerHeight})")
         #expect(abs((after as? Double ?? -10) - (before as? Double ?? 10)) < 0.02, "\(String(describing: diagnostic))")
-        #expect(try await web.evaluateJavaScript("window.auditRuntime") as? Int == 42)
+        #expect(try await web.evaluateJavaScriptValue("window.auditRuntime") as? Int == 42)
     }
 }
 
