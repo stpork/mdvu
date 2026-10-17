@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(windows)]
+mod diagram_worker;
 mod gui_shell;
 
 #[cfg(windows)]
@@ -279,6 +281,10 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Debug)]
 pub enum UserEvent {
     ShellReady,
+    DiagramRequest(String),
+    DiagramCancel,
+    DiagramMessage(String),
+    DiagramRuntimeReady(String, Result<&'static str, &'static str>),
     FileChanged,
     OpenFile(PathBuf),
     OpenFileWithFragment(PathBuf, Option<String>),
@@ -528,8 +534,8 @@ fn inject_needed_runtimes(
     let (needs_math, needs_mermaid, needs_plantuml) = match st.last_rendered {
         Some(ref doc) => (
             doc.has_math,
-            st.enable_diagrams && doc.has_mermaid,
-            st.enable_diagrams && doc.has_plantuml,
+            st.enable_diagrams && doc.has_mermaid && !cfg!(windows),
+            st.enable_diagrams && doc.has_plantuml && !cfg!(windows),
         ),
         None => return,
     };
@@ -733,6 +739,16 @@ fn get_webview2_user_data_dir() -> PathBuf {
 
 #[cfg(windows)]
 fn ensure_webview2_runtime_env() {
+    // A different site keeps the DOM-bound engines off the reading renderer's
+    // thread while retaining the shared browser/GPU process and data folder.
+    let isolation = "--isolate-origins=http://mdvu-diagram.localhost --disable-background-timer-throttling --disable-renderer-backgrounding";
+    let arguments = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").unwrap_or_default();
+    if !arguments.contains("--isolate-origins=http://mdvu-diagram.localhost") {
+        std::env::set_var(
+            "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+            format!("{arguments} {isolation}"),
+        );
+    }
     // 1. Mandatory user data folder configuration:
     // When mdvu is installed in C:\Program Files\MDVu, default UDF creation (<exe_dir>\<exe>.WebView2)
     // fails with E_ACCESSDENIED (0x80070005) for standard users. We redirect UDF to %LOCALAPPDATA%\MDVu\WebView2.
@@ -973,7 +989,11 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let allowed_shell_url = shell_url.clone();
     let web_context = Box::leak(Box::new(wry::WebContext::new(Some(user_data_dir))));
     let handle_message = move |msg: &str| {
-        if let Some(json) = msg.strip_prefix("ui_test:") {
+        if let Some(json) = msg.strip_prefix("diagram_render:") {
+            let _ = proxy_ipc.send_event(UserEvent::DiagramRequest(json.to_owned()));
+        } else if msg == "diagram_cancel" {
+            let _ = proxy_ipc.send_event(UserEvent::DiagramCancel);
+        } else if let Some(json) = msg.strip_prefix("ui_test:") {
             let _ = proxy_ipc.send_event(UserEvent::UiTestResult(json.to_string()));
         } else if let Some(json) = msg.strip_prefix("article_ready:") {
             let _ = proxy_ipc.send_event(UserEvent::ArticleReady(json.to_string()));
@@ -1056,7 +1076,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         });
     #[cfg(windows)]
     let builder = builder.with_initialization_script(
-        "window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};",
+        "window.ipc={postMessage:message=>window.chrome.webview.postMessage(message)};window.__mdvuNativeDiagramTransport={post:job=>window.ipc.postMessage('diagram_render:'+JSON.stringify(job)),cancel:()=>window.ipc.postMessage('diagram_cancel')};",
     );
     #[cfg(not(windows))]
     let builder = builder.with_ipc_handler(move |request| handle_message(request.body()));
@@ -1091,6 +1111,9 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(windows)]
     win32::attach_web_message_handler(&webview, &shell_url, handle_message)?;
+
+    #[cfg(windows)]
+    let mut diagram_worker = diagram_worker::DiagramWorker::default();
 
     // Setup file watcher with trailing-edge debounce (150ms) so multi-step saves never drop final writes
     let watcher_state = Arc::clone(&state);
@@ -1168,6 +1191,22 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
 
         match event {
             TaoEvent::UserEvent(user_event) => match user_event {
+                UserEvent::DiagramRequest(json) => {
+                    #[cfg(windows)]
+                    if let Some(result) = diagram_worker.submit(&json, &window, web_context, &proxy) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+                    #[cfg(not(windows))] let _ = json;
+                }
+                UserEvent::DiagramCancel => { #[cfg(windows)] diagram_worker.cancel(); }
+                UserEvent::DiagramMessage(json) => {
+                    #[cfg(windows)]
+                    if let Some(result) = diagram_worker.message(&json, &proxy) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+                    #[cfg(not(windows))] let _ = json;
+                }
+                UserEvent::DiagramRuntimeReady(id, source) => {
+                    #[cfg(windows)]
+                    if let Some(result) = diagram_worker.runtime_ready(&id, source) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+                    #[cfg(not(windows))] let _ = (id, source);
+                }
                 UserEvent::ShellReady => {
                     let mut st = state.lock().unwrap();
                     st.katex_injected = false;
@@ -1179,6 +1218,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::UiTestResult(json) => {
                     if let Some(path) = &ui_result {
                         if let Ok(mut result) = serde_json::from_str::<serde_json::Value>(&json) {
+                            #[cfg(windows)]
+                            if result["idleProbe"] == true {
+                                let released = !diagram_worker.has_renderer();
+                                result["checks"]["rendererReleased"] = serde_json::json!(released);
+                                if !released { result["passed"] = serde_json::json!(false); }
+                            }
                             result["allRenderedMs"] = serde_json::json!(startup.elapsed().as_secs_f64()*1000.0);
                             let _ = fs::write(path, result.to_string());
                         }
@@ -1197,7 +1242,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::SmokeResult(json) => {
                     attach_console();
                     let result: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
-                    let passed = ["ready", "safe", "large", "image", "toc"].iter().all(|key| result[key] == true);
+                    let passed = ["ready", "safe", "large", "image", "toc", "diagrams", "isolated"].iter().all(|key| result[key] == true);
                     println!("GUI smoke: {json}");
                     let _ = fs::remove_file(&shell_path);
                     *control_flow = ControlFlow::ExitWithCode(if passed { 0 } else { 1 });
@@ -1215,7 +1260,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     apply_document(&webview, &window, &mut st, *ready, &proxy);
                     if current { if let Some(script) = &ui_script { let _ = webview.evaluate_script(script); } }
                     if gui_smoke && current {
-                        let _ = webview.evaluate_script(r#"setTimeout(()=>{window.__mdvuInitArticle(); window.ipc.postMessage('smoke_result:'+JSON.stringify({ready:typeof window.__mdvuUpdateDocument==='function',safe:window.auditExecuted!==true,large:document.querySelector('article').innerHTML.length>2097152,image:document.getElementById('smoke-img')?.naturalWidth>0,toc:document.getElementById('target-heading')!==null}));},1000);"#);
+                        let _ = webview.evaluate_script(r#"setTimeout(async()=>{window.__mdvuInitArticle();await window.__mdvuRenderDiagrams({all:true});window.ipc.postMessage('smoke_result:'+JSON.stringify({ready:typeof window.__mdvuUpdateDocument==='function',safe:window.auditExecuted!==true,large:document.querySelector('article').innerHTML.length>2097152,image:document.getElementById('smoke-img')?.naturalWidth>0,toc:document.getElementById('target-heading')!==null,diagrams:document.querySelectorAll('figure.diagram-rendered').length===2&&!document.querySelector('.diagram-error'),isolated:!window.mermaid&&!window.PlantUML}));},1000);"#);
                     }
                     #[cfg(windows)] sync_win32_menu(hwnd, &st);
                 }
@@ -1629,6 +1674,11 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 _ => {}
             },
             _ => {}
+        }
+        #[cfg(windows)]
+        if !matches!(*control_flow, ControlFlow::ExitWithCode(_)) {
+            if let Some(result) = diagram_worker.poll() { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+            if let Some(deadline) = diagram_worker.deadline() { *control_flow = ControlFlow::WaitUntil(deadline); }
         }
         #[cfg(coverage)]
         if matches!(*control_flow, ControlFlow::ExitWithCode(_)) {

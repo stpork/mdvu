@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Run the native macOS UI on every Markdown fixture; retain checks, profiles and screenshots."""
-import argparse, csv, hashlib, json, os, pathlib, platform, re, subprocess, time
+import argparse, csv, ctypes, hashlib, json, os, pathlib, platform, re, subprocess, time
 root = pathlib.Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument('binary', nargs='?', default='dist/mdvu.app/Contents/MacOS/mdvu')
@@ -11,6 +11,13 @@ os.chdir(root)
 output = pathlib.Path(args.output).resolve(); output.mkdir(parents=True, exist_ok=True)
 binary = pathlib.Path(args.binary).resolve()
 fixtures = [root/'tests/fixtures'/args.fixture] if args.fixture else sorted((root/'tests/fixtures').rglob('*.md'))
+class RUsage(ctypes.Structure):
+    _fields_ = [('uuid',ctypes.c_uint8*16)] + [(name,ctypes.c_uint64) for name in ('user','system','idle','interrupt','pageins','wired','resident','footprint','start','exit','childUser','childSystem','childIdle','childInterrupt','childPageins','childElapsed','diskRead','diskWrite')]
+libproc=ctypes.CDLL('/usr/lib/libproc.dylib')
+libproc.proc_pid_rusage.argtypes=[ctypes.c_int,ctypes.c_int,ctypes.c_void_p]
+def footprint(pid):
+    usage=RUsage()
+    return usage.footprint if libproc.proc_pid_rusage(pid,2,ctypes.byref(usage))==0 else None
 def processes():
     data = subprocess.check_output(['/bin/ps','-axo','pid=,ppid=,rss=,time=,comm='], text=True)
     result = {}
@@ -31,7 +38,7 @@ for fixture in fixtures:
     image, diagnostic = output/(stem+'.png'), output/(stem+'-ui.json')
     for path in [image,diagnostic]: path.unlink(missing_ok=True)
     check_script=output/(stem+'-check.js')
-    check_script.write_text('window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
+    check_script.write_text('window.__mdvuAuditIdleProbe='+json.dumps(name=='test-heavy.md')+';window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
     before = set(processes()); start = time.perf_counter()
     env = dict(os.environ, MDVU_PROFILE='1', MDVU_CACHE_DIR=str(output/(stem+'-cache')), MDVU_UI_SCRIPT=str(check_script), MDVU_UI_RESULT_FILE=str(diagnostic))
     samples = []
@@ -40,7 +47,8 @@ for fixture in fixtures:
         while process.poll() is None and time.perf_counter()-start < 120:
             all_processes = processes(); own = all_processes.get(process.pid,{})
             webkit = {pid: info for pid,info in all_processes.items() if pid not in before and 'com.apple.WebKit.' in info['command']}
-            samples.append({'elapsedMs':(time.perf_counter()-start)*1000,'appRssBytes':own.get('rssBytes',0),'appCpuMs':own.get('cpuMs',0),'webkitRssBytes':sum(p['rssBytes'] for p in webkit.values()),'webkitCpuMs':sum(p['cpuMs'] for p in webkit.values()),'webkitProcesses':len(webkit)})
+            physical=[footprint(pid) for pid in [process.pid,*webkit]]
+            samples.append({'elapsedMs':(time.perf_counter()-start)*1000,'appRssBytes':own.get('rssBytes',0),'appCpuMs':own.get('cpuMs',0),'webkitRssBytes':sum(p['rssBytes'] for p in webkit.values()),'webkitCpuMs':sum(p['cpuMs'] for p in webkit.values()),'webkitProcesses':len(webkit),'physicalFootprintBytes':sum(physical) if all(p is not None for p in physical) else None,'processMemory':{pid:{'rssBytes':p['rssBytes'],'physicalFootprintBytes':physical[i+1]} for i,(pid,p) in enumerate(webkit.items())}})
             time.sleep(.25)
         if process.poll() is None: process.kill(); process.wait()
     ui = json.loads(diagnostic.read_text()) if diagnostic.exists() else None

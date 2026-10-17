@@ -131,7 +131,8 @@ public static class MdvuCapture {
             $ExpectedJSON = ConvertTo-Json -InputObject $Expected -Depth 6 -Compress
             if (-not $ExpectedJSON.StartsWith('[')) { throw 'Expected diagram errors must serialize as a JSON array' }
             $CheckScript = Join-Path $Profile 'check.js'
-            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuExpectedDiagramErrors=' + $ExpectedJSON + ';' + [Environment]::NewLine + $UISource))
+            $IdleProbe = if ($Fixture.Name -eq 'test-heavy.md') { 'true' } else { 'false' }
+            [IO.File]::WriteAllText($CheckScript, ('window.__mdvuAuditIdleProbe=' + $IdleProbe + ';window.__mdvuExpectedDiagramErrors=' + $ExpectedJSON + ';' + [Environment]::NewLine + $UISource))
             $env:MDVU_UI_SCRIPT = $CheckScript
             $UIResult = Join-Path $Output ($Fixture.BaseName+'-ui.json')
             Remove-Item $UIResult -ErrorAction SilentlyContinue

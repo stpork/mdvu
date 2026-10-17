@@ -5,7 +5,19 @@ $TestDir = Join-Path ([IO.Path]::GetTempPath()) ("mdvu GUI # " + [Guid]::NewGuid
 New-Item -ItemType Directory -Path $TestDir | Out-Null
 try {
     Copy-Item "tests/fixtures/diagram.png" (Join-Path $TestDir "image.png")
-    $Markdown = "# Target Heading`n`n<img id='smoke-img' src='image.png'>`n<img src='data:,bad' onerror='window.auditExecuted=true'>`n`n" + ("sample paragraph`n`n" * 150000)
+    $Diagrams = @'
+```mermaid
+graph TD; A-->B
+```
+
+```plantuml
+@startuml
+Alice -> Bob: Hello
+@enduml
+```
+
+'@
+    $Markdown = "# Target Heading`n`n<img id='smoke-img' src='image.png'>`n<img src='data:,bad' onerror='window.auditExecuted=true'>`n`n" + $Diagrams + ("sample paragraph`n`n" * 150000)
     $InputFile = Join-Path $TestDir "large note.md"
     [IO.File]::WriteAllText($InputFile, $Markdown)
     $env:MDVU_GUI_SMOKE = "1"
@@ -31,7 +43,7 @@ try {
         $Match = [regex]::Match($Text, 'GUI smoke: (\{[^\r\n]+\})')
         if (-not $Match.Success) { throw "WebView2 smoke diagnostic missing: $Text $($Stderr.Result)" }
         $Checks = $Match.Groups[1].Value | ConvertFrom-Json
-        foreach ($Name in @('ready','safe','large','image','toc')) {
+        foreach ($Name in @('ready','safe','large','image','toc','diagrams','isolated')) {
             if ($Checks.$Name -ne $true) { throw "WebView2 smoke check failed: $Name; $($Match.Groups[1].Value)" }
         }
         Write-Host $Match.Value

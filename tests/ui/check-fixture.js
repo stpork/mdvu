@@ -8,13 +8,13 @@
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const article = document.querySelector('article');
     const roots=()=>[article,...[...article.querySelectorAll('figure.diagram')].map(n=>n.querySelector('.diagram-content')?.shadowRoot).filter(Boolean)];
-    const diagramCount=()=>roots().reduce((count,root)=>count+root.querySelectorAll('svg').length,0);
+    const diagramCount=()=>[...article.querySelectorAll('figure.diagram')].filter(n=>window.__mdvuHasDiagramSVG?.(n)).length;
     checks.article = !!article && article.textContent.trim().length > 0;
     if (document.getElementById('mdvu-one-screen')) checks.customStylesheet = getComputedStyle(document.querySelector('.board')).display === 'grid';
     const needs = renderer => !!document.querySelector(`.diagram-pending[data-renderer="${renderer}"]`);
     const math = !!document.querySelector('.math-inline,.math-display');
     for (let n = 0; n < 400; n++) {
-      if ((!math || window.katex) && (!needs('mermaid') || window.mermaid) && (!needs('plantuml') || window.PlantUML?.renderToString)) break;
+      if ((!math || window.katex) && (!needs('mermaid') || window.__mdvuNativeDiagramTransport || window.mermaid) && (!needs('plantuml') || window.__mdvuNativeDiagramTransport || window.PlantUML?.renderToString)) break;
       await pause(50);
     }
     window.__mdvuRenderMath?.();
@@ -22,15 +22,41 @@
     let lastFrame=performance.now(), monitor=true;
     const trackFrame=now=>{if(!monitor)return;frameGaps.push(now-lastFrame);lastFrame=now;requestAnimationFrame(trackFrame)};
     requestAnimationFrame(trackFrame);
+    const coldScroll=[],coldZoom=[],coldTargets=[...article.querySelectorAll('figure.diagram')];let rendering=true;
+    const nextFrame=()=>new Promise(r=>requestAnimationFrame(r));
+    const scrollerDuringLoad=document.getElementById('mdvu-main-content')||document.scrollingElement;
+    const exercise=async()=>{
+      do {
+        let t=performance.now();
+        if(coldScroll.length%4===0)coldTargets[(coldScroll.length*17)%Math.max(1,coldTargets.length)]?.scrollIntoView({block:'center',behavior:'instant'});
+        scrollerDuringLoad.scrollBy({top:70,behavior:'instant'});await nextFrame();coldScroll.push(performance.now()-t);
+        const input=document.getElementById('mdvu-zoom-val'),width=innerWidth;
+        const zoomIn=document.getElementById('btn-zoom-in'),zoomOut=document.getElementById('btn-zoom-out');
+        t=performance.now();
+        if(zoomIn)zoomIn.click();else window.webkit?.messageHandlers?.uiControl?.postMessage('zoomIn');
+        for(let n=0;n<100&&(input?input.value!=='110%':innerWidth>width*.98);n++)await nextFrame();
+        await nextFrame();coldZoom.push(performance.now()-t);
+        checks.coldZoomIn=checks.coldZoomIn!==false&&(input?input.value==='110%':innerWidth<width*.98);
+        t=performance.now();
+        if(zoomOut)zoomOut.click();else window.webkit?.messageHandlers?.uiControl?.postMessage('zoomOut');
+        for(let n=0;n<100&&(input?input.value!=='100%':Math.abs(innerWidth-width)>3);n++)await nextFrame();
+        await nextFrame();coldZoom.push(performance.now()-t);
+        checks.coldZoomOut=checks.coldZoomOut!==false&&(input?input.value==='100%':Math.abs(innerWidth-width)<4);
+        await pause(120);
+      } while(rendering);
+    };
+    const interactions=exercise();
     let timer;
     try {
       await Promise.race([window.__mdvuRenderDiagrams?.({all:true}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Diagram rendering exceeded 90 seconds')),90000)})]);
-    } finally { clearTimeout(timer) }
+    } finally { clearTimeout(timer);rendering=false;await interactions }
     for (let n = 0; n < 1200 && document.querySelector('.diagram-pending:not(.diagram-error)'); n++) await pause(50);
     checks.runtimes = !document.querySelector('.diagram-pending:not(.diagram-error),.math-inline:not(.math-rendered):not(.katex-error),.math-display:not(.math-rendered):not(.katex-error)');
     const renderFinishedMs = performance.now();
     monitor=false;
     const frames=[...frameGaps].sort((a,b)=>a-b);
+    if(window.__mdvuNativeDiagramTransport){renderTimings.push(...window.__mdvuDiagramTimings);checks.enginesOutsideReader=!window.mermaid&&!window.PlantUML}
+
     const scroller=document.getElementById('mdvu-main-content')||document.scrollingElement;
     const edge=async key=>{const begin=performance.now(),previous=window.__mdvuReadingEdgeSettled;window.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));if(key==='End')for(let n=0;n<10&&window.__mdvuReadingEdgeSettled===previous;n++)await new Promise(r=>requestAnimationFrame(r));else await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return performance.now()-begin};
     const endMs=await edge('End');
@@ -40,7 +66,9 @@
     const scrollFrames=[];let previous=performance.now();
     for(let n=0;n<30;n++){scroller.scrollBy({top:120,behavior:'instant'});await new Promise(r=>requestAnimationFrame(r));const now=performance.now();scrollFrames.push(now-previous);previous=now}
     scroller.scrollTo({top:0,behavior:'instant'});
-    const performanceMetrics={homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
+    const mountedDiagrams=[...article.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length;
+    const performanceMetrics={mountedDiagrams,coldInteractionCount:coldScroll.length,coldScrollMaxMs:Math.max(...coldScroll,0),coldZoomMaxMs:Math.max(...coldZoom,0),homeMs,endMs,renderFrameP95Ms:frames[Math.floor(frames.length*.95)]||0,renderFrameMaxMs:frames.at(-1)||0,scrollFrameP95Ms:[...scrollFrames].sort((a,b)=>a-b)[Math.floor(scrollFrames.length*.95)]};
+    checks.coldResponsive=performanceMetrics.renderFrameMaxMs<500&&performanceMetrics.renderFrameP95Ms<100&&performanceMetrics.coldScrollMaxMs<250&&performanceMetrics.coldZoomMaxMs<500;
     const headings = [...article.querySelectorAll('h1,h2,h3,h4,h5,h6')];
     const ids = headings.map(h => h.id);
     checks.uniqueHeadingTargets = ids.every(Boolean) && new Set(ids).size === ids.length;
@@ -88,8 +116,9 @@
     const expected=window.__mdvuExpectedDiagramErrors||[];
     const normalize=s=>(s||'').replace(/\r\n/g,'\n').trim();
     checks.diagramErrors=diagramErrors.length===expected.length&&diagramErrors.every(e=>expected.some(known=>normalize(known.source)===normalize(e.source)));
-    checks.diagrams=[...article.querySelectorAll('figure.diagram')].every(n=>n.classList.contains('diagram-error')||n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg'));
-    const result = {checks, performance:performanceMetrics, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
+    checks.diagrams=[...article.querySelectorAll('figure.diagram')].every(n=>n.classList.contains('diagram-error')||window.__mdvuHasDiagramSVG?.(n));
+    if(window.__mdvuAuditIdleProbe)await pause(5500);
+    const result = {checks, idleProbe:!!window.__mdvuAuditIdleProbe, performance:performanceMetrics, visibility:document.visibilityState, renderTimings, passed:Object.values(checks).every(Boolean), renderFinishedMs, auditMs:performance.now()-start,
       diagrams:diagramCount(),
       diagramErrors,
       mathErrors:article.querySelectorAll('.katex-error').length,

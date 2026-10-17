@@ -302,7 +302,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private static let zoomItem = NSToolbarItem.Identifier("mdvu.zoom")
     private static let fullWidthItem = NSToolbarItem.Identifier("mdvu.fullWidth")
     private static let navigatorItem = NSToolbarItem.Identifier("mdvu.navigator")
-    private static let scriptHandlerNames = ["diagramCache", "tableOfContents", "navigationHistory", "uiTest"]
+    private let diagramOwner = UUID()
+    private var contentReadyGeneration = -1
+    private static let scriptHandlerNames = ["documentReady", "uiControl", "diagramRender", "diagramCancel", "diagramCache", "tableOfContents", "navigationHistory", "uiTest"]
     private static let measureScrollJS = "({y:scrollY,h:Math.max(1,document.documentElement.scrollHeight-innerHeight)})"
 
     private static func restoreScrollJS(ratio: Double) -> String {
@@ -335,6 +337,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if auditScript != nil, #available(macOS 14.0, *) {
             webView.configuration.preferences.inactiveSchedulingPolicy = .none
         }
+        webView.configuration.userContentController.addUserScript(WKUserScript(source: "window.__mdvuNativeDiagramTransport={post:job=>window.webkit.messageHandlers.diagramRender.postMessage(job),cancel:()=>window.webkit.messageHandlers.diagramCancel.postMessage(true)};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        webView.configuration.userContentController.addUserScript(WKUserScript(source: "if(document.querySelector('article'))window.webkit.messageHandlers.documentReady.postMessage(true);", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         webView.allowsMagnification = true
         let window = DocumentWindow(contentRect: NSRect(x: 0, y: 0, width: 1080, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         super.init(window: window)
@@ -368,6 +372,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     func tearDown() {
         guard !isTornDown else { return }
         isTornDown = true
+        DiagramRenderingService.shared.cancel(owner: diagramOwner)
         renderGeneration += 1
         findWorkItem?.cancel()
         findWorkItem = nil
@@ -730,6 +735,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     private func render(_ url: URL, position: Any?) {
         guard !isTornDown, currentURL == url else { return }
+        DiagramRenderingService.shared.cancel(owner: diagramOwner)
         renderGeneration += 1
         let generation = renderGeneration
         let theme = options.theme, fullWidth = isFullWidth
@@ -1145,7 +1151,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard !isTornDown else { return }
+        documentContentReady()
+    }
+
+    private func documentContentReady() {
+        guard !isTornDown, contentReadyGeneration != renderGeneration else { return }
+        contentReadyGeneration = renderGeneration
         hasLoadedDocument = true
         let generation = renderGeneration
         profiler.mark("webview.firstContent")
@@ -1163,53 +1174,29 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if options.snapshotPath != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.captureSnapshotIfRequested() }
         }
-        webView.evaluateJavaScript("[(document.querySelector('.diagram-pending[data-renderer=\"mermaid\"]') !== null), (document.querySelector('.diagram-pending[data-renderer=\"plantuml\"]') !== null), (document.querySelector('.math-inline, .math-display') !== null)]") { [weak self] value, _ in
+        webView.evaluateJavaScript("!!document.querySelector('.math-inline,.math-display')") { [weak self] value, _ in
             guard let self, self.renderGeneration == generation else { return }
-            guard let flags = value as? [Bool], flags.count == 3 else { self.captureSnapshotIfRequested(); return }
-            let needsMermaid = options.mermaid && flags[0] && !self.loadedRuntimes.contains("mermaid")
-            let needsPlantUML = options.mermaid && flags[1] && !self.loadedRuntimes.contains("plantuml")
-            let needsMath = flags[2] && !self.loadedRuntimes.contains("katex")
-            guard needsMermaid || needsPlantUML || needsMath else { self.captureSnapshotIfRequested(); return }
-
-            let group = DispatchGroup()
-
-            // Decompression can take tens of milliseconds. Keep it off the UI queue.
-            func injectRuntime(_ name: String, _ source: @escaping () -> String) {
-                group.enter()
+            if value as? Bool == true, !self.loadedRuntimes.contains("katex") {
                 DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                    let script = source()
+                    let script = ResourceLoader.katexJavaScript
                     DispatchQueue.main.async { [weak self] in
-                        guard let self, self.renderGeneration == generation, !script.isEmpty else {
-                            group.leave()
-                            return
-                        }
+                        guard let self, self.renderGeneration == generation else { return }
                         self.webView.evaluateJavaScript(script) { [weak self] _, error in
-                            if error == nil { self?.loadedRuntimes.insert(name) }
-                            #if DEBUG
-                            if let error {
-                                FileHandle.standardError.write(Data("mdvu: Runtime load failed: \(error.localizedDescription)\n".utf8))
-                            }
-                            #endif
-                            group.leave()
+                            guard let self, self.renderGeneration == generation else { return }
+                            if error == nil { self.loadedRuntimes.insert("katex") }
+                            self.finishInitialRender(generation: generation)
                         }
                     }
                 }
-            }
-            if needsMermaid { injectRuntime("mermaid") { ResourceLoader.mermaidJavaScript } }
-            if needsPlantUML { injectRuntime("plantuml") { ResourceLoader.plantumlJavaScript } }
-            if needsMath { injectRuntime("katex") { ResourceLoader.katexJavaScript } }
+            } else { self.finishInitialRender(generation: generation) }
+        }
+    }
 
-            group.notify(queue: .main) { [weak self] in
-                guard let self, self.renderGeneration == generation else { return }
-                self.webView.callAsyncJavaScript(
-                    "window.__mdvuRenderMath?.(); await window.__mdvuRenderDiagrams?.(); return true;",
-                    arguments: [:], in: nil, in: .page
-                ) { [weak self] _ in
-                    guard let self, self.renderGeneration == generation else { return }
-                    self.profiler.mark("render.complete")
-                    self.captureSnapshotIfRequested()
-                }
-            }
+    private func finishInitialRender(generation: Int) {
+        webView.callAsyncJavaScript("window.__mdvuRenderMath?.(); await window.__mdvuRenderDiagrams?.(); return true;", arguments: [:], in: nil, in: .page) { [weak self] _ in
+            guard let self, self.renderGeneration == generation else { return }
+            self.profiler.mark("render.complete")
+            self.captureSnapshotIfRequested()
         }
     }
 
@@ -1255,8 +1242,25 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "documentReady", message.frameInfo.isMainFrame { documentContentReady(); return }
+        if message.name == "uiControl", auditScript != nil {
+            if message.body as? String == "zoomIn" { zoomIn(nil) }
+            if message.body as? String == "zoomOut" { zoomOut(nil) }
+            return
+        }
+        if message.name == "diagramCancel" { DiagramRenderingService.shared.cancel(owner: diagramOwner); return }
+        if message.name == "diagramRender", !isTornDown, message.frameInfo.isMainFrame, let request = message.body as? [String: Any] {
+            let generation = renderGeneration
+            DiagramRenderingService.shared.submit(owner: diagramOwner, request: request) { [weak self] result in
+                guard let self, !self.isTornDown, self.renderGeneration == generation,
+                      let data = try? JSONSerialization.data(withJSONObject: result), let json = String(data: data, encoding: .utf8) else { return }
+                self.webView.evaluateJavaScript("window.__mdvuDiagramResult?.(\(json)); void 0", completionHandler: nil)
+            }
+            return
+        }
         if message.name == "uiTest", auditScript != nil, var result = message.body as? [String: Any] {
             var checks = result["checks"] as? [String: Bool] ?? [:]
+            if result["idleProbe"] as? Bool == true { checks["rendererReleased"] = !DiagramRenderingService.shared.hasRenderer }
             let originalZoom = effectiveZoom
             zoomIn(nil); checks["nativeZoomIn"] = effectiveZoom > originalZoom
             zoomOut(nil); checks["nativeZoomOut"] = abs(effectiveZoom - originalZoom) < 0.001

@@ -69,13 +69,46 @@ frame.srcdoc='<!doctype html><html><head><style>body{margin:0;font:16px Arial,sa
 });
 return window.__mdvuMermaidReady;
 };
+const nativeDiagrams=window.__mdvuNativeDiagramTransport;
+const diagramRequests=new Map,diagramSession=Math.random().toString(36).slice(2);
+window.__mdvuDiagramTimings=[];
+window.__mdvuDiagramResult=result=>{const request=diagramRequests.get(result.id);if(!request)return;diagramRequests.delete(result.id);window.__mdvuDiagramTimings.push({type:result.type,ms:result.ms});if(result.error)request.reject(new Error(result.error));else request.resolve(result.svg)};
+const renderNativeDiagram=(renderer,source,dark)=>new Promise((resolve,reject)=>{const id=diagramSession+String(++diagramSeq);diagramRequests.set(id,{resolve,reject});nativeDiagrams.post({id,renderer,source,dark})});
 let diagramSeq=0,mermaidInitialized=false,currentMermaidTheme=null,diagramObserver=null;
 const diagramStyle='<style>svg{max-width:100%;height:auto;background:transparent!important}.find-match{fill:#9b6400!important;text-decoration:underline}.find-current{fill:#c2410c!important}</style>';
+const diagramSVGs=new WeakMap;
+const mountDiagram=node=>{
+const record=diagramSVGs.get(node),host=node.querySelector('.diagram-content');
+if(!record||!host||host.shadowRoot.firstChild)return;
+host.style.aspectRatio='';host.shadowRoot.innerHTML=diagramStyle+record.svg;
+};
+const unmountDiagram=node=>{
+const record=diagramSVGs.get(node),host=node.querySelector('.diagram-content');
+if(!record||!host?.shadowRoot.firstChild||record.findActive)return;
+// ResizeObserver supplies the last actual size without forcing an offscreen SVG
+// to lay itself out. Its lightweight placeholder keeps the scroll position.
+host.style.aspectRatio=record.ratio||'auto';host.shadowRoot.replaceChildren();
+};
+const diagramSizeObserver=typeof ResizeObserver==='undefined'?null:new ResizeObserver(entries=>entries.forEach(entry=>{
+const record=diagramSVGs.get(entry.target.parentElement);
+if(record&&entry.target.shadowRoot?.firstChild&&entry.contentRect.height>0)record.ratio=String(entry.contentRect.width/entry.contentRect.height);
+}));
+const diagramVisibilityObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>entries.forEach(entry=>{
+if(entry.isIntersecting)mountDiagram(entry.target);else unmountDiagram(entry.target);
+}),{rootMargin:'1200px 0px'});
+window.__mdvuHasDiagramSVG=node=>diagramSVGs.has(node)||!!node.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
 // SVG styles otherwise join the page stylesheet set and slow every later render and zoom.
 const installDiagramSVG=(node,svg)=>{
 let host=node.querySelector('.diagram-content');
 if(!host){host=document.createElement('div');host.className='diagram-content';host.attachShadow({mode:'open'});node.replaceChildren(host)}
-host.shadowRoot.innerHTML=diagramStyle+svg;
+const header=svg.match(/<svg\b[^>]*>/i)?.[0]||'';
+const box=header.match(/\bviewBox=["']\s*[-\d.]+[ ,]+[-\d.]+[ ,]+([\d.]+)[ ,]+([\d.]+)\s*["']/);
+const ratio=box&&Number(box[2])>0?String(Number(box[1])/Number(box[2])):'auto';
+diagramSVGs.set(node,{svg,ratio});host.style.aspectRatio=ratio;
+const width=header.match(/max-width:\s*([\d.]+)px/i)||header.match(/\bwidth=["']([\d.]+)(?:px)?["']/);
+host.style.maxWidth=width?width[1]+'px':'';host.style.marginInline='auto';
+if(!diagramVisibilityObserver||isElementInViewport(node))mountDiagram(node);
+diagramSizeObserver?.observe(host);diagramVisibilityObserver?.observe(node);
 };
 const diagramQueue=[];let isProcessingQueue=false,lastReadingInput=-Infinity;
 ['wheel','touchmove','keydown'].forEach(type=>window.addEventListener(type,event=>{if(event.isTrusted)lastReadingInput=performance.now()},{passive:true}));
@@ -111,36 +144,27 @@ const pre=node.querySelector('pre');
 if(!pre){node.classList.remove('diagram-pending');delete node.__mdvuRendering;return}
 const renderer=node.dataset.renderer,rawSource=pre.textContent,source=cleanDiagramSource(rawSource),key=node.dataset.cacheKey;
 try{
-if(renderer==='mermaid'){
-if(typeof mermaid==='undefined'){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
-await ensureMermaidInit();
-const diagId=`mdvu-diagram-${++diagramSeq}`;
-const result=await mermaid.render(diagId,source);
-if(!node.isConnected)return;
-installDiagramSVG(node,result.svg);
-node.classList.remove('diagram-pending');
-node.classList.add('diagram-rendered');
-postDiagramCache(key,result.svg);
-}else if(renderer==='plantuml'){
-if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 const selected=document.documentElement.dataset.theme;
 const isDark=selected==='dark'||(selected==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
-let lines=source.trim().split(/\r?\n/);
+let svg;
+if(nativeDiagrams){svg=await renderNativeDiagram(renderer,source,isDark)}
+else if(renderer==='mermaid'){
+if(typeof mermaid==='undefined'){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
+await ensureMermaidInit();
+svg=(await mermaid.render(`mdvu-diagram-${++diagramSeq}`,source)).svg;
+}else if(renderer==='plantuml'){
+if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
+const lines=source.trim().split(/\r?\n/);
 if(!lines.some(l=>/^\s*@start/i.test(l))){lines.unshift('@startuml');lines.push('@enduml')}
-if(isDark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l))){lines.splice(1,0,'skinparam backgroundColor transparent')}
-await new Promise((resolve,reject)=>{
-PlantUML.renderToString(lines,svg=>{
-if(!svg){reject(new Error('PlantUML returned empty output'));return}
-if(!node.isConnected){resolve();return}
-installDiagramSVG(node,svg);
-node.classList.remove('diagram-pending');
-node.classList.add('diagram-rendered');
-postDiagramCache(key,svg);
-resolve();
-},err=>reject(new Error(err)));
-});
+if(isDark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l)))lines.splice(1,0,'skinparam backgroundColor transparent');
+svg=await new Promise((resolve,reject)=>PlantUML.renderToString(lines,value=>value?resolve(value):reject(new Error('PlantUML returned empty output')),error=>reject(new Error(error))));
 }
+if(!node.isConnected)return;
+installDiagramSVG(node,svg);
+node.classList.remove('diagram-pending');node.classList.add('diagram-rendered');
+postDiagramCache(key,svg);
 }catch(e){
+if(!node.isConnected)return;
 node.classList.remove('diagram-pending');
 node.classList.add('diagram-error');
 node.innerHTML=`<strong>Diagram could not be rendered</strong><pre></pre><small></small>`;
@@ -192,7 +216,7 @@ enqueueDiagram(entry.target);
 },{rootMargin:'1200px 0px'});
 return diagramObserver;
 };
-const isRendererReady=r=>(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
+const isRendererReady=r=>!!nativeDiagrams||(r==='mermaid'&&typeof mermaid!=='undefined')||(r==='plantuml'&&typeof PlantUML!=='undefined'&&!!PlantUML.renderToString);
 const renderDiagrams=async(options)=>{
 const forceAll=options===true||options?.all===true;
 if(window.__mdvuMermaidReady&&document.querySelector('.diagram-pending[data-renderer="mermaid"]'))await window.__mdvuMermaidReady;
@@ -265,16 +289,24 @@ window.__mdvuScrollToFragment=(id,push=true)=>{try{id=decodeURIComponent(id)}cat
 document.addEventListener('click',event=>{const anchor=event.target.closest?.('a[href]'),href=anchor?.getAttribute('href');if(!href?.startsWith('#'))return;let id;try{id=decodeURIComponent(href.slice(1))}catch{id=href.slice(1)}if(window.__mdvuScrollToFragment(id)){event.preventDefault()}});
 let allMatches=[];let currentIndex=-1;
 const clearFind=()=>{
-if(!allMatches.length)return;
 const parents=new Set;
 allMatches.forEach(m=>{parents.add(m.parentNode);m.replaceWith(...m.childNodes)});
 parents.forEach(p=>p?.normalize());
 allMatches=[];currentIndex=-1;
+document.querySelectorAll('figure.diagram-rendered').forEach(node=>{const record=diagramSVGs.get(node);if(record){record.findActive=false;if(!isElementInViewport(node))unmountDiagram(node)}});
 };
 const searchFind=q=>{
 clearFind();
 if(!q||!q.trim())return{count:0,current:0};
 const article=document.querySelector('article')||document.body;
+// Only materialize offscreen diagrams which can contain this query. Searching
+// labels must not retain every SVG DOM in a long document.
+const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu'),decode=document.createElement('textarea');
+article.querySelectorAll('figure.diagram-rendered').forEach(node=>{
+const record=diagramSVGs.get(node);if(!record)return;
+if(record.text===undefined){decode.innerHTML=record.svg.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ');record.text=decode.value}
+pattern.lastIndex=0;if(pattern.test(record.text)){record.findActive=true;mountDiagram(node)}
+});
 const nodes=[];
 const collect=root=>{
 const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);let node;
@@ -285,7 +317,7 @@ if(p&&!p.closest('script,style,.find-match,.heading-anchor,.diagram-pending,.dia
 }
 };
 collect(article);
-const pattern=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu'),created=[];
+const created=[];
 for(const node of nodes){
 const text=node.textContent;
 pattern.lastIndex=0;
@@ -344,7 +376,7 @@ document.body.appendChild(panel);
 panel.querySelector('#mdvu-toc-close')?.addEventListener('click',()=>panel.classList.remove('visible'));
 panel.querySelectorAll('a').forEach(a=>{a.addEventListener('click',()=>panel.classList.remove('visible'))});
 };
-window.__mdvuDisposeArticle=()=>{readingAnchor=null;readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
+window.__mdvuDisposeArticle=()=>{nativeDiagrams?.cancel();diagramRequests.forEach(request=>request.reject(new Error('Diagram cancelled')));diagramRequests.clear();window.__mdvuDiagramTimings.length=0;readingAnchor=null;readingEdgeGeneration++;highlightObserver?.disconnect();highlightObserver=null;diagramObserver?.disconnect();diagramObserver=null;diagramSizeObserver?.disconnect();diagramVisibilityObserver?.disconnect();diagramQueue.splice(0).forEach(finishQueuedDiagram);clearFind();document.getElementById('mdvu-toc-panel')?.remove();lastTOCKey=''};
 window.__mdvuInitArticle=()=>{document.querySelectorAll('figure.diagram-rendered:not(.diagram-pending)').forEach(node=>{if(!node.querySelector('.diagram-content')&&node.querySelector('svg'))installDiagramSVG(node,node.innerHTML)});decorateHeadings();wrapTables();scheduleHighlight();renderMath();renderDiagrams()};
 let readingEdgeGeneration=0;
 for(const type of ['wheel','touchmove','pointerdown'])window.addEventListener(type,()=>{readingEdgeGeneration++},{passive:true});
