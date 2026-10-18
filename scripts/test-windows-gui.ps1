@@ -36,7 +36,10 @@ Alice -> Bob: Hello
         [void]$Process.Start()
         $Stdout = $Process.StandardOutput.ReadToEndAsync()
         $Stderr = $Process.StandardError.ReadToEndAsync()
-        if (-not $Process.WaitForExit(60000)) { $Process.Kill(); throw "WebView2 GUI smoke test timed out" }
+        if (-not $Process.WaitForExit(60000)) {
+            $Process.Kill(); $Process.WaitForExit()
+            throw "WebView2 GUI smoke test timed out: $($Stdout.Result) $($Stderr.Result)"
+        }
         $Text = $Stdout.Result
         [IO.File]::WriteAllText($ErrorLog, $Stderr.Result)
         if ($Process.ExitCode -ne 0) { throw "WebView2 GUI smoke test failed: $($Process.ExitCode) $Text $($Stderr.Result)" }

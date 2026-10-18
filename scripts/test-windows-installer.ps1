@@ -34,24 +34,36 @@ if ($Scope -eq 'All') {
             Copy-Item $File $Target
         }
         Copy-Item $Msi (Join-Path $Stage 'package.msi')
-        $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$Stage/scripts/test-windows-installer.ps1`" -Msi `"$Stage/package.msi`" -Scope User -Output `"$UserOutput`""
-        $Action = New-ScheduledTaskAction -Execute (Get-Process -Id $PID).Path -Argument $Arguments -WorkingDirectory $Stage
-        Register-ScheduledTask -TaskName $Name -Action $Action -RunLevel Limited -User "$env:COMPUTERNAME\$Name" -Password $Password -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5)) | Out-Null
-        $PreviousRun = (Get-ScheduledTaskInfo $Name).LastRunTime
-        Start-ScheduledTask $Name
-        $Deadline = (Get-Date).AddMinutes(5)
-        do {
-            Start-Sleep -Milliseconds 500
-            $Task = Get-ScheduledTask $Name
-            $Info = Get-ScheduledTaskInfo $Name
-        } while (($Task.State -eq 'Running' -or $Info.LastRunTime -eq $PreviousRun) -and (Get-Date) -lt $Deadline)
-        if ($Task.State -eq 'Running' -or $Info.LastRunTime -eq $PreviousRun) { Stop-ScheduledTask $Name; throw 'Non-admin MSI test timed out' }
-        if ($Info.LastTaskResult -ne 0) { throw "Non-admin MSI test failed: $($Info.LastTaskResult); inspect $Output/User.log" }
+        # A caller may use a private, per-user fixed WebView2 runtime (e.g. Scoop).
+        # Stage that explicit dependency so both accounts exercise the same engine.
+        if ($env:WEBVIEW2_BROWSER_EXECUTABLE_FOLDER) {
+            $Runtime = New-Item -ItemType Directory (Join-Path $Stage 'webview2')
+            Get-ChildItem -LiteralPath $env:WEBVIEW2_BROWSER_EXECUTABLE_FOLDER | Copy-Item -Destination $Runtime.FullName -Recurse
+        }
+        # CreateProcessWithLogon loads the standard user's profile and avoids
+        # Task Scheduler's separate "Log on as a batch job" security policy.
+        @'
+$ErrorActionPreference = 'Stop'
+$env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
+$env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
+$env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
+$env:TEMP = Join-Path $env:LOCALAPPDATA 'Temp'
+$env:TMP = $env:TEMP
+Remove-Item Env:WEBVIEW2_USER_DATA_FOLDER,Env:MDVU_CACHE_DIR,Env:MDVU_UI_SCRIPT,Env:MDVU_UI_RESULT_FILE -ErrorAction SilentlyContinue
+if (Test-Path "$PSScriptRoot/webview2/msedgewebview2.exe") { $env:WEBVIEW2_BROWSER_EXECUTABLE_FOLDER = "$PSScriptRoot/webview2" }
+New-Item -ItemType Directory -Force $env:TEMP | Out-Null
+& "$PSScriptRoot/scripts/test-windows-installer.ps1" -Msi "$PSScriptRoot/package.msi" -Scope User -Output "$PSScriptRoot/test-results"
+'@ | Set-Content (Join-Path $Stage 'user-test.ps1')
+        $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$Stage/user-test.ps1`""
+        $Credential = [Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$Name", (ConvertTo-SecureString $Password -AsPlainText -Force))
+        $Child = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList $Arguments -Credential $Credential -LoadUserProfile -PassThru
+        try {
+            if (-not $Child.WaitForExit(180000)) { $Child.Kill(); throw 'Non-admin MSI test timed out' }
+        } finally { $Child.Dispose() }
         $ChildReport = Get-Content (Join-Path $UserOutput 'User.json') -Raw | ConvertFrom-Json
         if (-not $ChildReport.passed -or $ChildReport.elevated) { throw 'Non-admin MSI verification did not pass' }
         Write-Host 'MSI: machine/admin and user/non-admin install, Finish, shortcut, launch and uninstall passed.'
     } finally {
-        Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
         if (Test-Path $UserOutput) { Copy-Item (Join-Path $UserOutput '*') $Output -Force }
         Get-CimInstance Win32_UserProfile -Filter "SID='$($User.SID.Value)'" | Remove-CimInstance
         Remove-LocalUser -Name $Name
@@ -127,6 +139,7 @@ $Exe = Join-Path $Folder 'mdvu.exe'
 $Report.installFolder = $Folder
 $Report.shortcut = $Shortcut
 $Hive = if ($Machine) { 'HKLM:' } else { 'HKCU:' }
+$ScopeProperties = if ($Machine) { 'ALLUSERS=1 MSIINSTALLPERUSER=""' } else { 'ALLUSERS="" MSIINSTALLPERUSER=1' }
 $ProductCode = $null
 $Process = $null
 $InstallStarted = $false
@@ -142,6 +155,7 @@ try {
         $View.Execute(); $Record = $View.Fetch()
         Assert-Test 'Packaged MSI wires Finish to close' ($null -ne $Record -and $Record.StringData(1) -eq 'Return')
         $View.Close()
+        Assert-Test 'Product is not already registered' ($Installer.ProductState($ProductCode) -eq -1)
     } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Database); [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Installer) }
     $Log = Join-Path $Output "$Scope-install.log"
     # Start in the opposite scope so the UI must update its already-costed target.
@@ -183,8 +197,10 @@ try {
     } finally { if (-not $Launched.HasExited) { $Launched.Kill(); $Launched.WaitForExit() }; $Launched.Dispose() }
     # Exercise a real render from the installed directory, including loader lookup.
     & "$PSScriptRoot/test-windows-gui.ps1" -Exe $Exe
-    Invoke-Msi "/x $ProductCode /qn /norestart /l*v `"$(Join-Path $Output "$Scope-uninstall.log")`""
+    Invoke-Msi "/x $ProductCode $ScopeProperties /qn /norestart /l*v `"$(Join-Path $Output "$Scope-uninstall.log")`""
     $InstallStarted = $false
+    $Installer = New-Object -ComObject WindowsInstaller.Installer
+    try { Assert-Test 'Uninstall removes product registration' ($Installer.ProductState($ProductCode) -eq -1) } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($Installer) }
     Assert-Test 'Uninstall removes executable and shortcut' (-not (Test-Path $Exe) -and -not (Test-Path $Shortcut))
     Assert-Test 'Uninstall removes file association' (-not (Test-Path "$Hive\Software\Classes\MDVu.MarkdownDocument\shell\open\command"))
     $Report.passed = $true
@@ -193,7 +209,7 @@ try {
     throw
 } finally {
     if ($Process) { if (-not $Process.HasExited) { $Process.Kill() }; $Process.Dispose() }
-    if ($InstallStarted -and $ProductCode) { Invoke-Msi "/x $ProductCode /qn /norestart /l*v `"$(Join-Path $Output "$Scope-cleanup.log")`"" }
+    if ($InstallStarted -and $ProductCode) { Invoke-Msi "/x $ProductCode $ScopeProperties /qn /norestart /l*v `"$(Join-Path $Output "$Scope-cleanup.log")`"" }
     $Report | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $Output "$Scope.json") -Encoding UTF8
     Stop-Transcript | Out-Null
 }
