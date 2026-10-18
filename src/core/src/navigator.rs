@@ -475,22 +475,14 @@ impl DiagramCache {
         if !Self::is_safe_svg(&svg) {
             return None;
         }
-        if let Ok(mut guard) = self.memory.write() {
-            if guard.len() >= 128
-                || guard.values().map(String::len).sum::<usize>() + svg.len() > 16 * 1024 * 1024
-            {
-                guard.clear();
-            }
-            guard.insert(key.to_string(), svg.clone());
-        }
+        self.remember(key, &svg);
         Some(svg)
     }
 
-    pub fn write(&self, key: &str, svg: &str) {
-        if !Self::is_valid_key(key) || !Self::is_safe_svg(svg) {
-            return;
-        }
+    fn remember(&self, key: &str, svg: &str) {
         if let Ok(mut guard) = self.memory.write() {
+            // Replacing a cached SVG consumes neither another slot nor its old bytes.
+            guard.remove(key);
             if guard.len() >= 128
                 || guard.values().map(String::len).sum::<usize>() + svg.len() > 16 * 1024 * 1024
             {
@@ -498,6 +490,13 @@ impl DiagramCache {
             }
             guard.insert(key.to_string(), svg.to_string());
         }
+    }
+
+    pub fn write(&self, key: &str, svg: &str) {
+        if !Self::is_valid_key(key) || !Self::is_safe_svg(svg) {
+            return;
+        }
+        self.remember(key, svg);
         let path = self.dir.join(format!("{key}.svg"));
         static SERIAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let serial = SERIAL.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -591,6 +590,31 @@ mod tests {
         assert!(!DiagramCache::is_safe_svg(
             "<svg><a href=\"javascript:alert(1)\">x</a></svg>"
         ));
+    }
+
+    #[test]
+    fn replacing_cached_diagrams_preserves_other_entries_and_limits() {
+        let cache = DiagramCache {
+            dir: PathBuf::new(),
+            memory: RwLock::new(HashMap::new()),
+        };
+        for n in 0..128 {
+            cache.remember(&n.to_string(), "<svg></svg>");
+        }
+        cache.remember("0", "<svg>updated</svg>");
+        assert_eq!(cache.memory.read().unwrap().len(), 128);
+        assert_eq!(cache.memory.read().unwrap()["0"], "<svg>updated</svg>");
+        cache.remember("128", "<svg></svg>");
+        assert_eq!(cache.memory.read().unwrap().len(), 1);
+
+        cache.memory.write().unwrap().clear();
+        let svg = "x".repeat(8 * 1024 * 1024);
+        cache.remember("a", &svg);
+        cache.remember("b", &svg);
+        cache.remember("a", &svg);
+        assert_eq!(cache.memory.read().unwrap().len(), 2);
+        cache.remember("c", "x");
+        assert_eq!(cache.memory.read().unwrap().len(), 1);
     }
 
     #[test]
