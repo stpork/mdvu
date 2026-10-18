@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
 BIN=${1:-"$ROOT/.build/release/mdvu"}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT

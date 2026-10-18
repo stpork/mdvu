@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 Write-Host "==> Building MDVu Windows ($Configuration)..." -ForegroundColor Cyan
 

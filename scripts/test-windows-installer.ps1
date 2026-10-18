@@ -15,31 +15,50 @@ $IsAdmin = ([Security.Principal.WindowsPrincipal]::new($Identity)).IsInRole([Sec
 if ($Scope -eq 'All') {
     if (-not $IsAdmin) { throw 'Run -Scope All in an elevated PowerShell; -Scope User requires no elevation.' }
     & $PSCommandPath -Msi $Msi -Scope Machine -Output $Output
-    # A limited interactive task uses the signed-in user's non-elevated token.
-    # The child asserts that token before starting MSI, rather than assuming it.
-    $Name = 'MDVu-Installer-Test-' + [Guid]::NewGuid().ToString('N')
-    $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Msi `"$Msi`" -Scope User -Output `"$Output`""
-    $Action = New-ScheduledTaskAction -Execute (Get-Process -Id $PID).Path -Argument $Arguments -WorkingDirectory (Get-Location).Path
-    $Principal = New-ScheduledTaskPrincipal -UserId $Identity.Name -LogonType Interactive -RunLevel Limited
+    # Hosted runners may disable UAC, leaving even a "Limited" administrator
+    # token elevated. Use a disposable standard account and stage public test
+    # inputs outside the invoking user's private profile instead.
+    $Name = 'MDVuTest-' + [Guid]::NewGuid().ToString('N').Substring(0,8)
+    $Stage = Join-Path $env:ProgramData $Name
+    $Password = [Guid]::NewGuid().ToString('N') + 'aA1!'
+    $User = New-LocalUser -Name $Name -Password (ConvertTo-SecureString $Password -AsPlainText -Force) -AccountExpires (Get-Date).AddHours(1) -Description 'Temporary MDVu MSI regression account'
+    $UserOutput = Join-Path $Stage 'test-results'
     try {
-        Register-ScheduledTask -TaskName $Name -Action $Action -Principal $Principal -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5)) | Out-Null
-        $Started = Get-Date
+        Add-LocalGroupMember -SID 'S-1-5-32-545' -Member $User
+        New-Item -ItemType Directory -Force $Stage | Out-Null
+        & icacls.exe $Stage /grant "*$($User.SID.Value):(OI)(CI)F" | Out-Null
+        if ($LASTEXITCODE) { throw 'Cannot grant test account access to its staging directory' }
+        foreach ($File in @('scripts/test-windows-installer.ps1','scripts/test-windows-gui.ps1','tests/fixtures/diagram.png','dist/windows/mdvu.exe','version.txt')) {
+            $Target = Join-Path $Stage $File
+            New-Item -ItemType Directory -Force (Split-Path $Target -Parent) | Out-Null
+            Copy-Item $File $Target
+        }
+        Copy-Item $Msi (Join-Path $Stage 'package.msi')
+        $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$Stage/scripts/test-windows-installer.ps1`" -Msi `"$Stage/package.msi`" -Scope User -Output `"$UserOutput`""
+        $Action = New-ScheduledTaskAction -Execute (Get-Process -Id $PID).Path -Argument $Arguments -WorkingDirectory $Stage
+        Register-ScheduledTask -TaskName $Name -Action $Action -RunLevel Limited -User "$env:COMPUTERNAME\$Name" -Password $Password -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5)) | Out-Null
+        $PreviousRun = (Get-ScheduledTaskInfo $Name).LastRunTime
         Start-ScheduledTask $Name
-        $Deadline = $Started.AddMinutes(5)
+        $Deadline = (Get-Date).AddMinutes(5)
         do {
             Start-Sleep -Milliseconds 500
             $Task = Get-ScheduledTask $Name
             $Info = Get-ScheduledTaskInfo $Name
-        } while (($Task.State -eq 'Running' -or $Info.LastRunTime -lt $Started.AddSeconds(-1)) -and (Get-Date) -lt $Deadline)
-        if ($Task.State -eq 'Running') { Stop-ScheduledTask $Name; throw 'Non-admin MSI test timed out' }
+        } while (($Task.State -eq 'Running' -or $Info.LastRunTime -eq $PreviousRun) -and (Get-Date) -lt $Deadline)
+        if ($Task.State -eq 'Running' -or $Info.LastRunTime -eq $PreviousRun) { Stop-ScheduledTask $Name; throw 'Non-admin MSI test timed out' }
         if ($Info.LastTaskResult -ne 0) { throw "Non-admin MSI test failed: $($Info.LastTaskResult); inspect $Output/User.log" }
-        $Report = Get-Content (Join-Path $Output 'User.json') -Raw | ConvertFrom-Json
-        if (-not $Report.passed -or $Report.elevated) { throw 'Non-admin MSI verification did not pass' }
+        $ChildReport = Get-Content (Join-Path $UserOutput 'User.json') -Raw | ConvertFrom-Json
+        if (-not $ChildReport.passed -or $ChildReport.elevated) { throw 'Non-admin MSI verification did not pass' }
         Write-Host 'MSI: machine/admin and user/non-admin install, Finish, shortcut, launch and uninstall passed.'
-    } finally { Unregister-ScheduledTask $Name -Confirm:$false -ErrorAction SilentlyContinue }
+    } finally {
+        Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue
+        if (Test-Path $UserOutput) { Copy-Item (Join-Path $UserOutput '*') $Output -Force }
+        Get-CimInstance Win32_UserProfile -Filter "SID='$($User.SID.Value)'" | Remove-CimInstance
+        Remove-LocalUser -Name $Name
+        Remove-Item $Stage -Recurse -Force -ErrorAction SilentlyContinue
+    }
     return
 }
-if ($IsAdmin -ne ($Scope -eq 'Machine')) { throw "Wrong token for $Scope test (elevated=$IsAdmin)" }
 
 Start-Transcript -Path (Join-Path $Output "$Scope.log") -Force | Out-Null
 $Report = [ordered]@{scope=$Scope; elevated=$IsAdmin; passed=$false; tests=@()}
@@ -105,11 +124,14 @@ $Folder = if ($Machine) { Join-Path $env:ProgramFiles 'MDVu' } else { Join-Path 
 $Programs = [Environment]::GetFolderPath($(if ($Machine) { 'CommonPrograms' } else { 'Programs' }))
 $Shortcut = Join-Path $Programs 'MDVu/MDVu.lnk'
 $Exe = Join-Path $Folder 'mdvu.exe'
+$Report.installFolder = $Folder
+$Report.shortcut = $Shortcut
 $Hive = if ($Machine) { 'HKLM:' } else { 'HKCU:' }
 $ProductCode = $null
 $Process = $null
 $InstallStarted = $false
 try {
+    Assert-Test 'Installer token matches scope' ($IsAdmin -eq $Machine)
     Assert-Test 'Clean test installation' (-not (Test-Path $Exe) -and -not (Test-Path $Shortcut))
     $Installer = New-Object -ComObject WindowsInstaller.Installer
     $Database = $Installer.OpenDatabase($Msi, 0)

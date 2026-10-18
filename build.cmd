@@ -18,6 +18,6 @@ echo   app        Build and package MDVu for Windows (default)
 echo   release    Build optimized release binaries
 echo   debug      Build unoptimized debug binaries
 echo   test       Run Rust workspace tests
-echo   package    Create distribution zip and sha256
+echo   package    Build and package ZIP/MSI with SHA-256
 echo   clean      Remove build artifacts and dist folder
 exit /b 0

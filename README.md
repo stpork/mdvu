@@ -99,11 +99,11 @@ Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are und
    * Double-click the `.msi` package.
    * Check **Install for current user only (no administrator privileges needed)** to install without administrative privileges (installs to `%LOCALAPPDATA%\Programs\MDVu` without UAC elevation — the UAC shield icon dynamically disappears from the Install button).
    * Or leave it unchecked to install system-wide for all users (`C:\Program Files\MDVu`, requires UAC elevation).
-   * Click **Install**.
+   * Click **Install**, then **Finish**. The Start Menu shortcut launches the installed executable in the selected location.
 3. **Silent / unattended install**:
    ```cmd
    :: Install just for current user (no admin rights required):
-   msiexec /i mdvu-X.Y.Z-windows-x86_64.msi MSIINSTALLPERUSER=1 /qn
+   msiexec /i mdvu-X.Y.Z-windows-x86_64.msi ALLUSERS=2 MSIINSTALLPERUSER=1 /qn
 
    :: Install for all users (system-wide, requires admin):
    msiexec /i mdvu-X.Y.Z-windows-x86_64.msi ALLUSERS=1 /qn
@@ -129,7 +129,7 @@ The build also generates WinGet and Chocolatey submission templates. Generation 
    mdvu.exe document.md
    ```
 
-**Building & packaging from source on Windows:**
+**Building & packaging from source on Windows:** (PowerShell produces MSI and ZIP; `./build.sh windows` on macOS/Linux cross-compiles the portable ZIP only.)
 ```powershell
 # Build release binary, portable .zip, .msi installer, and Scoop/WinGet/Chocolatey manifests:
 .\scripts\build-windows.ps1
@@ -442,12 +442,14 @@ tests/ui/         Browser checks used on both platforms
 tests/snapshots/  Reference images
 packaging/macos/   macOS metadata and icon
 packaging/windows/ MSI metadata and Windows branding
-scripts/           Build, validation and benchmark entry points
+scripts/           Reproducible build, release and regression checks
 ```
 
-Build output belongs in `.build/`, `target/` and `dist/`; measurements and screenshots belong in `test-results/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
+Git contains application sources, locked renderer assets, packaging, documentation, regression tests, shared fixtures and approved reference images. Downloaded competitor applications, comparison tools, raw measurements, recordings and profiles stay locally under ignored `test-results/`; they are not source or release inputs. `COMPARISON.md` retains the readable results and methodology.
 
-Run `make check` and `make coverage` on macOS. After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. Pass `-Msi <path> -Install` to the Windows runner to validate an MSI installation. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
+Build output belongs in `.build/`, `target/` and `dist/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
+
+Run `python3 -m unittest discover -s tests -p 'test_*.py'` for repository, release, installer-authoring and runtime-integrity checks. Run `make check` and `make coverage` on macOS. `./build.sh check` also runs the visual reference checks (Pillow and an active desktop required). After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. For a clean Windows test machine, run `./scripts/test-windows-installer.ps1 -Msi <path>` from an elevated interactive PowerShell. It tests the full MSI UI in both scopes, using a disposable standard Windows account and a verified non-elevated token for the user installation; checks Finish, shortcut targets/launch, associations and installed rendering; then uninstalls each test installation. It refuses to overwrite an existing installation and removes the temporary account, profile and staged test files afterward. Logs stay under `test-results/installer-windows/`. The system runner's `-Msi <path> -Install` option only performs a silent machine installation and is not the two-scope regression test. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
 
 The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
 

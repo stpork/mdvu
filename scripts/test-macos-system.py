@@ -65,8 +65,7 @@ for fixture in fixtures:
     check_script=output/(stem+'-check.js')
     full_controls = args.controls == 'all' or args.controls == 'representative' and name in control_fixtures
     content_cases = re.findall(r'^## (D\d{3})\b', fixture.read_text(), re.M)
-    registry = json.loads((root/'tests/benchmarks/diagram-registry.json').read_text()) if content_cases else {}
-    required_cases = [case for library in registry.get('extensions',{}).values() for case in library['caseIds'] if case in content_cases]
+    required_cases = content_cases
     check_script.write_text('window.__mdvuExpectedContentCases='+json.dumps(content_cases)+';window.__mdvuExpectedRenderedContentCases='+json.dumps(required_cases)+';window.__mdvuRequireAllDiagrams='+json.dumps(name in {'runtime/plantuml-stdlib.md','test-diagrams.md'})+';window.__mdvuFullControlAudit='+json.dumps(full_controls)+';window.__mdvuAuditIdleProbe='+json.dumps(name=='test-heavy.md')+';window.__mdvuExpectedDiagramErrors='+json.dumps(expected_errors.get(name,[]),ensure_ascii=False)+';\n'+ui_source)
     before = set(processes()); start = time.perf_counter()
     cache = output/(stem+'-cache')

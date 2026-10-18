@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
 BIN=${1:-"$ROOT/.build/debug/mdvu"}
 mkdir -p "$ROOT/tests/snapshots"
 caffeinate -u -t 2 || true

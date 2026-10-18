@@ -11,7 +11,7 @@ Usage: ./build.sh [command]
 Commands:
   app        Build an optimized app for this Mac (default)
   universal  Build an arm64+x86_64 app
-  archive    Build a Universal app and versioned ZIP with SHA-256
+  archive    Build macOS DMG and ARM/Intel/Universal ZIPs with SHA-256
   debug      Build the debug executable
   release    Build the optimized executable
   test       Run unit tests
@@ -51,7 +51,7 @@ case "$command" in
     debug)     exec make ;;
     release)   exec make release ;;
     test)      exec make test ;;
-    check)     make test; exec make visual-test ;;
+    check)     make check; exec make visual-test ;;
     install)   exec make install ;;
     clean)     exec make clean ;;
     help|-h|--help) usage ;;

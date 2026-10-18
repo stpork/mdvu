@@ -78,7 +78,7 @@
                     </RegistryKey>
                 </RegistryKey>
 
-                <!-- File Extensions (.md, .markdown, .mdown, .mkd, .mdx, .mdtxt) -->
+                <!-- File Extensions (.md, .markdown, .mdown, .mkd) -->
                 <RegistryKey Root="HKMU" Key="Software\Classes\.md">
                     <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
                     <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
@@ -119,26 +119,6 @@
                     <RegistryKey Key="OpenWithList\mdvu.exe" />
                 </RegistryKey>
 
-                <RegistryKey Root="HKMU" Key="Software\Classes\.mdx">
-                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
-                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
-                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
-                    <RegistryKey Key="OpenWithProgids">
-                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                    </RegistryKey>
-                    <RegistryKey Key="OpenWithList\mdvu.exe" />
-                </RegistryKey>
-
-                <RegistryKey Root="HKMU" Key="Software\Classes\.mdtxt">
-                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
-                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
-                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
-                    <RegistryKey Key="OpenWithProgids">
-                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
-                    </RegistryKey>
-                    <RegistryKey Key="OpenWithList\mdvu.exe" />
-                </RegistryKey>
-
                 <!-- Application Registration for Windows "Default Apps" & "Open With" -->
                 <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe">
                     <RegistryValue Name="FriendlyAppName" Type="string" Value="MDVu" />
@@ -150,8 +130,6 @@
                         <RegistryValue Name=".markdown" Type="string" Value="" />
                         <RegistryValue Name=".mdown" Type="string" Value="" />
                         <RegistryValue Name=".mkd" Type="string" Value="" />
-                        <RegistryValue Name=".mdx" Type="string" Value="" />
-                        <RegistryValue Name=".mdtxt" Type="string" Value="" />
                     </RegistryKey>
                     <RegistryKey Key="shell\open\command">
                         <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot; &quot;%1&quot;" />
@@ -171,8 +149,6 @@
                         <RegistryValue Name=".markdown" Type="string" Value="MDVu.MarkdownDocument" />
                         <RegistryValue Name=".mdown" Type="string" Value="MDVu.MarkdownDocument" />
                         <RegistryValue Name=".mkd" Type="string" Value="MDVu.MarkdownDocument" />
-                        <RegistryValue Name=".mdx" Type="string" Value="MDVu.MarkdownDocument" />
-                        <RegistryValue Name=".mdtxt" Type="string" Value="MDVu.MarkdownDocument" />
                     </RegistryKey>
                 </RegistryKey>
             </Component>

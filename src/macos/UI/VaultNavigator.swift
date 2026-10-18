@@ -358,7 +358,7 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
             let files = autoreleasepool { VaultScanner.scanFiles(in: directory, isCancelled: { operation.isCancelled }) }
             guard !operation.isCancelled else { return }
             DispatchQueue.main.async { [weak self] in
-                guard let self, !operation.isCancelled else { return }
+                guard let self, self.scanOperation === operation, !operation.isCancelled else { return }
                 self.scanOperation = nil
                 self.openingDirectory = false
                 if self.mode == .list {

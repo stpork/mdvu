@@ -4,8 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
-VERSION=$(cat version.txt 2>/dev/null || echo "0.5.0")
-VERSION=$(echo "$VERSION" | tr -d '[:space:]')
+VERSION=$(tr -d '[:space:]' < version.txt)
 
 echo "==> Building MDVu Windows ($VERSION)..."
 
@@ -27,6 +26,11 @@ elif [ "$(uname -s)" = "Darwin" ] || [ "$(uname -s)" = "Linux" ]; then
     fi
 fi
 
+case "$TARGET" in
+    ''|x86_64-pc-windows-gnu|x86_64-pc-windows-msvc) ;;
+    *) echo "Error: Windows release packaging requires an x86_64 Windows target." >&2; exit 1 ;;
+esac
+
 if [ -n "$TARGET" ]; then
     echo "    Using cargo target: $TARGET"
     if [ "$TARGET" = "x86_64-pc-windows-msvc" ] && command -v cargo-xwin >/dev/null 2>&1; then
@@ -42,19 +46,8 @@ DIST_DIR="$ROOT/dist/windows"
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
-# Locate compiled .exe binary (only true Windows PE executable)
-EXE=""
-for candidate in \
-    ${TARGET:+"$ROOT/target/$TARGET/release/mdvu.exe"} \
-    "$ROOT/target/x86_64-pc-windows-gnu/release/mdvu.exe" \
-    "$ROOT/target/x86_64-pc-windows-msvc/release/mdvu.exe" \
-    "$ROOT/target/release/mdvu.exe" \
-    "$ROOT/target/debug/mdvu.exe"; do
-    if [ -n "$candidate" ] && [ -f "$candidate" ]; then
-        EXE="$candidate"
-        break
-    fi
-done
+# Package only the release just built, never an older target or debug binary.
+EXE="$ROOT/target/${TARGET:+$TARGET/}release/mdvu.exe"
 
 validate_pe() {
     file_path="$1"
@@ -77,11 +70,10 @@ cp "$EXE" "$DIST_DIR/mdvu.exe"
 echo "  [OK] Copied $(basename "$EXE") -> mdvu.exe ($(file -b "$DIST_DIR/mdvu.exe"))"
 
 # Copy WebView2Loader.dll (required by GNU/MinGW target runtime)
-LOADER_DLL=$(find "$ROOT/target" -name "WebView2Loader.dll" | grep -E "x64/WebView2Loader\.dll" | head -n 1)
-if [ -n "$LOADER_DLL" ] && [ -f "$LOADER_DLL" ]; then
-    cp "$LOADER_DLL" "$DIST_DIR/WebView2Loader.dll"
-    echo "  [OK] Copied $(basename "$LOADER_DLL") -> WebView2Loader.dll"
-fi
+LOADER_DLL=$(find "$(dirname "$EXE")/build" -name "WebView2Loader.dll" | grep -E "x64/WebView2Loader\.dll" | head -n 1)
+[ -n "$LOADER_DLL" ] || { echo "Error: WebView2Loader.dll missing from this build." >&2; exit 1; }
+cp "$LOADER_DLL" "$DIST_DIR/WebView2Loader.dll"
+echo "  [OK] Copied $(basename "$LOADER_DLL") -> WebView2Loader.dll"
 
 [ -f "README.md" ] && cp "README.md" "$DIST_DIR/README.txt"
 [ -f "LICENSE" ] && cp "LICENSE" "$DIST_DIR/LICENSE.txt"
@@ -94,7 +86,13 @@ echo "==> Creating release archive: $ZIP_PATH"
 if command -v zip >/dev/null 2>&1; then
     (cd "$DIST_DIR" && zip -r "$ZIP_PATH" ./* >/dev/null 2>&1)
 else
-    python3 -c "import zipfile, glob, os; z = zipfile.ZipFile('$ZIP_PATH', 'w', zipfile.ZIP_DEFLATED); [z.write(f, os.path.basename(f)) for f in glob.glob('$DIST_DIR/*')]; z.close()"
+    python3 - "$ZIP_PATH" "$DIST_DIR" <<'PY'
+from pathlib import Path
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_DEFLATED) as archive:
+    for path in Path(sys.argv[2]).iterdir():
+        archive.write(path, path.name)
+PY
 fi
 
 if command -v shasum >/dev/null 2>&1; then
@@ -102,7 +100,7 @@ if command -v shasum >/dev/null 2>&1; then
 elif command -v sha256sum >/dev/null 2>&1; then
     HASH=$(sha256sum "$ZIP_PATH" | awk '{print $1}')
 else
-    HASH=$(python3 -c "import hashlib; print(hashlib.sha256(open('$ZIP_PATH', 'rb').read()).hexdigest())")
+    HASH=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$ZIP_PATH")
 fi
 
 ZIP_BASENAME=$(basename "$ZIP_PATH")

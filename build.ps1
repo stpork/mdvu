@@ -38,7 +38,7 @@ Commands:
   release    Build optimized release binary (mdvu.exe)
   debug      Build unoptimized debug binary
   test       Run Rust workspace tests
-  package    Package existing binary into dist/ ZIP archive with SHA-256
+  package    Build and package Windows ZIP/MSI with SHA-256
   clean      Remove build artifacts and dist/ directory
   help       Show this help message
 "@
@@ -67,6 +67,7 @@ switch ($Command) {
     "clean" {
         Write-Host "==> Cleaning build artifacts..." -ForegroundColor Cyan
         cargo clean
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
         exit 0
     }

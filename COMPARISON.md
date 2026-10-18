@@ -1,18 +1,29 @@
 # Performance and compatibility comparison
 
-**Local draft, 18 October 2026. Not published.** Apple M1, 8 GiB, macOS 27.0.1. Eight applications in the current series (seven in the earlier tables), the same five project fixtures, five diagram-free derivatives and the supported diagram catalogue. Marked was excluded from the earlier tables and is now part of the new protocol. These are macOS results; they are not Windows competitor measurements.
+**Measurements recorded 18 October 2026; verification updated 19 October 2026.** Apple M1, 8 GiB, macOS 27.0.1. Eight applications in the current series (seven in the earlier tables), the same five project fixtures, five diagram-free derivatives and the supported diagram catalogue. Marked was excluded from the earlier tables and is now part of the new protocol. These are macOS results; they are not Windows competitor measurements.
 
 The strongest observed MDVu advantages here are its complete Universal app size and built-in diagram coverage. It is not fastest on every file or lowest in memory on every workload. Editors and knowledge bases have features beyond a dedicated viewer; the comparison concerns reading the tested documents with built-in renderers.
 
 ## New complete-traversal protocol · incomplete
 
-Eight applications: MDVu, activated Typora, Obsidian, MacDown 3000, MarkViewer, MD Viewer, VS Code and activated Marked 3.2.21. One document per fresh process. Cold clears identified regenerable application caches; macOS filesystem cache remains. Warm follows a full cold traversal of the same file. No plugins or external rendering server. [Complete protocol](tests/benchmarks/PROTOCOL.md).
+Eight applications: MDVu, activated Typora, Obsidian, MacDown 3000, MarkViewer, MD Viewer, VS Code and activated Marked 3.2.21. One document per fresh process. Cold clears identified regenerable application caches; macOS filesystem cache remains. Warm follows a full cold traversal of the same file. No plugins or external rendering server. [Measurement protocol](#measurement-protocol).
 
 **Qualified startup observations: 136 / 192; verified EOF: 135 / 192; handled: 136 / 192.** Calibration attempts and missing dependencies/session failures are retained with exclusion reasons, not mixed into this table. Earlier prepared-profile observations remain below under their original scope.
 
 First readable body is timed from process birth using compositor frames before the first input/focus intervention. The two-node Mermaid control requires the actual visible SVG. Ranges preserve sparse-frame uncertainty. RAM is summed physical footprint, median in seconds 7–8 / peak in seconds 0–8, including helper processes. Detailed RAM cells show median at 8 s / first-8-s peak / full-pass peak. The last is diagnostic and includes later Accessibility overhead; it is not a clean startup-memory ranking. Earliest valid completed pair selected per app/file; later valid repeats retained separately. One selected observation per cell; no statistical ranking or universal speed claim.
 
 Phases without a † marker reached their actual EOF through viewport-sized scroll steps, with recorded frames/OCR and end context. Reaching EOF does not mean every diagram rendered. Traversal wall time includes test cadence and checks; it is not render speed. Zoom and scrolling FPS are not measured. † means the untouched startup observation is qualified, but subsequent traversal was not confirmed by the adapter; its observed peak must not be described as a full-file peak.
+
+### Measurement protocol
+
+- Use unchanged project fixtures `test-light.md`, `test-medium.md`, `test-complete.md`, `test-heavy.md`, `test-onescreen.md`, their diagram-free common-content derivatives and the separate 73-case `test-diagrams.md` catalogue. One document in one fresh application process; remove restored extra tabs/windows before the next run.
+- Cold means identified regenerable application caches are cleared while keeping activation, preferences and source files. It does not mean the OS filesystem cache was purged. Warm starts a new process after the same document's completed cold traversal, retaining application caches.
+- Record the test window with ScreenCaptureKit and compare compositor timestamps against process birth. First readable content and first actually visible Mermaid are separate observations; ignore source panes, placeholders and error panels. Keep the first eight seconds untouched. Automation waits and screenshot-call duration do not count as rendering time.
+- Sample main/helper physical footprint every 200 ms. Report the median in seconds 7–8 and the first-eight-second peak separately from the later full-pass peak. Shared OS service attribution remains approximate. Keep screen geometry, app version and input/binary hashes with the raw evidence.
+- Traverse by overlapping viewport steps to the actual document end and verify the end context in captured frames. EOF proves traversal, not successful rendering of every diagram. Traversal wall time includes test cadence and is not a speed ranking. Zoom and scroll FPS are outside this competitor protocol.
+- Count installed regular-file bytes plus symlink payload once, excluding mutable profiles and the system WebKit/WebView2 runtime. Report source-only, unsupported, failed and unconfirmed cases explicitly; do not estimate missing results.
+
+`COMPARISON.md` keeps the results and definitions. Raw inventories, attempt logs and the original full protocol are preserved locally under ignored `test-results/benchmarks/`; recordings and installed competitor apps stay under `test-results/`. They are intentionally absent from a source checkout.
 
 ### Confirmed comparison at a glance
 
@@ -44,7 +55,7 @@ These are individual paired observations, not repeated-trial medians or a statis
 | VS Code | 1.142.0 | 1388.93 |
 | Marked | 3.2.21 | 145.18 |
 
-Logical app files plus symlink payload counted once, excluding directory metadata, resource forks/xattrs, user profiles and system WebKit. [Size inventory and previous counting corrections](tests/benchmarks/application-size-2026-10-18.json). This correction is not an application optimization.
+Logical app files plus symlink payload counted once, excluding directory metadata, resource forks/xattrs, user profiles and system WebKit. Size inventory and previous counting corrections: `test-results/benchmarks/application-size-2026-10-18.json` (local evidence, excluded from Git). This correction is not an application optimization.
 
 ### Common content, diagram fences removed
 
@@ -134,11 +145,19 @@ Logical app files plus symlink payload counted once, excluding directory metadat
 | Typora | `test-diagrams.md` | 1.38 s | 412 / 593 / 810 | 1.33 s | 427 / 606 / 765 |
 | VS Code | `test-diagrams.md` | 3.33 s | 1395 / 1452 / 1508 | 2.74 s | 1384 / 1434 / 1472 |
 
-[All attempts, binary/source hashes, cache states, geometry, exclusions and memory windows](tests/benchmarks/full-pass-2026-10-18.json). Raw videos, frames and step logs: `test-results/full-pass-20261018/`. Local draft; no publication.
+All attempts, binary/source hashes, cache states, geometry, exclusions and memory windows: `test-results/benchmarks/full-pass-2026-10-18.json` (local evidence, excluded from Git). Raw videos, frames and step logs: `test-results/full-pass-20261018/`. Local recordings are not distributed.
 
-## Current MDVu verification · 18 October 2026
+## Current MDVu verification · 19 October 2026
 
-This is native MDVu validation, separate from the incomplete competitor study above. Its binaries contain a later cache correction; the earlier comparative startup numbers are not claimed as post-correction measurements.
+[PR #2 CI on revision `7230777`](https://github.com/stpork/mdvu/actions/runs/39165392352) passed on macOS, Windows and Linux. This verification covers 90 Swift tests, 27 shared Rust unit tests plus 16 integration tests, 8 Windows host unit tests, 11 packaged CLI contract cases and 38/38 native fixtures per platform, including all 73 catalogue examples. Hosted native fixture runs use timer mode to verify correctness; they are not frame-rate or competitor measurements.
+
+The regression changes preserve the macOS math runtime through error pages, separate decoded Windows filenames from URL fragments and synchronize native/Rust release versions. No rendering engine or permanent cache was added. The Windows executable changed from 6,075,392 to 6,078,464 bytes (+3,072 bytes) in that CI pair. These identities are separate from the earlier performance series below.
+
+The subsequent MSI fix (`cd56a3e`) was tested natively on Windows NAS (Windows 10 build 19045): interactive installation into Program Files with an elevated token, and into the current user's LocalAppData with an explicitly non-elevated token. Both completed the real Finish action, launched through the Start Menu shortcut, validated associations/CLI, rendered the GUI smoke document and uninstalled successfully. This is installer correctness evidence, not a startup performance measurement. Raw MSI logs and reports stay locally under `test-results/installer-20261019/`.
+
+## Native performance observations · 18 October 2026
+
+This is the earlier native MDVu validation, separate from the incomplete competitor study above and the later correctness fixes. Its binaries contain a later cache correction; the earlier comparative startup numbers are not claimed as post-correction measurements.
 
 Replacing an existing SVG at the 128-entry/16 MiB cache boundary used to flush unrelated entries. The shared Rust insertion helper now removes the replaced entry before checking occupancy. The same helper serves disk reads and renderer writes; limits stay unchanged. A regression test checks replacement at both boundaries and eviction on actual overflow. The Universal app remains 7,364,248 bytes (7.02 MiB).
 
@@ -166,9 +185,9 @@ These are in-page frame intervals in the native verification run, not input late
 
 The code is not proven maximally fast or minimal-memory. Cold rendering still produced isolated intervals up to 120 ms on Mac and 250.1 ms on Windows RDP. The forced eager render-all heavy audit peaked around 1,192 MiB summed Mac footprint; this includes WebKit services and test overhead and is not normal lazy-reading memory. The transitive `block 0.1.6` dependency emits a future-incompatibility warning when the Windows crate is tested on Mac. No warning suppression or dependency fork was added.
 
-MSI install/uninstall was not repeated for this candidate. The cache correction is committed locally as `4983d8a`; other ongoing work remains in the working tree. Nothing was pushed or deployed.
+MSI install/uninstall was not repeated in this performance series. Its cache correction (`4983d8a`) is included in PR #2. The performance numbers remain tied to their original binaries; the website has not been deployed as part of this verification.
 
-Last pushed [GitHub CI](https://github.com/stpork/mdvu/actions/runs/39056053120) passed macOS, Windows and Linux on `8b6d006`. Current local changes have not been published, so that green run does not validate this working tree. [Verification data, binary identities and raw-log locations](tests/benchmarks/verification-2026-10-18.json).
+The historical baseline [GitHub CI](https://github.com/stpork/mdvu/actions/runs/39056053120) passed macOS, Windows and Linux on `8b6d006`. See the current verification section for the later tested revision. Verification data, binary identities and raw-log locations: `test-results/benchmarks/verification-2026-10-18.json` (local evidence, excluded from Git).
 
 ## Historical prepared-profile observations · superseded
 
@@ -197,7 +216,7 @@ MDVu warm light and first Mermaid use the middle observation of three fresh-proc
 
 #### MDVu opening optimizations · paired control
 
-The original 1.57 s light result did not reproduce in the untouched saved app. It is not used as the optimization baseline. Before and after use the same fixture bytes and capture protocol in a new session. Three fresh processes for light/first Mermaid; one per other workload. No p95 or statistical significance is claimed. The complete evidence, hashes, excluded contaminated trial and every observation are in [the paired series](tests/benchmarks/mdvu-opening-optimization-2026-10-18.json).
+The original 1.57 s light result did not reproduce in the untouched saved app. It is not used as the optimization baseline. Before and after use the same fixture bytes and capture protocol in a new session. Three fresh processes for light/first Mermaid; one per other workload. No p95 or statistical significance is claimed. The complete evidence, hashes, excluded contaminated trial and every observation are in the paired series: `test-results/benchmarks/mdvu-opening-optimization-2026-10-18.json` (local evidence, excluded from Git).
 
 | Input | Trials before / after | First visible content, ms | Peak process footprint in 8 s, MiB |
 | --- | --- | --- | --- |
@@ -300,7 +319,7 @@ The same valid-source catalogue in both application-cache-cold and fresh-process
 
 Both phases agree for all 584 application/example outcomes. Evidence combines complete AX document contents where exposed with saved viewport frames and native OCR. **EOF alone is not counted as rendering success.** MDVu Timing D047 was visually verified in frame 0034 in both phases; its fine labels are below the OCR threshold. Typora jumps from D040 to near EOF during both walks, so intermediate cases are corroborated by the full AX tree, not asserted to have been continuously visible. Marked 3.2.21 uses Swiss preview: Mermaid ZenUML D014 and D075/D076 show errors; PlantUML remains source. MarkViewer uses live editor preview; its separate read-only HTML mode is not represented by these numbers.
 
-[Per-case cold/warm outcomes, binary hashes, AX nodes and saved-frame references](tests/benchmarks/diagram-comparison-2026-10-18.json). Raw evidence stays in `test-results/full-pass-20261018/capture/`.
+Per-case cold/warm outcomes, binary hashes, AX nodes and saved-frame references: `test-results/benchmarks/diagram-comparison-2026-10-18.json` (local evidence, excluded from Git). Raw evidence stays in `test-results/full-pass-20261018/capture/`.
 
 <details>
 <summary>Every grammar/view and outcome</summary>
@@ -392,7 +411,7 @@ Both phases agree for all 584 application/example outcomes. Evidence combines co
 - Complete Universal installed size is the sum of regular-file lengths, not disk allocation or download size. Electron bundled by an app is included; macOS system WebKit and writable profiles/vaults are not. MDVu's separately measured ARM app is 4.90 MiB, but **9.98 MiB Universal** is used for the comparison. Versions, executable hashes and bundle sizes were rechecked unchanged after the recordings. The five source fixtures were rechecked unchanged.
 - Failed/incomplete/source-only cases remain explicit. MarkViewer heavy processes did not exit after a normal Quit request and were terminated by their verified benchmark PID; this is not called a spontaneous crash. No paid trial was activated. Zoom, scrolling and fullscreen are outside this competitor study. These measurements do not demonstrate that controls remain responsive while a heading is visible.
 
-[All timings, footprints, input/build hashes, selected frame brackets and evidence hashes](tests/benchmarks/competitor-performance-2026-10-18.json). [Every diagram outcome](tests/benchmarks/diagram-comparison-2026-10-18.json). [Clean input catalogue](tests/fixtures/test-diagrams.md). Raw local recordings, first-frame PNGs, compositor metadata and process samples: `test-results/comparison-20261018/`. Recordings have not been uploaded or copied into website assets.
+All timings, footprints, input/build hashes, selected frame brackets and evidence hashes: `test-results/benchmarks/competitor-performance-2026-10-18.json` (local evidence, excluded from Git). Every diagram outcome: `test-results/benchmarks/diagram-comparison-2026-10-18.json` (local evidence, excluded from Git). [Clean input catalogue](tests/fixtures/test-diagrams.md). Raw local recordings, first-frame PNGs, compositor metadata and process samples: `test-results/comparison-20261018/`. Recordings have not been uploaded or copied into website assets.
 
 ## Verified MDVu diagram catalogue — 18 October 2026
 
@@ -400,11 +419,11 @@ The current [test-diagrams.md](tests/fixtures/test-diagrams.md) contains **73 su
 
 Before selection, 114 candidates were opened individually in fresh native MDVu processes with empty diagram caches: **100 rendered, 14 failed, zero unresolved/source-only results**. Each case has a native screenshot and SHA-256 evidence. SVG diagnostic panels are checked independently of the engine's success callback. All 114 screenshots were visually reviewed. The final combined 73-example document was rendered again: **73/73 rendered, zero errors**.
 
-The clean catalogue excludes 25 duplicates/aliases, 14 unsupported cases and 2 utility/formatting probes. The full registry, canonical-case mappings and exclusions remain in [diagram-catalogue.json](tests/benchmarks/diagram-catalogue.json); actual native outcomes and evidence hashes are in [mdvu-diagram-validation.json](tests/benchmarks/mdvu-diagram-validation.json).
+The clean catalogue excludes 25 duplicates/aliases, 14 unsupported cases and 2 utility/formatting probes. The full registry, canonical-case mappings and exclusions remain in diagram-catalogue.json: `test-results/benchmarks/diagram-catalogue.json` (local evidence, excluded from Git); actual native outcomes and evidence hashes are in mdvu-diagram-validation.json: `test-results/benchmarks/mdvu-diagram-validation.json` (local evidence, excluded from Git).
 
 C4-PlantUML 2.14.0 and ArchiMate 3.2.2 are bundled offline. All C4 and ArchiMate candidates rendered, including nested includes and the ArchiMate element/icon overview. D071 originally passed an expression directly to an unquoted ArchiMate macro; the catalogue version computes that argument first. The five original fixtures remain unchanged. Canonical D003 additionally quotes requirement fields explicitly to remove a comparison syntax error. Standalone ZenUML fences now use the existing Mermaid engine, and DOT uses the existing shared Graphviz instance. No additional rendering engine was added. The PlantUML compressed asset grew by 44,410 bytes (43.37 KiB).
 
-The removed failures below are engine limitations, not library download errors. The Java reference engine also accepts the added probe syntax; its results are retained in [diagram-reference-validation.json](tests/benchmarks/diagram-reference-validation.json). The [browser factory registry](https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/teavm/js/PSystemBuilderJs.java) omits these factories. Adding C4/ArchiMate macros cannot add a missing compiled diagram engine.
+The removed failures below are engine limitations, not library download errors. The Java reference engine also accepts the added probe syntax; its results are retained in diagram-reference-validation.json: `test-results/benchmarks/diagram-reference-validation.json` (local evidence, excluded from Git). The [browser factory registry](https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/teavm/js/PSystemBuilderJs.java) omits these factories. Adding C4/ArchiMate macros cannot add a missing compiled diagram engine.
 
 | Removed case | Type / command | Reason |
 | --- | --- | --- |
@@ -423,8 +442,8 @@ The removed failures below are engine limitations, not library download errors. 
 | D098 | `help types` | Service command help types: the browser build does not register HelpFactory. This is not a diagram family. |
 | D099 | `listsprites` | Service command listsprites: the browser build does not register ListSpriteDiagramFactory. This is not a diagram family. |
 
-Initial catalogue validation ran on macOS with 24 Rust unit + 16 integration tests and 88 Swift tests; SVG diagnostic/DOT adapter and locked runtime checks also passed. The subsequent native NAS run verified the same 73 examples on Windows. See Current MDVu verification above for the later binaries, 89 Swift tests and current platform checks. These are correctness checks, not a performance ranking.
+Initial catalogue validation ran on macOS with 24 Rust unit + 16 integration tests and 88 Swift tests; SVG diagnostic/DOT adapter and locked runtime checks also passed. The subsequent native NAS run verified the same 73 examples on Windows. See Current MDVu verification above for the later tested revision and platform checks. These are correctness checks, not a performance ranking.
 
 ## Historical data
 
-[Earlier before/after native MDVu and distribution results](tests/benchmarks/comparison-history-2026-10-17.md) retain their original revisions/protocol. Superseded competitor syntax/counts and exploratory memory samples in that archive are not the current comparison.
+Earlier before/after native MDVu and distribution results: `test-results/benchmarks/comparison-history-2026-10-17.md` (local evidence, excluded from Git) retain their original revisions/protocol. Superseded competitor syntax/counts and exploratory memory samples in that archive are not the current comparison.

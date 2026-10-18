@@ -4,6 +4,22 @@
 dist/
 target/
 test-results/
+/tests/benchmarks/
+/competitors/
+/apps/
+/results/
+
+# Downloaded applications, release packages and generated diagnostics.
+*.app/
+*.exe
+*.dll
+*.msi
+*.dmg
+*.zip
+*.7z
+*.pdb
+*.profraw
+*.profdata
 
 __pycache__/
 *.py[cod]

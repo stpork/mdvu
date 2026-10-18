@@ -94,6 +94,7 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
   * Native window dragging, document proxy icon dragging, and `⌘-click` path hierarchy menu.
 * **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
   * Dynamically loads `libmdvu_core.dylib` using safe scoped C-string closures (`withOptionalCString`), completely eliminating dangling pointers.
+  * Successful documents and error pages share the in-place reader loader. Reusing the reader retains its math runtime; a full WebView navigation clears runtime state before loading a replacement.
   * Markdown processing, dialect rules and diagram cache storage use the same Rust core as Windows. The native host reports a missing or incompatible core instead of maintaining a second parser.
 
 ---
@@ -110,6 +111,7 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
 * **Live File Watcher**:
   * Powered by `notify`, monitors the document's parent directory with atomic save tracking (surviving file replacements and renames by editors like VS Code, Notepad++, and Vim).
   * Trailing debounce (150 ms) reloads the view while seamlessly preserving the user's vertical scroll ratio.
+* **Local links**: The reader decodes the file path and fragment separately and sends structured JSON to the native host. A decoded `#` or `%` in a filename is never reparsed as a URL delimiter.
 * **Shortcuts & Shell Integration**:
   * `Ctrl+O`: Native open file dialog (`rfd`).
   * `Ctrl+R` / `F5`: Reload preview.
@@ -151,17 +153,19 @@ mdvu document.md --toc
   * `make test`: Runs the native Swift regression suite against the shared Rust library.
 * **Unified Script**:
   * `./build.sh app` / `./build.sh universal` / `./build.sh archive` / `./build.sh test`
-  * `./build.sh windows`: Cross-compiles or packages the Windows release.
+  * `./build.sh check`: Runs shared Rust, Swift and visual reference checks.
+  * `./build.sh windows`: Cross-compiles the Windows x64 portable ZIP from macOS/Linux; native PowerShell packaging builds MSI as well.
 
 ### B. Windows
 * **PowerShell**: `.\build.ps1` (or `.\scripts\build-windows.ps1`):
-  * `.\build.ps1`: Builds release and packages `dist/mdvu-<version>-windows-x86_64.zip`.
+  * `.\build.ps1`: Builds release and packages the Windows x64 MSI, portable ZIP, SHA-256 sidecars and package-manager submission templates. Only the release executable returned by Cargo and its matching WebView2 loader are packaged.
   * `.\build.ps1 test`: Runs Rust workspace test suite.
   * `.\build.ps1 release`: Compiles optimized release binaries.
-* **Command Prompt**: `build.cmd` (`build`, `build release`, `build test`).
+* **Command Prompt**: `build.cmd` (`build.cmd`, `build.cmd release`, `build.cmd test`).
+* **MSI scope**: One dual-purpose MSI supports Program Files for all users and `%LOCALAPPDATA%\Programs\MDVu` for the current user without elevation. Directory assignments run before MSI costing; an interactive scope change updates the target directory. Shortcut and registry commands reference `[#MdvuExe]`, the installed file identity, rather than concatenating directory strings. Finish has an explicit `EndDialog` event.
 
 ### C. Continuous Integration (`.github/workflows/`)
-* **Shared workflow (`ci.yml`)**: Linux tests the Rust core. macOS runs Swift/core tests and coverage, native fixture correctness checks, release and universal builds. Windows runs workspace tests and coverage, native fixture correctness checks, CLI checks and release packaging. Hosted fixture tests use timer mode; physical desktop measurements use the default system runners described in [COMPARISON.md](COMPARISON.md).
+* **Shared workflow (`ci.yml`)**: Linux tests the Rust core. macOS runs Swift/core tests and coverage, native fixture correctness checks, release and universal builds. Windows parses all PowerShell scripts, runs workspace tests and coverage, native fixture correctness checks, CLI checks, release packaging and full MSI install/Finish/launch/uninstall tests for elevated and non-elevated scopes. The latter uses a temporary standard account, not a potentially elevated administrator token on a runner with UAC disabled. Linux additionally checks repository hygiene, documentation links, release metadata, installer authoring and renderer integrity. Hosted fixture tests use timer mode; physical desktop measurements use the default system runners described in [COMPARISON.md](COMPARISON.md).
 
 * **Release publication**: A version tag must match `version.txt`. After all three CI jobs pass, a dedicated job downloads that run's macOS and Windows artifacts. `scripts/release-assets.py` requires six packages and valid SHA-256 sidecars, uploads them to a draft, verifies the remote asset set and only then publishes it. Public releases are immutable; the manifest identifies the tested source commit. `scripts/publish-release.sh` orchestrates tagging from clean, green `develop`, Homebrew and the website refresh.
 
@@ -170,3 +174,7 @@ mdvu document.md --toc
 Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
 
 The JavaScript PlantUML build registers fewer diagram factories than the Java engine. Unsupported-type and syntax-error SVG panels are rejected before display/caching. C4 and ArchiMate library data are embedded in the PlantUML bundle, with their script-loader states pre-registered, so includes require no network or separate files. Other optional libraries are not included. `scripts/runtime-assets/stdlib-lock.json` pins the library URLs, versions and source hashes; the renderer asset generator verifies them before bundling. Updating the runtime manifest invalidates old SVG cache entries on both platforms. `assets/plantuml-adapter.mjs` routes `@startdot` directly to the same memoized Viz.js instance used by the PlantUML layout engine. The shared Rust parser normalizes standalone `zenuml` fences to Mermaid ZenUML input before computing their SVG cache key.
+
+### Source checkout and generated data
+
+Only application/build sources, locked runtimes, regression tests, fixtures, approved snapshots and human-readable documentation belong in Git. Build output is ignored under `.build/`, `target/` and `dist/`. Competitor apps, ad hoc comparison tools, raw JSON/video/screenshots and browser profiles remain local under `test-results/`. Native correctness runners derive catalogue cases directly from `tests/fixtures/test-diagrams.md`; a fresh checkout never needs local benchmark registries or results. Repository tests reject tracked downloads and generated diagnostics.

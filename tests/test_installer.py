@@ -25,6 +25,12 @@ class InstallerTests(unittest.TestCase):
                     if '%1' in r.get("Value", "")]
         self.assertEqual(commands, ['"[#MdvuExe]" "%1"'] * 2)
 
+    def test_associations_match_supported_markdown_inputs(self):
+        keys = self.xml.findall('.//w:RegistryKey[@Root="HKMU"]', NS)
+        extensions = {key.get("Key").split("\\")[-1] for key in keys
+                      if key.get("Key", "").startswith("Software\\Classes\\.")}
+        self.assertEqual(extensions, {".md", ".markdown", ".mdown", ".mkd"})
+
     def test_scope_updates_directory_resolution(self):
         # SetDirectory is WiX's before-CostFinalize assignment. A type-51 property
         # assignment after CostFinalize changes text without recosting file paths.

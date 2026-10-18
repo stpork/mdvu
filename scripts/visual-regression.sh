@@ -1,12 +1,14 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
 BIN=${1:-"$ROOT/.build/debug/mdvu"}
 REF_COMPLETE="$ROOT/tests/snapshots/kitchen-sink.png"
 REF_ONESCREEN="$ROOT/tests/snapshots/onescreen.png"
-ACTUAL_COMPLETE=$(mktemp -t mdvu-complete).png
-ACTUAL_ONESCREEN=$(mktemp -t mdvu-onescreen).png
-trap 'rm -f "$ACTUAL_COMPLETE" "$ACTUAL_ONESCREEN"' EXIT
+SNAPSHOTS=$(mktemp -d)
+ACTUAL_COMPLETE="$SNAPSHOTS/complete.png"
+ACTUAL_ONESCREEN="$SNAPSHOTS/onescreen.png"
+trap 'rm -rf "$SNAPSHOTS"' EXIT
 
 test -f "$REF_COMPLETE" || { echo "Missing reference $REF_COMPLETE; run make update-snapshot" >&2; exit 1; }
 test -f "$REF_ONESCREEN" || { echo "Missing reference $REF_ONESCREEN; run make update-snapshot" >&2; exit 1; }

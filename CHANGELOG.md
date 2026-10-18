@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
 
 ### Current 0.5.0 work
+- Ignore completed navigator scans whose results arrive after a different root is selected; cancellation alone does not identify the current scan.
+- Fix Windows MSI scope/directory resolution and Start Menu/association paths; wire Finish to close the successful installation dialog. Add native UI installation, launch and uninstall regression tests for admin and non-admin tokens.
+- Keep competitor applications, ad hoc comparison tools and raw research results out of Git while preserving local evidence; derive native catalogue checks from the fixture itself.
+- Make build checks include shared Rust tests, reject missing release architectures/loaders, package the selected release output only and keep version validation read-only during packaging.
 - Preserve the macOS reader and loaded math runtime through error pages so subsequent documents render formulas correctly.
 - Keep decoded Windows link paths separate from fragments, including filenames containing `#` and `%`.
 - Update all release/native/Rust versions together and verify packaged CLI versions against release metadata.
