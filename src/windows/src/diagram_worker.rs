@@ -20,6 +20,7 @@ pub struct DiagramWorker {
     active: Option<Value>,
     ready: bool,
     loaded: HashSet<String>,
+    runtime: Option<&'static str>,
     session: String,
     deadline: Option<Instant>,
 }
@@ -49,11 +50,7 @@ impl DiagramWorker {
                 return self.fail(error.to_string());
             }
         }
-        if self.ready {
-            self.start(proxy)
-        } else {
-            None
-        }
+        self.start(proxy)
     }
     fn create(
         &mut self,
@@ -109,38 +106,43 @@ impl DiagramWorker {
         let job = self.active.as_ref()?;
         let renderer = job["renderer"].as_str()?;
         if self.loaded.contains(renderer) {
-            return self.execute("");
+            return self.ready.then(|| self.execute()).flatten();
         }
         let id = job["id"].as_str()?.to_owned();
         let getter = if renderer == "mermaid" {
-            mdvu_core::get_mermaid_js
+            mdvu_core::get_mermaid_source
         } else {
             mdvu_core::get_plantuml_js
         };
         let proxy = proxy.clone();
+        let session = self.session.clone();
         std::thread::spawn(move || {
-            let _ = proxy.send_event(UserEvent::DiagramRuntimeReady(id, getter()));
+            let _ = proxy.send_event(UserEvent::DiagramRuntimeReady(session, id, getter()));
         });
         None
     }
     pub fn runtime_ready(
         &mut self,
+        session: &str,
         id: &str,
         source: Result<&'static str, &'static str>,
     ) -> Option<Value> {
         let job = self.active.as_ref()?;
-        if job["id"].as_str() != Some(id) {
+        if self.session != session || job["id"].as_str() != Some(id) {
             return None;
         }
         match source {
             Ok(source) => {
-                self.loaded.insert(job["renderer"].as_str()?.to_owned());
-                self.execute(source)
+                self.runtime = Some(source);
+                self.ready.then(|| self.execute()).flatten()
             }
             Err(error) => self.fail(error.into()),
         }
     }
-    fn execute(&mut self, source: &str) -> Option<Value> {
+    fn execute(&mut self) -> Option<Value> {
+        let source = self.runtime.take().unwrap_or("");
+        self.loaded
+            .insert(self.active.as_ref()?["renderer"].as_str()?.to_owned());
         let script = format!(
             "{source};window.__mdvuRunDiagramJob({});void 0",
             self.active.as_ref()?
@@ -150,11 +152,11 @@ impl DiagramWorker {
         }
         None
     }
-    pub fn message(&mut self, text: &str, proxy: &EventLoopProxy<UserEvent>) -> Option<Value> {
+    pub fn message(&mut self, text: &str, _proxy: &EventLoopProxy<UserEvent>) -> Option<Value> {
         let result = self.verified_message(text)?;
         if result["ready"] == true {
             self.ready = true;
-            return self.start(proxy);
+            return self.runtime.is_some().then(|| self.execute()).flatten();
         }
         if result["id"] != self.active.as_ref()?["id"] {
             return None;
@@ -178,6 +180,7 @@ impl DiagramWorker {
         self.owner = None;
         self.ready = false;
         self.loaded.clear();
+        self.runtime = None;
         self.deadline = None;
         self.session.clear();
     }
@@ -202,6 +205,22 @@ impl DiagramWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decoding_can_finish_before_webview_and_stale_sessions_are_ignored() {
+        let mut worker = DiagramWorker {
+            session: "new".into(),
+            active: Some(json!({"id":"1","renderer":"mermaid"})),
+            ..Default::default()
+        };
+        assert!(worker.runtime_ready("old", "1", Ok("stale")).is_none());
+        assert!(worker.runtime.is_none());
+        assert!(worker.runtime_ready("new", "1", Ok("current")).is_none());
+        assert_eq!(worker.runtime, Some("current"));
+        assert!(worker.loaded.is_empty());
+        worker.cancel();
+        assert!(worker.runtime.is_none());
+    }
 
     #[test]
     fn cancelled_renderer_cannot_mark_a_new_renderer_ready() {

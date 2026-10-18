@@ -36,6 +36,7 @@ release: prepare rust-release
 	done
 test: prepare rust-all
 	cd "$(PROJECT_ROOT)" && MDVU_CORE_LIB="$(PROJECT_ROOT)/target/debug/libmdvu_core.dylib" swift test $(TEST_FLAGS) $(SWIFT_TEST_ARGS)
+BUNDLE_ASSETS ?= 0
 DYLIB ?= $(PROJECT_ROOT)/target/release/libmdvu_core.dylib
 
 benchmark: release
@@ -55,6 +56,7 @@ package:
 	strip -u -r "$(APP)/Contents/MacOS/mdvu"
 	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
 	test ! -f "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" "$(APP)/Contents/Resources/"
+	@if [ "$(BUNDLE_ASSETS)" = 1 ]; then cp "$(PROJECT_ROOT)"/assets/*.lzma "$(APP)/Contents/Resources/"; fi
 	cp "$(PROJECT_ROOT)/packaging/macos/Info.plist" "$(APP)/Contents/Info.plist"
 	cp "$(DYLIB)" "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
 	strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib"

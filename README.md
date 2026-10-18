@@ -4,13 +4,13 @@
 
   <p>
     The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for <b>macOS &amp; Windows</b>.<br>
-    Built with pure AppKit &amp; WebKit (macOS) and Win32 &amp; WebView2 (Windows). Zero Electron. Zero Node. Zero Telemetry. 100% Offline.
+    Built with pure AppKit &amp; WebKit (macOS) and Win32 &amp; WebView2 (Windows). Zero Electron. Zero Node. Zero Telemetry. Markdown, math and diagrams render offline.
   </p>
 
   <p>
     <a href="https://github.com/stpork/mdvu/actions"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-    <a href="#windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
+    <a href="#3-windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/version-0.5.0-emerald" alt="Version 0.5.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
   </p>
@@ -24,16 +24,16 @@
 
 ## Why mdvu?
 
-**Less app. More document.** Read Markdown, diagrams and math in a compact native app for Mac and Windows. The rendering engines are included; a separate browser runtime is not bundled. See [measured sizes and UI performance](COMPARISON.md) and the [website](https://stpork.github.io/mdvu/#performance).
+Read Markdown, diagrams and math in a compact native app for Mac and Windows. The rendering engines are included; a separate browser runtime is not bundled. See [measured sizes and UI performance](COMPARISON.md) and the [website](https://stpork.github.io/mdvu/#comparison).
 * **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS and native **Win32 & WebView2** on Windows. Both run on the shared `mdvu-core` Rust engine with zero Electron, Node, or JVM.
 * **Responsive Reading**: Diagram execution uses a separate renderer so scrolling and zoom can continue while a diagram is being generated. Native fixture tests measure cold interaction latency and process memory.
-* **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with full CommonMark and GitHub Flavored Markdown (GFM) compliance and security tagfiltering.
+* **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with CommonMark parsing, GFM extensions and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 12.2.0**, **ZenUML 1.0.1**, and **PlantUML Core 1.2026.9** + **Viz.js 3.31.0** (Graphviz 16.1.0) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and runtime-aware disk caching.
 * **Native Zoom & Window Management**:
   * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, titlebar quick-open, and 3-pane split view with Vault Navigator (`⌥⌘D`).
-  * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, status bar, and live atomic-save file watcher (`notify`).
+  * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, a WebView2 reader toolbar and sidebars, and a live atomic-save file watcher (`notify`).
 * **Resource Hygiene**: Strict memory management, collision-resistant diagram caching, and zero background telemetry.
 
 ---
@@ -76,7 +76,9 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Others** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
+This checkout documents **0.5.0 in development**. The current public release is **0.4.1 for macOS**; Windows installers and the updated engine/catalogue features described here are planned for 0.5.0. Check the release asset list before downloading.
+
+Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Other versions · portable ZIPs** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
 
 | Package | OS & Architecture | Description |
 | :--- | :--- | :--- |
@@ -92,7 +94,7 @@ Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are und
 ### 3. Windows Installation & Usage
 
 #### Option A: MSI Installer (Recommended)
-1. Download **`mdvu-X.Y.Z-windows-x86_64.msi`** from [Releases](https://github.com/stpork/mdvu/releases).
+1. Install Microsoft Edge WebView2 Runtime if it is absent (it is shared with the OS, not bundled in MDVu). Download **`mdvu-X.Y.Z-windows-x86_64.msi`** from [Releases](https://github.com/stpork/mdvu/releases).
 2. **Interactive GUI install**:
    * Double-click the `.msi` package.
    * Check **Install for current user only (no administrator privileges needed)** to install without administrative privileges (installs to `%LOCALAPPDATA%\Programs\MDVu` without UAC elevation — the UAC shield icon dynamically disappears from the Install button).
@@ -162,7 +164,7 @@ cargo build --release -p mdvu-windows --bin mdvu
 
 ### 5. Build & Install From Source
 
-Requirements: macOS 13.0+, Swift 6 / Xcode Command Line Tools (`xcode-select --install`).
+Requirements: macOS 13.0+, Swift 6 / Xcode Command Line Tools (`xcode-select --install`), and the stable Rust toolchain with Cargo. Universal builds also require the `aarch64-apple-darwin` and `x86_64-apple-darwin` Rust targets. Windows builds require Rust, the MSVC C++ build tools and the Windows SDK; packaging additionally uses WiX as configured by `scripts/build-windows.ps1`.
 
 ```sh
 git clone https://github.com/stpork/mdvu.git
@@ -182,14 +184,15 @@ make install         # Install locally
 
 ---
 
-### 6. Direct Swift Package Manager (CLI Only)
+### 6. Command-line use from the macOS bundle
 
-If you only need the command-line rendering tool without the `.app` bundle:
+The CLI uses the same executable, Rust library and resources as the native app. Build the complete bundle and link its executable; copying the Swift binary alone omits required files.
 ```sh
 git clone https://github.com/stpork/mdvu.git
 cd mdvu
-swift build -c release
-cp .build/release/mdvu ~/.local/bin/
+make app
+mkdir -p ~/.local/bin
+ln -s "$PWD/dist/mdvu.app/Contents/MacOS/mdvu" ~/.local/bin/mdvu
 ```
 
 ---
@@ -203,7 +206,7 @@ cp .build/release/mdvu ~/.local/bin/
 # Open a single file
 mdvu README.md
 
-# Open multiple files in separate tabs/windows
+# macOS: open multiple files in separate windows (Windows accepts one path per invocation)
 mdvu ARCHITECTURE.md CHANGELOG.md
 
 # Open a directory (file navigator in List mode)
@@ -212,7 +215,7 @@ mdvu ~/Documents/Notes
 # Force light, dark, or system theme
 mdvu --theme dark document.md
 
-# Select markdown dialect (generic, github, or obsidian)
+# Select a Markdown dialect profile (also mkdocs, docusaurus, commonmark, hugo)
 mdvu --dialect obsidian note.md
 
 # Open directly in edge-to-edge Full Width mode
@@ -248,12 +251,12 @@ mdvu --snapshot output.png README.md
 | **`-s, --standalone`** | **Headless**: Embed offline diagram & math engines into HTML | `false` |
 | `--title <TITLE>` | Override document title | Filename |
 | `-t, --theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
-| `-d, --dialect <generic\|github\|obsidian>` | Parser dialect profile (auto-detects frontmatter) | `generic` |
+| `-d, --dialect <PROFILE>` | Dialect profile: `generic`, `github`/`gfm`, `obsidian`, `mkdocs`, `docusaurus`, `commonmark`, `hugo`; automatic selection also accepts `auto` | Automatic, falling back to `generic` |
 | `--full-width` | Open in edge-to-edge full width mode | Saved preference |
 | `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
-| `--no-mermaid` | Disable Mermaid diagram rendering | Enabled |
+| `--no-mermaid` | Disable Mermaid/ZenUML and PlantUML-family diagrams | Diagram rendering enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit (macOS) | None |
-| `-v, --version` | Display version information and exit | None |
+| `--version` | Display version information and exit (`-v` on macOS; `-V` on Windows) | None |
 | `-h, --help` | Display command-line usage help | None |
 
 ---
@@ -291,12 +294,12 @@ mdvu --snapshot output.png README.md
 * **YAML FrontMatter**:
   * Frontmatter headers (`---`) are extracted and cleanly formatted as a readable document metadata table.
 * **Dynamic Dialect Switching & Auto-Detection**:
-  * **View → Dialect Menu**: Instantly switch the active document window between **Generic (CommonMark)**, **GitHub (GFM)**, and **Obsidian** with live re-rendering and scroll preservation.
+  * **View → Dialect Menu** on macOS: switch between Automatic, Generic, GitHub (GFM), Obsidian, MkDocs, Docusaurus, CommonMark and Hugo. Windows selects the dialect through `--dialect` or document directives.
   * **Frontmatter & Directive Auto-Detection**: Automatically detects dialect from YAML frontmatter (`dialect: obsidian`) or top-of-file HTML comment directives (`<!-- dialect: obsidian -->`), applying the optimal profile seamlessly.
 * **Safe HTML & Styling**:
   * Preserves presentation markup and raw `<style>` blocks. A per-document nonce policy authorizes bundled scripts and blocks scripts and event handlers embedded in Markdown.
 * **Code Fence Protection**:
-  * All inline transformations are shielded by `CodeFenceProtector` against modifying code blocks (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
+  * The shared Rust dialect pipeline protects code blocks from inline transformations (including 3-backtick, 4-backtick ` ```` `, and tilde `~~~` fences).
 
 ---
 
@@ -307,28 +310,31 @@ mdvu --snapshot output.png README.md
 * **Mermaid 12.2.0**:
   * **Core Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`.
   * **Extended Types**: `ishikawa-beta` (fishbone diagrams), `swimlane-beta` (workflow swimlanes), `packet-beta` (binary packet protocols), `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, `sankey-beta`, and `xychart-beta`.
-  * **ZenUML 1.0.1 Plugin**: Support for concise ZenUML sequence diagrams within ````mermaid`` code blocks.
+  * **ZenUML 1.0.1 Plugin**: Support for concise ZenUML sequence diagrams within ````mermaid`` and standalone ````zenuml`` code blocks, sharing the same renderer and SVG cache.
   * **Auto-Quoting Resilience**: Grammar preprocessor automatically quotes unquoted labels containing hyphens in `requirementDiagram` and complex models.
 * **PlantUML 1.2026.9 (`@plantuml/core`) + Graphviz (`Viz.js 3.31.0` / Graphviz 16.1.0)**:
-  * **100% Offline & Pure WebAssembly/JS**: Executes client-side inside WebKit via TeaVM. **No Java runtime (JRE/JVM) or external binaries required.**
+  * **Offline JavaScript/WebAssembly**: Executes locally through TeaVM and Viz.js in WebKit on macOS or WebView2 on Windows. **No Java runtime (JRE/JVM) or external binaries required.**
   * **Fenced Blocks**: Supports both ````plantuml`` and ````puml`` code fences.
   * **UML Models**: Sequence diagrams, Class models with inheritance and associations, State machines, Activity diagrams, Component architectures, Object diagrams, Deployment diagrams, and Use-case models.
   * **Non-UML Families**: JSON/YAML data tree visualizers, Salt UI wireframes, Archimate enterprise models, MindMaps, Work Breakdown Structures (WBS), Gantt schedules, and Network (`nwdiag`) diagrams.
   * **Dark Mode & Transparency**: Automatically adapts to document theme with transparent SVG backgrounds.
-  * **Runtime limits**: Ditaa is absent from the JavaScript PlantUML engine. Optional standard-library `!include <...>` bundles are not shipped; an ArchiMate diagram written directly in the core syntax is distinct from an include-based macro library.
+  * **Included libraries**: C4-PlantUML 2.14.0 and ArchiMate 3.2.2 render offline through `!include <C4/C4_Context>`, `<C4/C4_Container>`, `<archimate/Archimate>` and their library files.
+  * **DOT**: `@startdot` blocks use the same bundled Graphviz/Viz.js instance as PlantUML, with no additional engine or Java requirement.
+  * **Runtime limits**: The JavaScript port supports fewer diagram types than the Java engine; Ditaa, standalone AsciiMath/LaTeX, chronology, Chen ER, files, board, wire, flow, HCL, BPM and git are not available. Other optional standard libraries are not bundled. Unsupported and error SVGs are reported as rendering errors.
 * **Isolated Diagram Execution**:
   * Native builds generate diagrams in a separate renderer and attach SVGs near the reading viewport. The renderer is released after inactivity; a bounded queue and cache limit retained work.
 * **On-Demand Lazy Decompression**:
   * Documents without diagrams do not load the diagram engines; their LZMA archives remain compressed.
+  * macOS release bundles store compressed runtimes once in `Contents/Resources`, shared by both CPU architectures. Windows embeds them in the executable.
   * Documents with only Mermaid diagrams decompress only `mermaid.lzma` (1.64 MiB).
-  * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.18 MiB).
+  * Documents with only PlantUML diagrams decompress only `plantuml.lzma` (1.22 MiB, including C4 and ArchiMate).
 * **Runtime-aware SVG Disk Cache**:
-  * SVGs are cached to `~/Library/Caches/com.mdvu.viewer/diagrams` keyed by renderer, source, theme, application version and the locked runtime manifest.
+  * SVGs are cached to `~/Library/Caches/mdvu/diagrams` on macOS and `%LOCALAPPDATA%\mdvu\Caches\diagrams` on Windows; `MDVU_CACHE_DIR` overrides the directory. Keys cover renderer, source, theme, app version and the locked runtime manifest.
   * Renders once; subsequent loads reuse cached SVG and bypass diagram generation.
 
 ---
 
-### 🔍 Native Zoom Control `[-][ 100% ][+]`
+### 🔍 Zoom Control `[-][ 100% ][+]`
 * **Hardware-Accelerated Scaling**: WebKit handles continuous trackpad magnification. Frame rate depends on display refresh rate, document complexity, and system load; no fixed FPS guarantee is implied.
 * **Magnetic Snapping ($\pm 2.5\%$)**: Micro-gestures within $\pm 2.5\%$ of clean 10% multiples (100%, 150%, 200%, 300%) snap cleanly to integers, eliminating jitter and phantom numbers (e.g. `201%` $\to$ `200%`).
 * **Bounce-Back Settling Engine**: Rapid zoom-out bounce-back gestures settle at exact `1.0` (`100%`) via trailing spring timers.
@@ -339,7 +345,7 @@ mdvu --snapshot output.png README.md
 
 ---
 
-### 📑 Document Titlebar Quick-Open
+### 📑 macOS Document Titlebar Quick-Open
 * Click the file name in the window titlebar to open the native `NSOpenPanel` sheet modal and switch files or folders in the current window.
 * Full compatibility with macOS native window features: dragging the title moves the window, `⌘-click` reveals the Finder directory hierarchy, and the proxy icon can be dragged into Terminal or Mail.
 
@@ -351,7 +357,7 @@ mdvu --snapshot output.png README.md
 
 ---
 
-### 🧭 Navigation & Two-Finger Swipe
+### 🧭 macOS Trackpad Navigation & Two-Finger Swipe
 * **Two-Finger History Swipe**: Horizontal trackpad swipes navigate Back and Forward when history is available.
 * **Zoom Pan-Priority**: When zoomed in (`> 105%`), two-finger gestures seamlessly pan overflowing tables, code blocks, and diagrams without triggering history jumps.
 * **Dynamic Back/Forward Validation**: Segmented history buttons in the toolbar visually enable or disable based on actual navigation history availability.
@@ -373,7 +379,7 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. No controlled comparison with competing applications has been performed.
+See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. The current local macOS comparison includes eight applications, separate application-cache-cold and warm starts, process memory and a 73-example diagram catalogue. It remains incomplete: 136/192 startup observations and 135/192 verified full-document passes. Windows native checks are reported separately; there is no Windows competitor ranking.
 
 Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
@@ -397,18 +403,19 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 
 | Action | macOS | Windows |
 | :--- | :--- | :--- |
-| Open File or Folder | `⌘O` | `Ctrl+O` |
-| Close Window | `⌘W` | `Alt+F4` |
+| Open File | `⌘O` | `Ctrl+O` |
+| Open Folder / Vault | `⌘O` (select a folder) | `Ctrl+Shift+O` |
+| Close Window | `⌘W` | `Ctrl+W` / `Alt+F4` |
 | Reload Document | `⌘R` | `F5` / `Ctrl+R` |
 | Zoom In (+10%) | `⌘+` / `⌘=` | `Ctrl++` / `Ctrl+=` |
 | Zoom Out (-10%) | `⌘-` | `Ctrl+-` |
 | Actual Size (100%) | `⌘0` | `Ctrl+0` |
 | Toggle Fullscreen | `^⌘F` | `F11` |
 | Toggle Table of Contents | `^⌘S` | `Ctrl+B` |
-| Toggle File / Vault Navigator | `⌥⌘D` | — |
+| Toggle File / Vault Navigator | `⌥⌘D` | `Ctrl+Shift+D` |
 | Find in Document | `⌘F` | `Ctrl+F` |
 | Find Next / Previous | `⌘G` / `⇧⌘G` | `F3` / `⇧F3` |
-| Toggle Full Width Mode | `⇧⌘W` | — |
+| Toggle Full Width Mode | `⇧⌘W` | `Ctrl+Shift+W` |
 | Navigate Back / Forward | `⌘[` / `⌘]` | `Alt+←` / `Alt+→` |
 | Quit Application | `⌘Q` | `Alt+F4` |
 
@@ -417,7 +424,7 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 ## Architecture
 
 `mdvu` uses a unified cross-platform hybrid architecture:
-* **Core (`src/core`)**: High-throughput Markdown parser (`pulldown-cmark`), dialect pipeline, embedded LZMA diagram engines (Mermaid, PlantUML, KaTeX), and C-ABI FFI layer.
+* **Core (`src/core`)**: Markdown parser (`pulldown-cmark`), dialect pipeline, runtime loading/cache and C-ABI FFI. Windows embeds the LZMA engines; packaged macOS builds share one resource copy between CPU architectures.
 * **Shared GUI / CLI Entry Point**: The same frontend executable opens the GUI or exports HTML/TOC through CLI flags (`-o`, `--stdout`, `--toc`) and stdin. The macOS app also ships the Rust shared library and resources; Windows links the core into `mdvu.exe`.
 * **macOS (`src/macos`)**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
 * **Windows (`src/windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
@@ -458,7 +465,7 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 ### Third-Party Software & Licenses
 * [pulldown-cmark](https://github.com/raphlinus/pulldown-cmark) — MIT / Apache-2.0 (c) Raph Levien and pulldown-cmark contributors.
 * [wry](https://github.com/tauri-apps/wry) & [tao](https://github.com/tauri-apps/tao) — MIT / Apache-2.0 (c) The Tauri Programme within The Commons Conservancy.
-* [lzma-rs](https://github.com/gendx/lzma-rs) — MIT / Apache-2.0 (c) Corentin Henry.
+* [lzma-rust2](https://github.com/hasenbanck/lzma-rust2) — Apache-2.0.
 * [Mermaid.js 12.2.0](https://github.com/mermaid-js/mermaid) — MIT (c) Knut Sveidqvist and Mermaid Contributors.
 * [ZenUML Plugin 1.0.1](https://github.com/mermaid-js/mermaid-zenuml) — MIT (c) Mermaid Contributors.
 * [PlantUML Core 1.2026.9](https://github.com/plantuml/plantuml) — MIT (c) PlantUML Team.

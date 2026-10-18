@@ -45,6 +45,7 @@ This project incorporates or bundles components from the following open-source s
 - **Repositories**: https://github.com/plantuml/plantuml, https://github.com/mdaines/viz.js
 - **License**: PlantUML Core 1.2026.9: MIT; Viz.js: MIT; bundled Graphviz/Expat retain their upstream licenses.
 - **Copyright**: (c) PlantUML Team; (c) Michael Daines and Graphviz Contributors.
+- **Included standard libraries**: C4-PlantUML 2.14.0 (MIT), https://github.com/plantuml-stdlib/C4-PlantUML; ArchiMate-PlantUML 3.2.2 (MIT), https://github.com/plantuml-stdlib/Archimate-PlantUML. Upstream library metadata and source are preserved in the embedded bundle.
 
 #### 5. KaTeX
 - **Repository**: https://github.com/KaTeX/KaTeX
@@ -56,7 +57,7 @@ This project incorporates or bundles components from the following open-source s
 - **License**: MIT License / Apache License 2.0
 - **Copyright**: (c) 2019 - Present Tauri Programme within The Commons Conservancy.
 
-#### 7. lzma-rs
-- **Repository**: https://github.com/gendx/lzma-rs
-- **License**: MIT License / Apache License 2.0
-- **Copyright**: (c) 2019 Corentin Henry.
+#### 7. lzma-rust2
+- **Repository**: https://github.com/hasenbanck/lzma-rust2
+- **License**: Apache License 2.0
+- **Copyright**: See the upstream LICENSE and source notices.

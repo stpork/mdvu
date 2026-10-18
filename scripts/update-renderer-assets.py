@@ -6,6 +6,7 @@ import lzma
 from pathlib import Path
 import shutil
 import subprocess
+import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
 LOCK = ROOT / 'scripts/runtime-assets'
@@ -15,6 +16,12 @@ for name in ('package.json', 'package-lock.json'):
     shutil.copyfile(LOCK / name, BUILD / name)
 subprocess.run(['npm', 'ci', '--prefix', str(BUILD), '--ignore-scripts', '--no-audit', '--no-fund'], check=True)
 modules = BUILD / 'node_modules'
+stdlib = json.loads((LOCK / 'stdlib-lock.json').read_text())
+for name, library in stdlib.items():
+    source = urllib.request.urlopen(library['url'], timeout=30).read()
+    if hashlib.sha256(source).hexdigest() != library['sha256']:
+        raise ValueError(f'Stdlib integrity mismatch: {name}')
+    (BUILD / (name + '.min.js')).write_bytes(source)
 esbuild = ['node', str(modules / 'esbuild/bin/esbuild')]
 
 def bundle(entry, output, *options):
@@ -28,13 +35,18 @@ entry.write_text("import mermaid from 'mermaid';\nimport zenuml from '@mermaid-j
 mermaid = bundle(entry, BUILD / 'mermaid.js')
 entry = BUILD / 'plantuml-entry.mjs'
 entry.write_text("import * as Viz from '@viz-js/viz';\nimport * as PlantUML from '@plantuml/core';\n"
-                 "globalThis.PLANTUML_VIZ=Viz;globalThis.PlantUML=PlantUML;\n")
+                 + ''.join(f"import './{name}.min.js';\n" for name in stdlib)
+                 + "import '../../assets/diagram-output.js';\n"
+                 + "import {createPlantUMLRenderer} from '../../assets/plantuml-adapter.mjs';\n"
+                 + "globalThis.PlantUML=createPlantUMLRenderer(PlantUML,Viz);\n"
+                 + "globalThis.__pl_script_state=globalThis.__pl_script_state||Object.create(null);\n"
+                 + ''.join(f"globalThis.__pl_script_state['{name}.min.js']={{state:'loaded'}};\n" for name in stdlib))
 # Viz embeds its WASM. A fixed module URL also works in standalone about:blank
 # documents; it is an identifier, never a network dependency.
 plantuml = bundle(entry, BUILD / 'plantuml.js',
                   '--define:import.meta.url="https://mdvu-runtime.invalid/viz.js"')
 katex = (modules / 'katex/dist/katex.min.js').read_bytes()
-manifest = {'compression': 'LZMA1 / .lzma, preset 9 extreme (64 MiB dictionary)', 'packages': {}, 'assets': {}}
+manifest = {'compression': 'LZMA1 / .lzma, preset 9 extreme (64 MiB dictionary)', 'packages': {}, 'stdlib': stdlib, 'assets': {}}
 for name in json.loads((BUILD / 'package.json').read_text())['dependencies']:
     package = json.loads((modules / name / 'package.json').read_text())
     manifest['packages'][name] = package['version']

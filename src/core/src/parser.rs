@@ -184,9 +184,16 @@ impl MarkdownParser {
                 let clean_lang = lang.trim().to_ascii_lowercase();
                 let trimmed_code = code_buffer.trim_matches(|c| c == '\n' || c == '\r');
 
-                if enable_diagrams && clean_lang == "mermaid" {
+                if enable_diagrams && (clean_lang == "mermaid" || clean_lang == "zenuml") {
+                    let diagram_source = if clean_lang == "zenuml"
+                        && trimmed_code.lines().next().map(str::trim) != Some("zenuml")
+                    {
+                        CowStr::from(format!("zenuml\n{trimmed_code}"))
+                    } else {
+                        CowStr::from(trimmed_code)
+                    };
                     has_mermaid = true;
-                    let key = compute_diagram_cache_key("mermaid", diagram_theme, trimmed_code);
+                    let key = compute_diagram_cache_key("mermaid", diagram_theme, &diagram_source);
                     let html = if let Some(svg) = DiagramCache::global().read(&key) {
                         format!(
                             "<figure class=\"diagram diagram-rendered\" data-renderer=\"mermaid\" data-cache-key=\"{key}\">{svg}</figure>"
@@ -194,7 +201,7 @@ impl MarkdownParser {
                     } else {
                         format!(
                             "<figure class=\"diagram diagram-pending\" data-renderer=\"mermaid\" data-cache-key=\"{key}\"><pre>{}</pre><div class=\"diagram-status\">Rendering diagram…</div></figure>",
-                            escape_html(trimmed_code)
+                            escape_html(&diagram_source)
                         )
                     };
                     Some(Event::Html(html.into()))
@@ -525,5 +532,20 @@ mod tests {
         let doc =
             parser.render("<h1><img src=\"icon.png\" alt=\"icon\"/> Document &lt;Special&gt;</h1>");
         assert_eq!(doc.title.as_deref(), Some("Document <Special>"));
+    }
+    #[test]
+    fn standalone_zenuml_reuses_mermaid_renderer_and_cache_key() {
+        let parser = MarkdownParser::new("light");
+        let body = "Reader.open() {\n  Viewer.parse()\n}";
+        let mermaid = parser.render(&format!("```mermaid\nzenuml\n{body}\n```"));
+        for source in [
+            format!("```zenuml\n{body}\n```"),
+            format!("```zenuml\nzenuml\n{body}\n```"),
+        ] {
+            let standalone = parser.render(&source);
+            assert!(standalone.has_mermaid);
+            assert!(!standalone.has_plantuml);
+            assert_eq!(standalone.body, mermaid.body);
+        }
     }
 }

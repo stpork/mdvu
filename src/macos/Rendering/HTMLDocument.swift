@@ -46,6 +46,7 @@ enum ResourceLoader {
     static let tocTreeJavaScript = text("toc-tree", "js")
     static let sidebarPolicyJSON = text("sidebar-policy", "json")
     static let diagramRendererJavaScript = text("diagram-renderer", "js")
+    static var mermaidRuntime: String { MdvuCoreBridge.shared.mermaidRuntime ?? "" }
     static var mermaidJavaScript: String { MdvuCoreBridge.shared.mermaidJavaScript ?? "" }
     static var plantumlJavaScript: String { MdvuCoreBridge.shared.plantumlJavaScript ?? "" }
     static var katexJavaScript: String { MdvuCoreBridge.shared.katexJavaScript ?? "" }

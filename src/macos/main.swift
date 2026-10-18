@@ -90,10 +90,6 @@ if options.isHeadless {
     }
 }
 
-if let first = options.paths.first {
-    EagerDocumentLoader.start(path: first, options: options)
-}
-
 let app = NSApplication.shared
 WebKitPrewarmer.prewarm()
 let delegate = AppDelegate(arguments: arguments)

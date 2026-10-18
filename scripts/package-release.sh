@@ -24,7 +24,7 @@ BUNDLE="$ARM_BIN_DIR/mdvu_mdvu.bundle"
 
 echo "==> Packaging arm64 release bundle..."
 if [ -f "$ARM_BIN" ]; then
-    make package APP="$DIST/mdvu-arm64.app" BINARY="$ARM_BIN" DYLIB="$ROOT/target/aarch64-apple-darwin/release/libmdvu_core.dylib" RESOURCE_BUNDLE="$BUNDLE"
+    make package BUNDLE_ASSETS=1 APP="$DIST/mdvu-arm64.app" BINARY="$ARM_BIN" DYLIB="$ROOT/target/aarch64-apple-darwin/release/libmdvu_core.dylib" RESOURCE_BUNDLE="$BUNDLE"
     ARM_ZIP="mdvu-${VERSION}-macos-arm64.zip"
     ditto -c -k --sequesterRsrc --keepParent "$DIST/mdvu-arm64.app" "$DIST/$ARM_ZIP"
     (cd "$DIST" && shasum -a 256 "$ARM_ZIP" > "$ARM_ZIP.sha256")
@@ -33,7 +33,7 @@ fi
 
 echo "==> Packaging x86_64 release bundle..."
 if [ -f "$X86_BIN" ]; then
-    make package APP="$DIST/mdvu-x86_64.app" BINARY="$X86_BIN" DYLIB="$ROOT/target/x86_64-apple-darwin/release/libmdvu_core.dylib" RESOURCE_BUNDLE="$BUNDLE"
+    make package BUNDLE_ASSETS=1 APP="$DIST/mdvu-x86_64.app" BINARY="$X86_BIN" DYLIB="$ROOT/target/x86_64-apple-darwin/release/libmdvu_core.dylib" RESOURCE_BUNDLE="$BUNDLE"
     X86_ZIP="mdvu-${VERSION}-macos-x86_64.zip"
     ditto -c -k --sequesterRsrc --keepParent "$DIST/mdvu-x86_64.app" "$DIST/$X86_ZIP"
     (cd "$DIST" && shasum -a 256 "$X86_ZIP" > "$X86_ZIP.sha256")

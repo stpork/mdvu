@@ -834,7 +834,7 @@ struct MarkdownParserTests {
 
     @Test func testEagerDocumentLoaderLifecycle() {
         let fixture = Self.fixtureURL("test-light.md")
-        EagerDocumentLoader.start(path: fixture.path, options: .default)
+        EagerDocumentLoader.start(path: fixture.path, options: .default, diagramTheme: "light")
         let task = EagerDocumentLoader.take(for: fixture)
         #expect(task != nil)
         #expect(EagerDocumentLoader.take(for: fixture) == nil)

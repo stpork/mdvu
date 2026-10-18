@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 
 use crate::assets::{
     get_app_js_c_str, get_katex_c_str, get_markdown_css_c_str, get_mermaid_c_str,
-    get_plantuml_c_str,
+    get_mermaid_source_c_str, get_plantuml_c_str,
 };
 use crate::navigator::DiagramCache;
 use crate::pipeline::MarkdownDialect;
@@ -57,6 +57,11 @@ pub extern "C" fn mdvu_get_mermaid_js() -> *const c_char {
         Some(s) => s.as_ptr(),
         None => std::ptr::null(),
     }
+}
+
+#[no_mangle]
+pub extern "C" fn mdvu_get_mermaid_source() -> *const c_char {
+    get_mermaid_source_c_str().map_or(std::ptr::null(), CStr::as_ptr)
 }
 
 #[no_mangle]

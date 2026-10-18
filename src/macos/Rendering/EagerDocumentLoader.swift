@@ -6,15 +6,15 @@ final class EagerDocumentLoader: @unchecked Sendable {
     private var pendingURL: URL?
     private var pendingTask: Task<RenderedDocument, Error>?
 
-    static func start(path: String, options: CLIOptions) {
+    static func start(path: String, options: CLIOptions, diagramTheme: String) {
         let url = URL(fileURLWithPath: path).standardizedFileURL
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue else { return }
         guard MarkdownDocument.isMarkdown(url: url) else { return }
-        shared.begin(url: url, options: options)
+        shared.begin(url: url, options: options, diagramTheme: diagramTheme)
     }
 
-    private func begin(url: URL, options: CLIOptions) {
+    private func begin(url: URL, options: CLIOptions, diagramTheme: String) {
         lock.lock()
         defer { lock.unlock() }
         pendingURL = url
@@ -22,11 +22,7 @@ final class EagerDocumentLoader: @unchecked Sendable {
             let data = try Data(contentsOf: url, options: .mappedIfSafe)
             let source = String(decoding: data, as: UTF8.self)
             let pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, isDialectExplicit: options.isDialectExplicit)
-            let diagramTheme: String = {
-                if options.theme != .system { return options.theme.rawValue }
-                return "light"
-            }()
-            return autoreleasepool { pipeline.render(source, diagramTheme: diagramTheme) }
+            return autoreleasepool { pipeline.render(source, diagramTheme: options.theme == .system ? diagramTheme : options.theme.rawValue) }
         }
     }
 

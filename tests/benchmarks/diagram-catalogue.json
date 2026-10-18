@@ -1,0 +1,1912 @@
+{
+  "schema": 3,
+  "document": "tests/fixtures/test-diagrams.md",
+  "documentSha256": "876c24376213ce93cd67957982882161e4d82fc5900011ccffd413b825d8bde2",
+  "registrySha256": "32c199038165c03f43658af04629cb3bfd70c7a406da26f1645a92e5eb8b1794",
+  "inputs": {
+    "tests/fixtures/test-light.md": "4bcfb2f870087fd7e0d0ca078159de30c3973618306a10251339669c0a541907",
+    "tests/fixtures/test-medium.md": "d797c549ab66d7d1cb01c5e01e5379b9e9000334a58e75252ef14866662966f1",
+    "tests/fixtures/test-complete.md": "1758df456e7b9f3a1a0445d4f4c6ca9bd72ca6408dd0cb3a2d69e27cbcc662cd",
+    "tests/fixtures/test-heavy.md": "7c0543f86ca09f1f43d6e2fd4d92e5a36ebb1eeaf652dbb4a01bcc10a4276f74",
+    "tests/fixtures/test-onescreen.md": "8128bdd9ba45a815a5634f8ae462a1a00630f968259ef60372a94b2070639a02"
+  },
+  "cases": [
+    {
+      "language": "mermaid",
+      "kind": "flowchart",
+      "heading": "1.1 System at a Glance",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 70,
+      "sha256": "21f2229633057a6e192f8e02603d785e41ee753f7981840ff4f186d5269c1dcf",
+      "id": "D001"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Context",
+      "heading": "2.1 Stakeholder Context — C4",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 108,
+      "sha256": "6ee41f8303a3cf26367b41e875a3a5c9a230bd331841c8ccd0e1bee63b436376",
+      "id": "D002"
+    },
+    {
+      "language": "mermaid",
+      "kind": "requirementDiagram",
+      "heading": "2.3 Requirement Relationships",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 141,
+      "sha256": "7d5914646a78e25a048d444cd619186196de3c93b9684bf151a7bcdc41f62d45",
+      "id": "D003",
+      "originalSourceSha256": "87ad2187960c133bfff4c2e6425d740e9cf5115288604bec23d07d8b03710403",
+      "fixtureCorrection": "Quote requirement id/text/docref values explicitly. MDVu repairs unquoted values automatically; the shared comparison must use valid syntax rather than reward this repair as wider format support."
+    },
+    {
+      "language": "mermaid",
+      "kind": "quadrantChart",
+      "heading": "2.5 Quality Trade-off Quadrants",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 183,
+      "sha256": "d8ba49ab8cee03af6d5bc067cd79f124617e29a9d44c8b7bf641730f7e296a2e",
+      "id": "D004"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Container",
+      "heading": "3.1 Container View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 208,
+      "sha256": "c2ce335aa7a7f4a512348be51db4dc59423818cef0ad8b97ffb5f95dc9766d95",
+      "id": "D005"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Component",
+      "heading": "3.2 Component View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 233,
+      "sha256": "dea32b114276ca9b9f9d2190a30983565631244a94ede42e98399a7145239d95",
+      "id": "D006"
+    },
+    {
+      "language": "mermaid",
+      "kind": "architecture-beta",
+      "heading": "3.3 Architecture Service Map",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 257,
+      "sha256": "dea24340e1a5fdc2b823ee08907ea412017bd72edfc10feb4b9ac197a667f87d",
+      "id": "D007"
+    },
+    {
+      "language": "mermaid",
+      "kind": "erDiagram",
+      "heading": "4.1 Content Data Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 290,
+      "sha256": "a3be40a4f7293548889edb2b3b0a90ad29acbd2ee947c5144b5b1b56a030ba46",
+      "id": "D008"
+    },
+    {
+      "language": "mermaid",
+      "kind": "sankey",
+      "heading": "4.3 Publication Data Flow",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 361,
+      "sha256": "f42ed8fd21c535a423fe4dbe0c7683b45d6dd643cfad7a0d9d69235b4989794d",
+      "id": "D009"
+    },
+    {
+      "language": "mermaid",
+      "kind": "sequenceDiagram",
+      "heading": "4.4 Search and Read Sequence",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 374,
+      "sha256": "8e4212f1f7411cac2c8247da0fa737100f5a231a0fdfa139022b50945dab4dff",
+      "id": "D010"
+    },
+    {
+      "language": "mermaid",
+      "kind": "stateDiagram-v2",
+      "heading": "5.3 Security State Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 445,
+      "sha256": "31f40d643706f7e1fdb766653c624509af1a0cc89cdbb6faee6ad0132639fec3",
+      "id": "D011"
+    },
+    {
+      "language": "mermaid",
+      "kind": "ishikawa-beta",
+      "heading": "5.4 Risk Analysis — Ishikawa",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 462,
+      "sha256": "e3aff85948d8668ed26b0aaaed9132f74990c2e811570ef711ab41e9b8f165bb",
+      "id": "D012"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Dynamic",
+      "heading": "6.2 Dynamic Render Path — C4",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 511,
+      "sha256": "eaff669c52afcee3e611e71d5b2b81036e59e08eac6ab1c5578280d755f249bf",
+      "id": "D013"
+    },
+    {
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "6.3 Alternative Interaction — ZenUML",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 526,
+      "sha256": "fa00a92dc4cfb8c0de9fd67167abcc3bde8add617fe5e6e23efd650995a6150e",
+      "id": "D014"
+    },
+    {
+      "language": "mermaid",
+      "kind": "swimlane-beta",
+      "heading": "6.4 Workflow Swimlanes",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 542,
+      "sha256": "621f2b19a65b3568144249f4fc3f93e94064c54068dee4ba42b10de44d0872e5",
+      "id": "D015"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Deployment",
+      "heading": "7.1 Deployment View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 572,
+      "sha256": "304cb94d8163169e8c0812394e8ffeef0d9ace24c576dc8f62a1203a226ea073",
+      "id": "D016"
+    },
+    {
+      "language": "mermaid",
+      "kind": "gantt",
+      "heading": "7.2 Release Timeline",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 596,
+      "sha256": "9d6bd6d077a195b3cf4fe027b1f386db6855fbbbde053aa8cb7500f73e48f173",
+      "id": "D017"
+    },
+    {
+      "language": "mermaid",
+      "kind": "gitGraph",
+      "heading": "7.3 Git Release Flow",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 615,
+      "sha256": "0a77ca6d8a1ebf25b5edb346882174f50f62569be984c01901c4b07a3f789b41",
+      "id": "D018"
+    },
+    {
+      "language": "mermaid",
+      "kind": "xychart",
+      "heading": "8.3 Example Performance Trend",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 675,
+      "sha256": "8706b1c2610e8e75ac7b9b1c24344949a65db0f0cab08241ff3e81a471a389d0",
+      "id": "D020"
+    },
+    {
+      "language": "mermaid",
+      "kind": "radar-beta",
+      "heading": "8.4 Capability Radar",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 688,
+      "sha256": "d0778cc86aa5fc1b073d0b7f3baaf2a281ba01742717597f118b3bfebae95986",
+      "id": "D021"
+    },
+    {
+      "language": "mermaid",
+      "kind": "timeline",
+      "heading": "9.2 Capability Roadmap",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 719,
+      "sha256": "c7de51c9f762ad41748c50949cd2a0a3e83c0f483ce2fda34e2f034e0a13582c",
+      "id": "D022"
+    },
+    {
+      "language": "mermaid",
+      "kind": "kanban",
+      "heading": "9.3 Delivery Portfolio",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 734,
+      "sha256": "772fa18689d8de5e447726b91fb1f6f9196a38d5dfc064caca7eeafd22616b0c",
+      "id": "D023"
+    },
+    {
+      "language": "mermaid",
+      "kind": "mindmap",
+      "heading": "9.4 Product Capability Tree",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 750,
+      "sha256": "edccde3942933fb3db71c92f445127a0925b2719f51f83a14e49f13fd41a6cc5",
+      "id": "D024"
+    },
+    {
+      "language": "mermaid",
+      "kind": "treemap-beta",
+      "heading": "9.5 Portfolio Treemap",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 775,
+      "sha256": "012c7fec0752760f002fe48041a64bceb77a3cb13cc3fe443d371efac8d08c7f",
+      "id": "D025"
+    },
+    {
+      "language": "mermaid",
+      "kind": "classDiagram",
+      "heading": "12.3 Class Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1878,
+      "sha256": "f86adf3c638018ee1bbfad4b55b2c7d4a55cf0397601a62a7a4568d1639fbb49",
+      "id": "D027"
+    },
+    {
+      "language": "mermaid",
+      "kind": "journey",
+      "heading": "12.4 User Journey",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1903,
+      "sha256": "30a92deab1103bca822e69d2a789c41cf09f995db4b706f6d0ac6e654b4b6aa6",
+      "id": "D028"
+    },
+    {
+      "language": "mermaid",
+      "kind": "pie",
+      "heading": "12.5 Pie Chart",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1920,
+      "sha256": "5978bd4c159c9ede1c7871b830c2efbbb55ac77d17867a8bd853b4b48481d01c",
+      "id": "D029"
+    },
+    {
+      "language": "mermaid",
+      "kind": "block-beta",
+      "heading": "12.6 Block Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1932,
+      "sha256": "5a07f02d95b378f54e914748fd7c2ff2df3601b4fadc7dbe01dc10ed66209d3e",
+      "id": "D030"
+    },
+    {
+      "language": "mermaid",
+      "kind": "packet",
+      "heading": "12.7 Packet Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1943,
+      "sha256": "3b75afe105601e7562354ceb6f6d3bd486617d705d2f2b26a2055dacbe35667c",
+      "id": "D031"
+    },
+    {
+      "language": "mermaid",
+      "kind": "eventmodeling",
+      "heading": "12.8 Event Modeling",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1958,
+      "sha256": "90fe8a8856e37349e14d566b70a3ebdcac5bc3cec8b36c0310974f15d1a56370",
+      "id": "D032"
+    },
+    {
+      "language": "mermaid",
+      "kind": "treeView-beta",
+      "heading": "12.9 Tree View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1971,
+      "sha256": "fde21f34a96db39b389ddec7ef727f328614e5cb860ef5f6f0605aa311a3703b",
+      "id": "D033"
+    },
+    {
+      "language": "mermaid",
+      "kind": "venn-beta",
+      "heading": "12.10 Venn Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1988,
+      "sha256": "6ed8559f37bb1cb518d216a895f1088c16ffd6bf60d628d49a8020ebd74a010f",
+      "id": "D034"
+    },
+    {
+      "language": "mermaid",
+      "kind": "wardley-beta",
+      "heading": "12.11 Wardley Map",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 2004,
+      "sha256": "07105ee8fbea2160d88e5ca156932e268b099c17b4881db4c3ddc8a4aa80a7a8",
+      "id": "D035"
+    },
+    {
+      "language": "mermaid",
+      "kind": "cynefin-beta",
+      "heading": "12.12 Cynefin View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 2024,
+      "sha256": "28201ca56d8a68a44b1240fcafe25abf3e0554df396e1df0e35f4d0d9d5abc2b",
+      "id": "D036"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.1 Sequence Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2622,
+      "sha256": "060703e9a76059b458d23b97a7bf7604f90d0c6bc74c53a3fe8f61902bdf98e4",
+      "id": "D038"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.2 Use Case Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2652,
+      "sha256": "d35799f61cf1bffccf5524eb2b1bbb45ba7e81b9d0389abea424a2d703847992",
+      "id": "D039"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.3 Class Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2673,
+      "sha256": "eda18a6c48f716fcb5447a4a04a55a4d47a9dcbf8a28e13368ac642c4c9946fb",
+      "id": "D040"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.4 Object Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2697,
+      "sha256": "8a7a09ed051cc3e2eb38a80e0baebb942138430d6bb9eb5d4f0cff129c2619ea",
+      "id": "D041"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.5 Activity Diagram — Current Syntax",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2719,
+      "sha256": "a899ab3a5ea1a79de96ed7484f4b68cf33724e6ea3a186735d3a341459a0793b",
+      "id": "D042"
+    },
+    {
+      "language": "puml",
+      "kind": "@startuml",
+      "heading": "13.1.6 Activity Diagram — Legacy Syntax Probe",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2739,
+      "sha256": "59a06806f53acb61d847d3e8048f352b7baa9d51c2777fd2a75e98e0111c8e0c",
+      "id": "D043"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.7 Component Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2755,
+      "sha256": "3b0c6d072be42b368c9a84d231015f7834f3c99d1e3fff2ad9e78fbd8d92d3e7",
+      "id": "D044"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.8 Deployment Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2775,
+      "sha256": "6a8169beb9ab019e4ea87c0c65c0a866922a9757dda3af015f8057d08ce4eb68",
+      "id": "D045"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.9 State Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2795,
+      "sha256": "3d0227c78c1c5a1a651edb887237f1c50cc60c57cffd20d9236fc44c51764a8b",
+      "id": "D046"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.10 Timing Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2811,
+      "sha256": "528f8c85414761522523f19685e58eccf07445b44f8f43dbf55d9c37ee3fec55",
+      "id": "D047"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startjson",
+      "heading": "13.2.1 JSON Data",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2835,
+      "sha256": "0b60e044b8aa20a5ef6234472d160cec96f6ca5a814175eb4e457d95edc015cd",
+      "id": "D048"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startyaml",
+      "heading": "13.2.2 YAML Data",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2850,
+      "sha256": "31aa8c3cf8271b660f42c2a36e30c2d79bcfe337b0884375b5db8c970530822c",
+      "id": "D049"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startebnf",
+      "heading": "13.2.3 EBNF Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2867,
+      "sha256": "268f3a767d0128b5adfb4541f504292ce05112e9aff0ae37b6f4f49a3903b190",
+      "id": "D050"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startregex",
+      "heading": "13.2.4 Regex Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2879,
+      "sha256": "892e100586e585c5bcba5e6c3fbcaa1880c44adbdd7546313af7235efdd3c0e3",
+      "id": "D051"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startnwdiag",
+      "heading": "13.2.5 Network Diagram (nwdiag)",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2889,
+      "sha256": "7ace21c3f060084c6a6f4510959a27e1c48933e25890f4a56d78d607834eceae",
+      "id": "D052"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startsalt",
+      "heading": "13.2.6 Salt Wireframe",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2906,
+      "sha256": "836129217350f36962264015fc667a5da8a74fb3d5322171bf9094e15cabb069",
+      "id": "D053"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.7 ArchiMate Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2923,
+      "sha256": "d0346f832dc447790b8d0addd19ef51d794e57488c6c544af7261a012f5f03e9",
+      "id": "D054"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.8 SDL Shapes",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2935,
+      "sha256": "c5d6f4e932d7752fd1a2d6b106c57ffbf119685c398079092263a894f4117909",
+      "id": "D055"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startgantt",
+      "heading": "13.2.10 Gantt Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2969,
+      "sha256": "b8a9221dfbd61308b50e8c923ee998187ecdb3cd859ca9d747ca2c6b70896791",
+      "id": "D057"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startmindmap",
+      "heading": "13.2.12 MindMap Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2992,
+      "sha256": "dd3c68e981c6d6d823767b380176d8658a45e1d8e8a27019b19d0f918a77af25",
+      "id": "D059"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startwbs",
+      "heading": "13.2.13 WBS Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3012,
+      "sha256": "30d34657494c8aa77fe8cbb05bee12a9c153566637025cf743adabe9088eccdd",
+      "id": "D060"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.16 Information Engineering Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3048,
+      "sha256": "0d2ec3dc7b20a27705d320acd2bd4c2833dd652fe22c643ccf65d8aefd7ffe6d",
+      "id": "D063"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startchart",
+      "heading": "13.2.18 Chart Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3086,
+      "sha256": "f9ff0dbe0ca3632362bbbb3045962f1664d9f3211a6606248ac5668b0a4b678b",
+      "id": "D065"
+    },
+    {
+      "id": "D075",
+      "language": "mermaid",
+      "heading": "usecase-beta",
+      "kind": "usecase-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/usecase.md",
+      "category": "diagram",
+      "sha256": "00339c496aec5a45f8f5caf77b60b01088186cac9d7fdf4773d046e5d289bc46"
+    },
+    {
+      "id": "D076",
+      "language": "mermaid",
+      "heading": "agentflow-beta",
+      "kind": "agentflow-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/agentflow.md",
+      "category": "diagram",
+      "sha256": "55831a75f37d1eeb46ac1403b17e96c8e0a95da90a4664088cc243842e8e29ef"
+    },
+    {
+      "id": "D077",
+      "language": "mermaid",
+      "heading": "railroad-beta",
+      "kind": "railroad-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "013df6171827f1deac1fecbaa17447f1df6b96ef66498b21cbba0f998bbff825"
+    },
+    {
+      "id": "D078",
+      "language": "mermaid",
+      "heading": "railroad-ebnf-beta",
+      "kind": "railroad-ebnf-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "7eaf506537b9c6a56fe02f6ee2a872d9a5d9411002460550d4fe42de71823405"
+    },
+    {
+      "id": "D079",
+      "language": "mermaid",
+      "heading": "railroad-abnf-beta",
+      "kind": "railroad-abnf-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "41e29febcb6136f5d838a66449cb0fe3297408d67fe1778b413198efa182e724"
+    },
+    {
+      "id": "D080",
+      "language": "mermaid",
+      "heading": "railroad-peg-beta",
+      "kind": "railroad-peg-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "e825d5ab3c9b8fcf823583929f71237fb7f18d4ee348f648db686fe59dccd230"
+    },
+    {
+      "id": "D090",
+      "language": "plantuml",
+      "heading": "DOT",
+      "kind": "@startdot",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/directdot",
+      "category": "diagram",
+      "sha256": "f2f1291531d9d8100b1e4ba81da62de2aec521410fe90ac6545e65db80d2ead9"
+    },
+    {
+      "id": "D091",
+      "language": "plantuml",
+      "heading": "PACKET",
+      "kind": "@startpacketdiag",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/packetdiag",
+      "category": "diagram",
+      "sha256": "fa4947adf130e16f4fcea9df07fabd20a41e58a86794995da91d7ce9b3b8e9bd"
+    },
+    {
+      "id": "D100",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Context",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "e74763f48a0b7e7a289dac20d211d442e95a5f00142981a2425fa00a8b0777c6"
+    },
+    {
+      "id": "D101",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Landscape",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "9f86672ecf56afcefa1c30afe58358b50ddd31b930479fe92b499c7bae8cad72"
+    },
+    {
+      "id": "D102",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Container",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "bdd04769f47f70e2db2bd2f2f081e29273602f6dc6fa57617abe347075bcbd9f"
+    },
+    {
+      "id": "D103",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Component",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "5717dc40a3b0660c7756c42e7c3ed703def4a7b02a70b97685929eaf92eb2053"
+    },
+    {
+      "id": "D104",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Dynamic",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "d1bd0bd87a9fe878cf2677610ce6f1ab30d5282ada865cd301314bda7c4f68fb"
+    },
+    {
+      "id": "D105",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Deployment",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "08e9c5250939f1a95718ffb90c6aa6a9363199e2e5778b96e021bffe5b85bbbd"
+    },
+    {
+      "id": "D106",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Sequence",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "98ee6b673543df2793fba0dbabd618e2e71e9bc5cae187e4c0e52cebfd12ed07"
+    },
+    {
+      "id": "D110",
+      "language": "plantuml",
+      "heading": "ArchiMate / business, application and technology layers",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+      "category": "extension",
+      "sha256": "fd61109bfe34124684ace76e916bee4d4a03fd043e103095baea556d2f4c0c1e"
+    }
+  ],
+  "candidates": [
+    {
+      "language": "mermaid",
+      "kind": "flowchart",
+      "heading": "1.1 System at a Glance",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 70,
+      "sha256": "21f2229633057a6e192f8e02603d785e41ee753f7981840ff4f186d5269c1dcf",
+      "id": "D001"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Context",
+      "heading": "2.1 Stakeholder Context — C4",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 108,
+      "sha256": "6ee41f8303a3cf26367b41e875a3a5c9a230bd331841c8ccd0e1bee63b436376",
+      "id": "D002"
+    },
+    {
+      "language": "mermaid",
+      "kind": "requirementDiagram",
+      "heading": "2.3 Requirement Relationships",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 141,
+      "sha256": "87ad2187960c133bfff4c2e6425d740e9cf5115288604bec23d07d8b03710403",
+      "id": "D003"
+    },
+    {
+      "language": "mermaid",
+      "kind": "quadrantChart",
+      "heading": "2.5 Quality Trade-off Quadrants",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 183,
+      "sha256": "d8ba49ab8cee03af6d5bc067cd79f124617e29a9d44c8b7bf641730f7e296a2e",
+      "id": "D004"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Container",
+      "heading": "3.1 Container View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 208,
+      "sha256": "c2ce335aa7a7f4a512348be51db4dc59423818cef0ad8b97ffb5f95dc9766d95",
+      "id": "D005"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Component",
+      "heading": "3.2 Component View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 233,
+      "sha256": "dea32b114276ca9b9f9d2190a30983565631244a94ede42e98399a7145239d95",
+      "id": "D006"
+    },
+    {
+      "language": "mermaid",
+      "kind": "architecture-beta",
+      "heading": "3.3 Architecture Service Map",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 257,
+      "sha256": "dea24340e1a5fdc2b823ee08907ea412017bd72edfc10feb4b9ac197a667f87d",
+      "id": "D007"
+    },
+    {
+      "language": "mermaid",
+      "kind": "erDiagram",
+      "heading": "4.1 Content Data Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 290,
+      "sha256": "a3be40a4f7293548889edb2b3b0a90ad29acbd2ee947c5144b5b1b56a030ba46",
+      "id": "D008"
+    },
+    {
+      "language": "mermaid",
+      "kind": "sankey",
+      "heading": "4.3 Publication Data Flow",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 361,
+      "sha256": "f42ed8fd21c535a423fe4dbe0c7683b45d6dd643cfad7a0d9d69235b4989794d",
+      "id": "D009"
+    },
+    {
+      "language": "mermaid",
+      "kind": "sequenceDiagram",
+      "heading": "4.4 Search and Read Sequence",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 374,
+      "sha256": "8e4212f1f7411cac2c8247da0fa737100f5a231a0fdfa139022b50945dab4dff",
+      "id": "D010"
+    },
+    {
+      "language": "mermaid",
+      "kind": "stateDiagram-v2",
+      "heading": "5.3 Security State Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 445,
+      "sha256": "31f40d643706f7e1fdb766653c624509af1a0cc89cdbb6faee6ad0132639fec3",
+      "id": "D011"
+    },
+    {
+      "language": "mermaid",
+      "kind": "ishikawa-beta",
+      "heading": "5.4 Risk Analysis — Ishikawa",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 462,
+      "sha256": "e3aff85948d8668ed26b0aaaed9132f74990c2e811570ef711ab41e9b8f165bb",
+      "id": "D012"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Dynamic",
+      "heading": "6.2 Dynamic Render Path — C4",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 511,
+      "sha256": "eaff669c52afcee3e611e71d5b2b81036e59e08eac6ab1c5578280d755f249bf",
+      "id": "D013"
+    },
+    {
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "6.3 Alternative Interaction — ZenUML",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 526,
+      "sha256": "fa00a92dc4cfb8c0de9fd67167abcc3bde8add617fe5e6e23efd650995a6150e",
+      "id": "D014"
+    },
+    {
+      "language": "mermaid",
+      "kind": "swimlane-beta",
+      "heading": "6.4 Workflow Swimlanes",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 542,
+      "sha256": "621f2b19a65b3568144249f4fc3f93e94064c54068dee4ba42b10de44d0872e5",
+      "id": "D015"
+    },
+    {
+      "language": "mermaid",
+      "kind": "C4Deployment",
+      "heading": "7.1 Deployment View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 572,
+      "sha256": "304cb94d8163169e8c0812394e8ffeef0d9ace24c576dc8f62a1203a226ea073",
+      "id": "D016"
+    },
+    {
+      "language": "mermaid",
+      "kind": "gantt",
+      "heading": "7.2 Release Timeline",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 596,
+      "sha256": "9d6bd6d077a195b3cf4fe027b1f386db6855fbbbde053aa8cb7500f73e48f173",
+      "id": "D017"
+    },
+    {
+      "language": "mermaid",
+      "kind": "gitGraph",
+      "heading": "7.3 Git Release Flow",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 615,
+      "sha256": "0a77ca6d8a1ebf25b5edb346882174f50f62569be984c01901c4b07a3f789b41",
+      "id": "D018"
+    },
+    {
+      "language": "mermaid",
+      "kind": "stateDiagram",
+      "heading": "8.1 Operational State Machine",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 652,
+      "sha256": "916635c645991a161b0d8cd0e64f29d9cde1022542c7e7d3ca9ced40ee18b36b",
+      "id": "D019"
+    },
+    {
+      "language": "mermaid",
+      "kind": "xychart",
+      "heading": "8.3 Example Performance Trend",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 675,
+      "sha256": "8706b1c2610e8e75ac7b9b1c24344949a65db0f0cab08241ff3e81a471a389d0",
+      "id": "D020"
+    },
+    {
+      "language": "mermaid",
+      "kind": "radar-beta",
+      "heading": "8.4 Capability Radar",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 688,
+      "sha256": "d0778cc86aa5fc1b073d0b7f3baaf2a281ba01742717597f118b3bfebae95986",
+      "id": "D021"
+    },
+    {
+      "language": "mermaid",
+      "kind": "timeline",
+      "heading": "9.2 Capability Roadmap",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 719,
+      "sha256": "c7de51c9f762ad41748c50949cd2a0a3e83c0f483ce2fda34e2f034e0a13582c",
+      "id": "D022"
+    },
+    {
+      "language": "mermaid",
+      "kind": "kanban",
+      "heading": "9.3 Delivery Portfolio",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 734,
+      "sha256": "772fa18689d8de5e447726b91fb1f6f9196a38d5dfc064caca7eeafd22616b0c",
+      "id": "D023"
+    },
+    {
+      "language": "mermaid",
+      "kind": "mindmap",
+      "heading": "9.4 Product Capability Tree",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 750,
+      "sha256": "edccde3942933fb3db71c92f445127a0925b2719f51f83a14e49f13fd41a6cc5",
+      "id": "D024"
+    },
+    {
+      "language": "mermaid",
+      "kind": "treemap-beta",
+      "heading": "9.5 Portfolio Treemap",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 775,
+      "sha256": "012c7fec0752760f002fe48041a64bceb77a3cb13cc3fe443d371efac8d08c7f",
+      "id": "D025"
+    },
+    {
+      "language": "mermaid",
+      "kind": "graph",
+      "heading": "12.1 Legacy graph Alias",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1850,
+      "sha256": "31aed542fa13846c5cca39275cdd137fc3ed46585144f6382dac5c8278f0e7b1",
+      "id": "D026"
+    },
+    {
+      "language": "mermaid",
+      "kind": "classDiagram",
+      "heading": "12.3 Class Model",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1878,
+      "sha256": "f86adf3c638018ee1bbfad4b55b2c7d4a55cf0397601a62a7a4568d1639fbb49",
+      "id": "D027"
+    },
+    {
+      "language": "mermaid",
+      "kind": "journey",
+      "heading": "12.4 User Journey",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1903,
+      "sha256": "30a92deab1103bca822e69d2a789c41cf09f995db4b706f6d0ac6e654b4b6aa6",
+      "id": "D028"
+    },
+    {
+      "language": "mermaid",
+      "kind": "pie",
+      "heading": "12.5 Pie Chart",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1920,
+      "sha256": "5978bd4c159c9ede1c7871b830c2efbbb55ac77d17867a8bd853b4b48481d01c",
+      "id": "D029"
+    },
+    {
+      "language": "mermaid",
+      "kind": "block-beta",
+      "heading": "12.6 Block Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1932,
+      "sha256": "5a07f02d95b378f54e914748fd7c2ff2df3601b4fadc7dbe01dc10ed66209d3e",
+      "id": "D030"
+    },
+    {
+      "language": "mermaid",
+      "kind": "packet",
+      "heading": "12.7 Packet Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1943,
+      "sha256": "3b75afe105601e7562354ceb6f6d3bd486617d705d2f2b26a2055dacbe35667c",
+      "id": "D031"
+    },
+    {
+      "language": "mermaid",
+      "kind": "eventmodeling",
+      "heading": "12.8 Event Modeling",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1958,
+      "sha256": "90fe8a8856e37349e14d566b70a3ebdcac5bc3cec8b36c0310974f15d1a56370",
+      "id": "D032"
+    },
+    {
+      "language": "mermaid",
+      "kind": "treeView-beta",
+      "heading": "12.9 Tree View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1971,
+      "sha256": "fde21f34a96db39b389ddec7ef727f328614e5cb860ef5f6f0605aa311a3703b",
+      "id": "D033"
+    },
+    {
+      "language": "mermaid",
+      "kind": "venn-beta",
+      "heading": "12.10 Venn Diagram",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 1988,
+      "sha256": "6ed8559f37bb1cb518d216a895f1088c16ffd6bf60d628d49a8020ebd74a010f",
+      "id": "D034"
+    },
+    {
+      "language": "mermaid",
+      "kind": "wardley-beta",
+      "heading": "12.11 Wardley Map",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 2004,
+      "sha256": "07105ee8fbea2160d88e5ca156932e268b099c17b4881db4c3ddc8a4aa80a7a8",
+      "id": "D035"
+    },
+    {
+      "language": "mermaid",
+      "kind": "cynefin-beta",
+      "heading": "12.12 Cynefin View",
+      "source": "tests/fixtures/test-light.md",
+      "sourceLine": 2024,
+      "sha256": "28201ca56d8a68a44b1240fcafe25abf3e0554df396e1df0e35f4d0d9d5abc2b",
+      "id": "D036"
+    },
+    {
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "12.23 ZenUML Advanced Control Flow",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2573,
+      "sha256": "72d91b1abc94116ba6860798604d271a1d6e94b29e56a1c0ee6c2eb48995bbcd",
+      "id": "D037"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.1 Sequence Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2622,
+      "sha256": "060703e9a76059b458d23b97a7bf7604f90d0c6bc74c53a3fe8f61902bdf98e4",
+      "id": "D038"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.2 Use Case Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2652,
+      "sha256": "d35799f61cf1bffccf5524eb2b1bbb45ba7e81b9d0389abea424a2d703847992",
+      "id": "D039"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.3 Class Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2673,
+      "sha256": "eda18a6c48f716fcb5447a4a04a55a4d47a9dcbf8a28e13368ac642c4c9946fb",
+      "id": "D040"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.4 Object Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2697,
+      "sha256": "8a7a09ed051cc3e2eb38a80e0baebb942138430d6bb9eb5d4f0cff129c2619ea",
+      "id": "D041"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.5 Activity Diagram — Current Syntax",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2719,
+      "sha256": "a899ab3a5ea1a79de96ed7484f4b68cf33724e6ea3a186735d3a341459a0793b",
+      "id": "D042"
+    },
+    {
+      "language": "puml",
+      "kind": "@startuml",
+      "heading": "13.1.6 Activity Diagram — Legacy Syntax Probe",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2739,
+      "sha256": "59a06806f53acb61d847d3e8048f352b7baa9d51c2777fd2a75e98e0111c8e0c",
+      "id": "D043"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.7 Component Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2755,
+      "sha256": "3b0c6d072be42b368c9a84d231015f7834f3c99d1e3fff2ad9e78fbd8d92d3e7",
+      "id": "D044"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.8 Deployment Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2775,
+      "sha256": "6a8169beb9ab019e4ea87c0c65c0a866922a9757dda3af015f8057d08ce4eb68",
+      "id": "D045"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.9 State Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2795,
+      "sha256": "3d0227c78c1c5a1a651edb887237f1c50cc60c57cffd20d9236fc44c51764a8b",
+      "id": "D046"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.10 Timing Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2811,
+      "sha256": "528f8c85414761522523f19685e58eccf07445b44f8f43dbf55d9c37ee3fec55",
+      "id": "D047"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startjson",
+      "heading": "13.2.1 JSON Data",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2835,
+      "sha256": "0b60e044b8aa20a5ef6234472d160cec96f6ca5a814175eb4e457d95edc015cd",
+      "id": "D048"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startyaml",
+      "heading": "13.2.2 YAML Data",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2850,
+      "sha256": "31aa8c3cf8271b660f42c2a36e30c2d79bcfe337b0884375b5db8c970530822c",
+      "id": "D049"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startebnf",
+      "heading": "13.2.3 EBNF Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2867,
+      "sha256": "268f3a767d0128b5adfb4541f504292ce05112e9aff0ae37b6f4f49a3903b190",
+      "id": "D050"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startregex",
+      "heading": "13.2.4 Regex Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2879,
+      "sha256": "892e100586e585c5bcba5e6c3fbcaa1880c44adbdd7546313af7235efdd3c0e3",
+      "id": "D051"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startnwdiag",
+      "heading": "13.2.5 Network Diagram (nwdiag)",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2889,
+      "sha256": "7ace21c3f060084c6a6f4510959a27e1c48933e25890f4a56d78d607834eceae",
+      "id": "D052"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startsalt",
+      "heading": "13.2.6 Salt Wireframe",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2906,
+      "sha256": "836129217350f36962264015fc667a5da8a74fb3d5322171bf9094e15cabb069",
+      "id": "D053"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.7 ArchiMate Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2923,
+      "sha256": "d0346f832dc447790b8d0addd19ef51d794e57488c6c544af7261a012f5f03e9",
+      "id": "D054"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.8 SDL Shapes",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2935,
+      "sha256": "c5d6f4e932d7752fd1a2d6b106c57ffbf119685c398079092263a894f4117909",
+      "id": "D055"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startditaa",
+      "heading": "13.2.9 Ditaa Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2953,
+      "sha256": "0925be1cc59396dd9a9c31076d2f9dc01c2d1d7f76349e1a3cc77be656ea662e",
+      "id": "D056"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startgantt",
+      "heading": "13.2.10 Gantt Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2969,
+      "sha256": "b8a9221dfbd61308b50e8c923ee998187ecdb3cd859ca9d747ca2c6b70896791",
+      "id": "D057"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startchronology",
+      "heading": "13.2.11 Chronology Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2981,
+      "sha256": "57f54d3c668af8a84cefba9c3641825d06cf54fbbb7001b3dee7e4361a533804",
+      "id": "D058"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startmindmap",
+      "heading": "13.2.12 MindMap Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 2992,
+      "sha256": "dd3c68e981c6d6d823767b380176d8658a45e1d8e8a27019b19d0f918a77af25",
+      "id": "D059"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startwbs",
+      "heading": "13.2.13 WBS Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3012,
+      "sha256": "30d34657494c8aa77fe8cbb05bee12a9c153566637025cf743adabe9088eccdd",
+      "id": "D060"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startmath",
+      "heading": "13.2.14 Standalone AsciiMath",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3032,
+      "sha256": "c188a933b05256002594336d7dbcf89faab2c640239cb38f9215983b2e0d6c66",
+      "id": "D061"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startlatex",
+      "heading": "13.2.15 Standalone JLaTeXMath",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3040,
+      "sha256": "23e0886f891376adeed23d3b9f0359057c041055d3d02f782430f6483f7625f3",
+      "id": "D062"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.16 Information Engineering Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3048,
+      "sha256": "0d2ec3dc7b20a27705d320acd2bd4c2833dd652fe22c643ccf65d8aefd7ffe6d",
+      "id": "D063"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startchen",
+      "heading": "13.2.17 Chen ER Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3067,
+      "sha256": "b01fb196d68c937fe916daa7e8725dbdceb29d3b95aa815d1f1356ac9ddb3e78",
+      "id": "D064"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startchart",
+      "heading": "13.2.18 Chart Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3086,
+      "sha256": "f9ff0dbe0ca3632362bbbb3045962f1664d9f3211a6606248ac5668b0a4b678b",
+      "id": "D065"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startfiles",
+      "heading": "13.2.19 Files Tree Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3098,
+      "sha256": "b379e106e920c0c43428754d97c9725427196850732915d83db15c76073ccfe3",
+      "id": "D066"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startboard",
+      "heading": "13.3.1 Board Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3115,
+      "sha256": "53e083ba4306b47975c302d8449d6f0d16184d9308d50a9072da27a72b07e9f4",
+      "id": "D067"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startwire",
+      "heading": "13.3.2 Wire Diagram",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3128,
+      "sha256": "258413366f1ccba2792a4315eefb43678f9cd5b9523201ab2aad0c8a55d14745",
+      "id": "D068"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.1 Hyperlinks, Tooltips, Creole and Unicode",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3141,
+      "sha256": "e59322293eb8440153b71f338aef3421ba73a259b4a980e229b144503bf7f62d",
+      "id": "D069"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.2 Style and Handwritten Option",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3163,
+      "sha256": "9a5c020100cc1db2b10fd490f836d167cc7070c40c159332a3f112c2db8f8f17",
+      "id": "D070"
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.3 Preprocessor and Standard Library Include",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3180,
+      "sha256": "849e2b9c408acd593768b93c7c0806274f33f8c5fca964d2a0222ac6c2852a5c",
+      "id": "D071",
+      "originalSourceSha256": "5530a9fa7644d120e55618f514f98c369660fa2a1c4a0d405906039d48ab12e2",
+      "fixtureCorrection": "ArchiMate unquoted procedures require a precomputed argument; the runtime label is assigned before Technology_Service is called. Original five fixtures are unchanged."
+    },
+    {
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.4 Teoz Sequence Engine",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 3194,
+      "sha256": "d7641d127a202521a33b4af085226d1ef3eea7cc83623517af331dd0af6ae35f",
+      "id": "D072"
+    },
+    {
+      "language": "zenuml",
+      "kind": "Viewer->Parser:",
+      "heading": "DIA-010 — Standalone zenuml fence alias",
+      "source": "tests/fixtures/test-complete.md",
+      "sourceLine": 6237,
+      "sha256": "68f7671bef0b6701b713fcfe7b22d75cf80e7d3d27b6a8230e56a4ca82ed7e54",
+      "id": "D073"
+    },
+    {
+      "language": "mermaid",
+      "kind": "xychart-beta",
+      "heading": "Data becomes visible",
+      "source": "tests/fixtures/test-onescreen.md",
+      "sourceLine": 262,
+      "sha256": "52cb9a31c5ec784eb679229aaf88a04c7d1a1013fe18a22160db07e67b389a25",
+      "id": "D074"
+    },
+    {
+      "id": "D075",
+      "language": "mermaid",
+      "heading": "usecase-beta",
+      "kind": "usecase-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/usecase.md",
+      "category": "diagram",
+      "sha256": "00339c496aec5a45f8f5caf77b60b01088186cac9d7fdf4773d046e5d289bc46"
+    },
+    {
+      "id": "D076",
+      "language": "mermaid",
+      "heading": "agentflow-beta",
+      "kind": "agentflow-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/agentflow.md",
+      "category": "diagram",
+      "sha256": "55831a75f37d1eeb46ac1403b17e96c8e0a95da90a4664088cc243842e8e29ef"
+    },
+    {
+      "id": "D077",
+      "language": "mermaid",
+      "heading": "railroad-beta",
+      "kind": "railroad-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "013df6171827f1deac1fecbaa17447f1df6b96ef66498b21cbba0f998bbff825"
+    },
+    {
+      "id": "D078",
+      "language": "mermaid",
+      "heading": "railroad-ebnf-beta",
+      "kind": "railroad-ebnf-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "7eaf506537b9c6a56fe02f6ee2a872d9a5d9411002460550d4fe42de71823405"
+    },
+    {
+      "id": "D079",
+      "language": "mermaid",
+      "heading": "railroad-abnf-beta",
+      "kind": "railroad-abnf-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "41e29febcb6136f5d838a66449cb0fe3297408d67fe1778b413198efa182e724"
+    },
+    {
+      "id": "D080",
+      "language": "mermaid",
+      "heading": "railroad-peg-beta",
+      "kind": "railroad-peg-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/docs/syntax/railroad.md",
+      "category": "diagram",
+      "sha256": "e825d5ab3c9b8fcf823583929f71237fb7f18d4ee348f648db686fe59dccd230"
+    },
+    {
+      "id": "D081",
+      "language": "mermaid",
+      "heading": "Alias / flowchart-elk",
+      "kind": "flowchart-elk",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "15f8433ea5ceebd019e2beb5b2358455a733f8319340bb5b4b986399dae25ab7"
+    },
+    {
+      "id": "D082",
+      "language": "mermaid",
+      "heading": "Alias / classDiagram-v2",
+      "kind": "classDiagram-v2",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "5cbb4fecf0f3594d5aa2fc532c9ffeffe0879d0d2001c3be9e8d7a456a14b1ff"
+    },
+    {
+      "id": "D083",
+      "language": "mermaid",
+      "heading": "Alias / sankey-beta",
+      "kind": "sankey-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "a6f167a7f0b9909cfe99d066cdf197a11c7af6a408ece545de9ff166b0156057"
+    },
+    {
+      "id": "D084",
+      "language": "mermaid",
+      "heading": "Alias / packet-beta",
+      "kind": "packet-beta",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "53e83726cd333c9123afddca499a68e58ff7007a041f2c285a7b4ca861ee8fd7"
+    },
+    {
+      "id": "D085",
+      "language": "mermaid",
+      "heading": "Alias / block",
+      "kind": "block",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "6e6209e93ba18929a0b74325cea4685c543b02538a50772ee9c995fb061e1b93"
+    },
+    {
+      "id": "D086",
+      "language": "mermaid",
+      "heading": "Alias / ishikawa",
+      "kind": "ishikawa",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "74f62777ff20b8997b761415d26054355a08d187bd06f575860c781c18a36496"
+    },
+    {
+      "id": "D087",
+      "language": "mermaid",
+      "heading": "Alias / treemap",
+      "kind": "treemap",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "alias",
+      "sha256": "ea08500a5366c56a5e844dd322e2c05ebe8e77784abddfed663fe57dccf3948b"
+    },
+    {
+      "id": "D088",
+      "language": "mermaid",
+      "heading": "Requirement with explicit Dagre layout",
+      "kind": "requirementDiagram",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "category": "layout",
+      "sha256": "abc8991233cd3b60e70550174cabdbb4f928f1435f77034553752fa24e97cf21"
+    },
+    {
+      "id": "D089",
+      "language": "mermaid",
+      "heading": "Runtime information",
+      "kind": "info",
+      "source": "https://github.com/mermaid-js/mermaid/blob/mermaid%4012.2.0/packages/mermaid/src/diagrams/info/infoDetector.ts",
+      "category": "utility",
+      "sha256": "96bac4de3ce48eccdafa38eb18e0581fe70d26b8d8d5a74ca8af79c77658dcde"
+    },
+    {
+      "id": "D090",
+      "language": "plantuml",
+      "heading": "DOT",
+      "kind": "@startdot",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/directdot",
+      "category": "diagram",
+      "sha256": "f2f1291531d9d8100b1e4ba81da62de2aec521410fe90ac6545e65db80d2ead9"
+    },
+    {
+      "id": "D091",
+      "language": "plantuml",
+      "heading": "PACKET",
+      "kind": "@startpacketdiag",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/packetdiag",
+      "category": "diagram",
+      "sha256": "fa4947adf130e16f4fcea9df07fabd20a41e58a86794995da91d7ce9b3b8e9bd"
+    },
+    {
+      "id": "D092",
+      "language": "plantuml",
+      "heading": "FLOW",
+      "kind": "@startflow",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/flowdiagram",
+      "category": "diagram",
+      "sha256": "1e1c1f58b12dda7c14e3bccb7ef575bc8357837ee06432d41692ed391bfda268"
+    },
+    {
+      "id": "D093",
+      "language": "plantuml",
+      "heading": "HCL",
+      "kind": "@starthcl",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/hcl",
+      "category": "diagram",
+      "sha256": "193611edb17b3c2fdfeb8b1e67daaa3d6541a90a7707e05522aa1ce90f9da775"
+    },
+    {
+      "id": "D094",
+      "language": "plantuml",
+      "heading": "BPM",
+      "kind": "@startbpm",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/bpm",
+      "category": "diagram",
+      "sha256": "f5348eba5b480acaea38f3254ba472aef9ec00fdd99fbf05cfbf0674217e7600"
+    },
+    {
+      "id": "D095",
+      "language": "plantuml",
+      "heading": "GIT",
+      "kind": "@startgit",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/gitlog",
+      "category": "diagram",
+      "sha256": "5e055c357742c54b69f5b7596f0e4608f4c9931409b1530a4d4e100f3844910e"
+    },
+    {
+      "id": "D096",
+      "language": "plantuml",
+      "heading": "COMPOSITE",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/statediagram",
+      "category": "diagram",
+      "sha256": "5a49aa5bbe719e6897a5943689e35c07675cc023cabcfa9c4482172aea3dfd85"
+    },
+    {
+      "id": "D097",
+      "language": "plantuml",
+      "heading": "CREOLE",
+      "kind": "@startcreole",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/klimt/creole",
+      "category": "diagram",
+      "sha256": "cde07324d1533563eef0d17bdb4ccba9e6098562c5af64966f6089a6972000cd"
+    },
+    {
+      "id": "D098",
+      "language": "plantuml",
+      "heading": "HELP",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/help",
+      "category": "utility",
+      "sha256": "a85a82b1ef3648f7010b98a01b709dff1acb27c063fdc33955f01adea93b00fb"
+    },
+    {
+      "id": "D099",
+      "language": "plantuml",
+      "heading": "SPRITES",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/sprite",
+      "category": "utility",
+      "sha256": "23e63f81ee2fb37240659f64e2d63f5a952c78bd5617933b2822acaf81e94ef3"
+    },
+    {
+      "id": "D100",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Context",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "e74763f48a0b7e7a289dac20d211d442e95a5f00142981a2425fa00a8b0777c6"
+    },
+    {
+      "id": "D101",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Landscape",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "9f86672ecf56afcefa1c30afe58358b50ddd31b930479fe92b499c7bae8cad72"
+    },
+    {
+      "id": "D102",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Container",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "bdd04769f47f70e2db2bd2f2f081e29273602f6dc6fa57617abe347075bcbd9f"
+    },
+    {
+      "id": "D103",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Component",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "5717dc40a3b0660c7756c42e7c3ed703def4a7b02a70b97685929eaf92eb2053"
+    },
+    {
+      "id": "D104",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Dynamic",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "d1bd0bd87a9fe878cf2677610ce6f1ab30d5282ada865cd301314bda7c4f68fb"
+    },
+    {
+      "id": "D105",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Deployment",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "08e9c5250939f1a95718ffb90c6aa6a9363199e2e5778b96e021bffe5b85bbbd"
+    },
+    {
+      "id": "D106",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / Sequence",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/f998c46833daac592f3283ff08d7b8cd7e1558fb",
+      "category": "extension",
+      "sha256": "98ee6b673543df2793fba0dbabd618e2e71e9bc5cae187e4c0e52cebfd12ed07"
+    },
+    {
+      "id": "D107",
+      "language": "plantuml",
+      "heading": "Gantt project alias",
+      "kind": "@startproject",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/java/net/sourceforge/plantuml/core/DiagramType.java",
+      "category": "alias",
+      "sha256": "1148a6774672c1af3deb8dcb4620f8ba1b0b20ce0978607c29b011e2c16fb31b"
+    },
+    {
+      "id": "D108",
+      "language": "zenuml",
+      "heading": "ZenUML nested calls, branches, loops, parallel and exceptions",
+      "kind": "title",
+      "source": "https://github.com/mermaid-js/zenuml-core/blob/775a78c972a0efbd0573dfb35cafdc04c2a999de/docs/DSL_SYNTAX.md",
+      "category": "language-features",
+      "sha256": "cf7fd0c4a2e6488e34b80f6ae2f807947773ee249f808b6ff0bcda0177289193"
+    },
+    {
+      "id": "D109",
+      "language": "mermaid",
+      "heading": "ZenUML plugin / same control flow",
+      "kind": "zenuml",
+      "source": "https://github.com/mermaid-js/zenuml-core/blob/775a78c972a0efbd0573dfb35cafdc04c2a999de/docs/DSL_SYNTAX.md",
+      "category": "language-features",
+      "sha256": "5968b69141c3bf2ee3d44a7f5d1f19519476e300a0235474c312fa026713772d"
+    },
+    {
+      "id": "D110",
+      "language": "plantuml",
+      "heading": "ArchiMate / business, application and technology layers",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+      "category": "extension",
+      "sha256": "fd61109bfe34124684ace76e916bee4d4a03fd043e103095baea556d2f4c0c1e"
+    },
+    {
+      "id": "D111",
+      "language": "puml",
+      "heading": "ArchiMate / motivation, strategy, physical and implementation",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+      "category": "extension",
+      "sha256": "94c453862bf3919ef796c23bd787f9a9017f274bdb19a9ee1c8201df86343302"
+    },
+    {
+      "id": "D112",
+      "language": "plantuml",
+      "heading": "ArchiMate / upstream catalogue of all element icons",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml/plantuml/blob/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+      "category": "extension",
+      "sha256": "aa2db24479a425409be47728b650ddc61a3370fb4e93c599475a7f3911501e8f"
+    },
+    {
+      "id": "D113",
+      "language": "plantuml",
+      "heading": "C4-PlantUML / tags, boundaries and legend",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/release/v2.14.0",
+      "category": "extension",
+      "sha256": "4e138900774823db9e33cad370c2a7b342c62dfd3e8272b1653afb160d2cdc3b"
+    },
+    {
+      "id": "D114",
+      "language": "plantuml",
+      "heading": "C4 / code-level view using UML classes",
+      "kind": "@startuml",
+      "source": "https://github.com/plantuml-stdlib/C4-PlantUML/tree/release/v2.14.0",
+      "category": "model-view",
+      "sha256": "77f8cffd4a27112ddfafb7d9970c3ce92efb91442e96cc22e63685a3eb78fc38"
+    }
+  ],
+  "excluded": [
+    {
+      "id": "D019",
+      "category": "duplicate",
+      "canonical": "D011"
+    },
+    {
+      "id": "D026",
+      "category": "duplicate",
+      "canonical": "D001"
+    },
+    {
+      "id": "D037",
+      "category": "duplicate",
+      "canonical": "D014"
+    },
+    {
+      "id": "D056",
+      "category": "unsupported",
+      "reason": "Ditaa is not included in the bundled PlantUML JavaScript engine."
+    },
+    {
+      "id": "D058",
+      "category": "unsupported",
+      "reason": "The chronology diagram factory is not registered in the browser build."
+    },
+    {
+      "id": "D061",
+      "category": "unsupported",
+      "reason": "The browser build has no PlantUML AsciiMath renderer. Ordinary MDVu LaTeX/math blocks use KaTeX separately."
+    },
+    {
+      "id": "D062",
+      "category": "unsupported",
+      "reason": "The browser build has no PlantUML JLaTeXMath renderer. Ordinary MDVu LaTeX/math blocks use KaTeX separately."
+    },
+    {
+      "id": "D064",
+      "category": "unsupported",
+      "reason": "The Chen ER diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D066",
+      "category": "unsupported",
+      "reason": "The files-tree diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D067",
+      "category": "unsupported",
+      "reason": "The board diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D068",
+      "category": "unsupported",
+      "reason": "The wire diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D069",
+      "category": "duplicate",
+      "canonical": "D038"
+    },
+    {
+      "id": "D070",
+      "category": "duplicate",
+      "canonical": "D040"
+    },
+    {
+      "id": "D071",
+      "category": "duplicate",
+      "canonical": "D110"
+    },
+    {
+      "id": "D072",
+      "category": "duplicate",
+      "canonical": "D038"
+    },
+    {
+      "id": "D073",
+      "category": "duplicate",
+      "canonical": "D014"
+    },
+    {
+      "id": "D074",
+      "category": "duplicate",
+      "canonical": "D020"
+    },
+    {
+      "id": "D081",
+      "category": "duplicate",
+      "canonical": "D001"
+    },
+    {
+      "id": "D082",
+      "category": "duplicate",
+      "canonical": "D027"
+    },
+    {
+      "id": "D083",
+      "category": "duplicate",
+      "canonical": "D009"
+    },
+    {
+      "id": "D084",
+      "category": "duplicate",
+      "canonical": "D031"
+    },
+    {
+      "id": "D085",
+      "category": "duplicate",
+      "canonical": "D030"
+    },
+    {
+      "id": "D086",
+      "category": "duplicate",
+      "canonical": "D012"
+    },
+    {
+      "id": "D087",
+      "category": "duplicate",
+      "canonical": "D025"
+    },
+    {
+      "id": "D088",
+      "category": "duplicate",
+      "canonical": "D003"
+    },
+    {
+      "id": "D089",
+      "category": "utility",
+      "reason": "Runtime information or text formatting, not a diagram family"
+    },
+    {
+      "id": "D092",
+      "category": "unsupported",
+      "reason": "The flow diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D093",
+      "category": "unsupported",
+      "reason": "The HCL diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D094",
+      "category": "unsupported",
+      "reason": "The BPM diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D095",
+      "category": "unsupported",
+      "reason": "The git diagram factory is absent from the browser build."
+    },
+    {
+      "id": "D096",
+      "category": "duplicate",
+      "canonical": "D046"
+    },
+    {
+      "id": "D097",
+      "category": "utility",
+      "reason": "Runtime information or text formatting, not a diagram family"
+    },
+    {
+      "id": "D098",
+      "category": "unsupported",
+      "reason": "Service command help types: the browser build does not register HelpFactory. This is not a diagram family."
+    },
+    {
+      "id": "D099",
+      "category": "unsupported",
+      "reason": "Service command listsprites: the browser build does not register ListSpriteDiagramFactory. This is not a diagram family."
+    },
+    {
+      "id": "D107",
+      "category": "duplicate",
+      "canonical": "D057"
+    },
+    {
+      "id": "D108",
+      "category": "duplicate",
+      "canonical": "D014"
+    },
+    {
+      "id": "D109",
+      "category": "duplicate",
+      "canonical": "D014"
+    },
+    {
+      "id": "D111",
+      "category": "duplicate",
+      "canonical": "D110"
+    },
+    {
+      "id": "D112",
+      "category": "duplicate",
+      "canonical": "D110"
+    },
+    {
+      "id": "D113",
+      "category": "duplicate",
+      "canonical": "D100"
+    },
+    {
+      "id": "D114",
+      "category": "duplicate",
+      "canonical": "D040"
+    }
+  ],
+  "selectionRule": "One example per engine and distinct diagram grammar or library view. Aliases, layout/style/feature probes and repeated examples are excluded; distinct Mermaid and PlantUML syntaxes remain separate. Runtime information and Creole formatting are not diagrams."
+}

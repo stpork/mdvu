@@ -58,7 +58,7 @@ struct CLIOptions {
       -t, --theme <THEME>      system, light, dark [default: system]
           --full-width         Enable full-width article view
           --navigator          Open with directory navigator sidebar
-          --no-mermaid         Disable Mermaid diagram rendering
+          --no-mermaid         Disable Mermaid/ZenUML and PlantUML diagrams
 
     Diagnostic Options:
           --benchmark          Run Markdown parsing benchmarks

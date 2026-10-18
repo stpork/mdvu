@@ -338,6 +338,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             if auditScript != nil, #available(macOS 14.0, *) { config.preferences.inactiveSchedulingPolicy = .none }
             webView = WKWebView(frame: .zero, configuration: config)
         }
+        profiler.mark("webview.created")
         webView.configuration.userContentController.addUserScript(WKUserScript(source: "window.__mdvuNativeDiagramTransport={post:job=>window.webkit.messageHandlers.diagramRender.postMessage(job),cancel:()=>window.webkit.messageHandlers.diagramCancel.postMessage(true)};", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         webView.configuration.userContentController.addUserScript(WKUserScript(source: "if(document.querySelector('article'))window.webkit.messageHandlers.documentReady.postMessage(true);", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         webView.allowsMagnification = true

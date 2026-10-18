@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func open(_ url: URL, options: CLIOptions) {
+        profiler.mark("open.received")
         let key = url.standardizedFileURL.path
         if let existing = documents[key] {
             existing.showWindow(nil); existing.window?.makeKeyAndOrderFront(nil); return
@@ -62,6 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
             showError("File not found: \(url.path)"); return
         }
+        EagerDocumentLoader.start(path: url.path, options: options,
+            diagramTheme: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? "dark" : "light")
         let controller = DocumentWindowController(url: url, directoryMode: isDirectory.boolValue, options: options, profiler: profiler)
         controller.onOpenURL = { [weak self] target in self?.open(target, options: options) }
         controller.onDocumentChange = { [weak self, weak controller] newURL in

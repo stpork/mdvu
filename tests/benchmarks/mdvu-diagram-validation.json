@@ -1,0 +1,1178 @@
+{
+  "schema": 1,
+  "verifiedAt": "2026-10-18",
+  "scope": "114 candidates in one native document, empty diagram cache; per-heading status and saved SVG, combined native snapshot. Historical isolated screenshots are retained separately. Not a speed benchmark.",
+  "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1",
+  "coreSha256": "341dff90bbbef516716f2a88d43096a52a7e84c9c7e7f8588519b1adee6c9946",
+  "macOS": "27.0.1",
+  "machine": "arm64",
+  "runtimeManifestSha256": "8ecdffe1c0d268f4cc308c3d4d76b321df78d3285267e22c2e986a8eab2aebde",
+  "rendererSourceSha256": "f22163b330b2315db8c546fb5558a14223f6e0c646db5c4b6dfd1bfefde968d8",
+  "parserSourceSha256": "ac3a4352cd867ef96547fec5312c7e5f833f17ca7f186b5c6deef67be76cdf86",
+  "summary": {
+    "rendered": 100,
+    "error": 14,
+    "source": 0,
+    "unresolved": 0
+  },
+  "cases": [
+    {
+      "id": "D001",
+      "language": "mermaid",
+      "kind": "flowchart",
+      "heading": "1.1 System at a Glance",
+      "sourceSha256": "21f2229633057a6e192f8e02603d785e41ee753f7981840ff4f186d5269c1dcf",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "54bde317a911ddcf425c11fbadc275b8b3a0879a0cb398495c4158f0cdbd5016"
+    },
+    {
+      "id": "D002",
+      "language": "mermaid",
+      "kind": "C4Context",
+      "heading": "2.1 Stakeholder Context — C4",
+      "sourceSha256": "6ee41f8303a3cf26367b41e875a3a5c9a230bd331841c8ccd0e1bee63b436376",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "8bb507767860c69c92a17c21b4c1416394f3c79323260de80ea62364b7af85e9"
+    },
+    {
+      "id": "D003",
+      "language": "mermaid",
+      "kind": "requirementDiagram",
+      "heading": "2.3 Requirement Relationships",
+      "sourceSha256": "87ad2187960c133bfff4c2e6425d740e9cf5115288604bec23d07d8b03710403",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "14743f6f5d88a6806580bd653cf2d0e37bf391ccca8c9113d59b62314353fcb1"
+    },
+    {
+      "id": "D004",
+      "language": "mermaid",
+      "kind": "quadrantChart",
+      "heading": "2.5 Quality Trade-off Quadrants",
+      "sourceSha256": "d8ba49ab8cee03af6d5bc067cd79f124617e29a9d44c8b7bf641730f7e296a2e",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "df7cbb2ca5a8ff65cbb1b522a532a4a41f7752462a9ee0f18d4f60aebbeec65c"
+    },
+    {
+      "id": "D005",
+      "language": "mermaid",
+      "kind": "C4Container",
+      "heading": "3.1 Container View",
+      "sourceSha256": "c2ce335aa7a7f4a512348be51db4dc59423818cef0ad8b97ffb5f95dc9766d95",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "31d38c1ddf5e43bfea40fac1f0f796b9383b8e8ad6c249575020023f27d58a39"
+    },
+    {
+      "id": "D006",
+      "language": "mermaid",
+      "kind": "C4Component",
+      "heading": "3.2 Component View",
+      "sourceSha256": "dea32b114276ca9b9f9d2190a30983565631244a94ede42e98399a7145239d95",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "79722bdf2e174d6edfcd5620fac7b4446ccbde8c18fd73a05839de8ef1eb7ceb"
+    },
+    {
+      "id": "D007",
+      "language": "mermaid",
+      "kind": "architecture-beta",
+      "heading": "3.3 Architecture Service Map",
+      "sourceSha256": "dea24340e1a5fdc2b823ee08907ea412017bd72edfc10feb4b9ac197a667f87d",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "be332ec420152f089bbf2146f16d6084b6c495292da45a926940d924c383ae31"
+    },
+    {
+      "id": "D008",
+      "language": "mermaid",
+      "kind": "erDiagram",
+      "heading": "4.1 Content Data Model",
+      "sourceSha256": "a3be40a4f7293548889edb2b3b0a90ad29acbd2ee947c5144b5b1b56a030ba46",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "02e7bf43808fd0ae6577be28de05493eadab274f216bc14af6d2d7fd9c27af25"
+    },
+    {
+      "id": "D009",
+      "language": "mermaid",
+      "kind": "sankey",
+      "heading": "4.3 Publication Data Flow",
+      "sourceSha256": "f42ed8fd21c535a423fe4dbe0c7683b45d6dd643cfad7a0d9d69235b4989794d",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "d46605d5a0f11f6c16cbb83d0fc4e2fd25f13fbbfa3c5c4a0a266e27d0a4867b"
+    },
+    {
+      "id": "D010",
+      "language": "mermaid",
+      "kind": "sequenceDiagram",
+      "heading": "4.4 Search and Read Sequence",
+      "sourceSha256": "8e4212f1f7411cac2c8247da0fa737100f5a231a0fdfa139022b50945dab4dff",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "90a7e6c275ddfeb69dc1e29e53b55ce793f9abae4ee40d13e9128727b6aae73c"
+    },
+    {
+      "id": "D011",
+      "language": "mermaid",
+      "kind": "stateDiagram-v2",
+      "heading": "5.3 Security State Model",
+      "sourceSha256": "31f40d643706f7e1fdb766653c624509af1a0cc89cdbb6faee6ad0132639fec3",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "9e127bac5b9b777ac6c697c20661feadf608fb0caeb62ff007b096df4e3b0152"
+    },
+    {
+      "id": "D012",
+      "language": "mermaid",
+      "kind": "ishikawa-beta",
+      "heading": "5.4 Risk Analysis — Ishikawa",
+      "sourceSha256": "e3aff85948d8668ed26b0aaaed9132f74990c2e811570ef711ab41e9b8f165bb",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c2ee811748c0f646929eb5dc3c1e8cee1c4b16c635d1d6483b1d1d0cc4feaefd"
+    },
+    {
+      "id": "D013",
+      "language": "mermaid",
+      "kind": "C4Dynamic",
+      "heading": "6.2 Dynamic Render Path — C4",
+      "sourceSha256": "eaff669c52afcee3e611e71d5b2b81036e59e08eac6ab1c5578280d755f249bf",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "16d660f34d91fa83023b12cb59767db0c880019b68abfb75c1872f7608921c34"
+    },
+    {
+      "id": "D014",
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "6.3 Alternative Interaction — ZenUML",
+      "sourceSha256": "fa00a92dc4cfb8c0de9fd67167abcc3bde8add617fe5e6e23efd650995a6150e",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "af381bead496792b8de4783f9f6e93501c3907dce89e2e18b55c5b86a8cf2312"
+    },
+    {
+      "id": "D015",
+      "language": "mermaid",
+      "kind": "swimlane-beta",
+      "heading": "6.4 Workflow Swimlanes",
+      "sourceSha256": "621f2b19a65b3568144249f4fc3f93e94064c54068dee4ba42b10de44d0872e5",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b3fa6309d87050c103c8734186212eb08a8315574f5ea9782b9910e09bae6c01"
+    },
+    {
+      "id": "D016",
+      "language": "mermaid",
+      "kind": "C4Deployment",
+      "heading": "7.1 Deployment View",
+      "sourceSha256": "304cb94d8163169e8c0812394e8ffeef0d9ace24c576dc8f62a1203a226ea073",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c1ee7f1a78465ba43df7237424300c25dc2b9b16b11247d9301f81ea9328f92f"
+    },
+    {
+      "id": "D017",
+      "language": "mermaid",
+      "kind": "gantt",
+      "heading": "7.2 Release Timeline",
+      "sourceSha256": "9d6bd6d077a195b3cf4fe027b1f386db6855fbbbde053aa8cb7500f73e48f173",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "04f66c72b9b772b08fa52de9ab5cfb2e71eae083aa6f47d5fd9ea94cc00aaa5a"
+    },
+    {
+      "id": "D018",
+      "language": "mermaid",
+      "kind": "gitGraph",
+      "heading": "7.3 Git Release Flow",
+      "sourceSha256": "0a77ca6d8a1ebf25b5edb346882174f50f62569be984c01901c4b07a3f789b41",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "0e4f659b5249d39732e6813005d36e3a2a3beafc277c89d545dd47ed8d384cb1"
+    },
+    {
+      "id": "D019",
+      "language": "mermaid",
+      "kind": "stateDiagram",
+      "heading": "8.1 Operational State Machine",
+      "sourceSha256": "916635c645991a161b0d8cd0e64f29d9cde1022542c7e7d3ca9ced40ee18b36b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1bbcc2f2470e8678393ac66e93f6f0e6c8fa1581d5976973ab28fd44e2c5329d"
+    },
+    {
+      "id": "D020",
+      "language": "mermaid",
+      "kind": "xychart",
+      "heading": "8.3 Example Performance Trend",
+      "sourceSha256": "8706b1c2610e8e75ac7b9b1c24344949a65db0f0cab08241ff3e81a471a389d0",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b7ef26f2cbad45f20064454b13ec4c0a1b25ee15ba24d3f53dad4e2486473d73"
+    },
+    {
+      "id": "D021",
+      "language": "mermaid",
+      "kind": "radar-beta",
+      "heading": "8.4 Capability Radar",
+      "sourceSha256": "d0778cc86aa5fc1b073d0b7f3baaf2a281ba01742717597f118b3bfebae95986",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ba65b6374bfec0f1201fde3e52efa16b2ad0a50e91af8530be3b43375c4a40b1"
+    },
+    {
+      "id": "D022",
+      "language": "mermaid",
+      "kind": "timeline",
+      "heading": "9.2 Capability Roadmap",
+      "sourceSha256": "c7de51c9f762ad41748c50949cd2a0a3e83c0f483ce2fda34e2f034e0a13582c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "e34dc2973c768dc185124a6e6efcb513ad459805342b059d67f5c6400a932821"
+    },
+    {
+      "id": "D023",
+      "language": "mermaid",
+      "kind": "kanban",
+      "heading": "9.3 Delivery Portfolio",
+      "sourceSha256": "772fa18689d8de5e447726b91fb1f6f9196a38d5dfc064caca7eeafd22616b0c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ae6080645d53e94de424f8146473796f87a211e0ffde63ec93e69dcdedd798a9"
+    },
+    {
+      "id": "D024",
+      "language": "mermaid",
+      "kind": "mindmap",
+      "heading": "9.4 Product Capability Tree",
+      "sourceSha256": "edccde3942933fb3db71c92f445127a0925b2719f51f83a14e49f13fd41a6cc5",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "d30816156fb20634a131c18db52d82fe8042d4471643ac5f9bfe6f97ad839d67"
+    },
+    {
+      "id": "D025",
+      "language": "mermaid",
+      "kind": "treemap-beta",
+      "heading": "9.5 Portfolio Treemap",
+      "sourceSha256": "012c7fec0752760f002fe48041a64bceb77a3cb13cc3fe443d371efac8d08c7f",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "515614c03144d6c1798c7f75d0d4ca5528f5fc05ce6507bc9b6bf43a98ea3fb3"
+    },
+    {
+      "id": "D026",
+      "language": "mermaid",
+      "kind": "graph",
+      "heading": "12.1 Legacy graph Alias",
+      "sourceSha256": "31aed542fa13846c5cca39275cdd137fc3ed46585144f6382dac5c8278f0e7b1",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "dc6fdfefabf5fc83483aafd9d5916d76fbab34b5cc4c49c9d2ce7ccd2c98f64d"
+    },
+    {
+      "id": "D027",
+      "language": "mermaid",
+      "kind": "classDiagram",
+      "heading": "12.3 Class Model",
+      "sourceSha256": "f86adf3c638018ee1bbfad4b55b2c7d4a55cf0397601a62a7a4568d1639fbb49",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "37d2b9ff892dd4cf3c30732d8749c4e95dcbda7842858673c303e9820ce65b03"
+    },
+    {
+      "id": "D028",
+      "language": "mermaid",
+      "kind": "journey",
+      "heading": "12.4 User Journey",
+      "sourceSha256": "30a92deab1103bca822e69d2a789c41cf09f995db4b706f6d0ac6e654b4b6aa6",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "26db0bc1a9726336114d7fcbf8c25b809bc5069710bc75591df08c9361cccfe7"
+    },
+    {
+      "id": "D029",
+      "language": "mermaid",
+      "kind": "pie",
+      "heading": "12.5 Pie Chart",
+      "sourceSha256": "5978bd4c159c9ede1c7871b830c2efbbb55ac77d17867a8bd853b4b48481d01c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "38a516553dc722a5cf712f94e8713c7dff603f695b354baf4b058127a481453e"
+    },
+    {
+      "id": "D030",
+      "language": "mermaid",
+      "kind": "block-beta",
+      "heading": "12.6 Block Diagram",
+      "sourceSha256": "5a07f02d95b378f54e914748fd7c2ff2df3601b4fadc7dbe01dc10ed66209d3e",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c14d65e69d622865b4a7605643f3909dc9fc2f69a0a730f2ec0e0f631878443b"
+    },
+    {
+      "id": "D031",
+      "language": "mermaid",
+      "kind": "packet",
+      "heading": "12.7 Packet Diagram",
+      "sourceSha256": "3b75afe105601e7562354ceb6f6d3bd486617d705d2f2b26a2055dacbe35667c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "16ebf53dd15943243e626e0df5dd7158de01e976aa6761ae61c54b3916102d65"
+    },
+    {
+      "id": "D032",
+      "language": "mermaid",
+      "kind": "eventmodeling",
+      "heading": "12.8 Event Modeling",
+      "sourceSha256": "90fe8a8856e37349e14d566b70a3ebdcac5bc3cec8b36c0310974f15d1a56370",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "03c29e0217bd8bd3222bc99da2ee83e5652d10ed2e7164d1c369617e2a277eee"
+    },
+    {
+      "id": "D033",
+      "language": "mermaid",
+      "kind": "treeView-beta",
+      "heading": "12.9 Tree View",
+      "sourceSha256": "fde21f34a96db39b389ddec7ef727f328614e5cb860ef5f6f0605aa311a3703b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "55f28a04cdbf46f495b73ea86d717bddf08b5723423f5a9cbe82e935b2e62e46"
+    },
+    {
+      "id": "D034",
+      "language": "mermaid",
+      "kind": "venn-beta",
+      "heading": "12.10 Venn Diagram",
+      "sourceSha256": "6ed8559f37bb1cb518d216a895f1088c16ffd6bf60d628d49a8020ebd74a010f",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "50e112ca0dc002ce166857014fc7a330de200e26a49acbda6e72631cfee50e9e"
+    },
+    {
+      "id": "D035",
+      "language": "mermaid",
+      "kind": "wardley-beta",
+      "heading": "12.11 Wardley Map",
+      "sourceSha256": "07105ee8fbea2160d88e5ca156932e268b099c17b4881db4c3ddc8a4aa80a7a8",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "75b68d3a073afeb2dca3f4849a227b81ac56f6a3bbe5c72448ee4e948a2b2750"
+    },
+    {
+      "id": "D036",
+      "language": "mermaid",
+      "kind": "cynefin-beta",
+      "heading": "12.12 Cynefin View",
+      "sourceSha256": "28201ca56d8a68a44b1240fcafe25abf3e0554df396e1df0e35f4d0d9d5abc2b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "e43f8c9be450c5c6206c6f4e5b486419e4946fc4e35b1fd11bfd3237c813904b"
+    },
+    {
+      "id": "D037",
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "12.23 ZenUML Advanced Control Flow",
+      "sourceSha256": "72d91b1abc94116ba6860798604d271a1d6e94b29e56a1c0ee6c2eb48995bbcd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "aee62dd285c04ab9604e9429022a0949bcecd7325b8cb86bcadc9f731e03aa52"
+    },
+    {
+      "id": "D038",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.1 Sequence Diagram",
+      "sourceSha256": "060703e9a76059b458d23b97a7bf7604f90d0c6bc74c53a3fe8f61902bdf98e4",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "77902250500cc20e6b942269b92baad3a2da4aa0f487cfc43d46b6e5dae9c091"
+    },
+    {
+      "id": "D039",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.2 Use Case Diagram",
+      "sourceSha256": "d35799f61cf1bffccf5524eb2b1bbb45ba7e81b9d0389abea424a2d703847992",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "beaedca4f2c58e2bd831eaaf99eb2ad77c31c625e311a203187eb4b91a433712"
+    },
+    {
+      "id": "D040",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.3 Class Diagram",
+      "sourceSha256": "eda18a6c48f716fcb5447a4a04a55a4d47a9dcbf8a28e13368ac642c4c9946fb",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "243ad73a078936a846e79a324a0f86ab59a8ef2554be4748edad57675182aee9"
+    },
+    {
+      "id": "D041",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.4 Object Diagram",
+      "sourceSha256": "8a7a09ed051cc3e2eb38a80e0baebb942138430d6bb9eb5d4f0cff129c2619ea",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b7bc4bc3e71a44aa84f49856ff0ffb35898a22db57388560aab9bee1be9b3bff"
+    },
+    {
+      "id": "D042",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.5 Activity Diagram — Current Syntax",
+      "sourceSha256": "a899ab3a5ea1a79de96ed7484f4b68cf33724e6ea3a186735d3a341459a0793b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "e65f540345e110b1eef2cb4e94df81252f6ec7c6401cc15677211194b18357d1"
+    },
+    {
+      "id": "D043",
+      "language": "puml",
+      "kind": "@startuml",
+      "heading": "13.1.6 Activity Diagram — Legacy Syntax Probe",
+      "sourceSha256": "59a06806f53acb61d847d3e8048f352b7baa9d51c2777fd2a75e98e0111c8e0c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "bdfb92b8a63efa4318ffdcb26a23d136a1726ac8509aa704a0735f09e0a7ed0d"
+    },
+    {
+      "id": "D044",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.7 Component Diagram",
+      "sourceSha256": "3b0c6d072be42b368c9a84d231015f7834f3c99d1e3fff2ad9e78fbd8d92d3e7",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ca3960ad25ed5bd86b852ba9b72e04cd33a0eb14d0ad44759582b6d8ed32d3c0"
+    },
+    {
+      "id": "D045",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.8 Deployment Diagram",
+      "sourceSha256": "6a8169beb9ab019e4ea87c0c65c0a866922a9757dda3af015f8057d08ce4eb68",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "488d87176017b9891585dad4668ffcb4f30b13685e6736962a5d64adeb023fd2"
+    },
+    {
+      "id": "D046",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.9 State Diagram",
+      "sourceSha256": "3d0227c78c1c5a1a651edb887237f1c50cc60c57cffd20d9236fc44c51764a8b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "a64527ca65bd729abd60a8d60a8c04aafdc344a85646e3b033f138b83ddf791f"
+    },
+    {
+      "id": "D047",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.1.10 Timing Diagram",
+      "sourceSha256": "528f8c85414761522523f19685e58eccf07445b44f8f43dbf55d9c37ee3fec55",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "28b1714ca3568709f717180ee728ed3d7759fe1ee970f3ac709b4b49a4d8ea4b"
+    },
+    {
+      "id": "D048",
+      "language": "plantuml",
+      "kind": "@startjson",
+      "heading": "13.2.1 JSON Data",
+      "sourceSha256": "0b60e044b8aa20a5ef6234472d160cec96f6ca5a814175eb4e457d95edc015cd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "8c95ff3d7cb5af23a766dfc0ab03c4dcb4628c8f940108f486928a512898a39e"
+    },
+    {
+      "id": "D049",
+      "language": "plantuml",
+      "kind": "@startyaml",
+      "heading": "13.2.2 YAML Data",
+      "sourceSha256": "31aa8c3cf8271b660f42c2a36e30c2d79bcfe337b0884375b5db8c970530822c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c8bdcb024fbf00326fc8b2d4d68be6223a419d177f325ba9acb6a5ae5716fe78"
+    },
+    {
+      "id": "D050",
+      "language": "plantuml",
+      "kind": "@startebnf",
+      "heading": "13.2.3 EBNF Diagram",
+      "sourceSha256": "268f3a767d0128b5adfb4541f504292ce05112e9aff0ae37b6f4f49a3903b190",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "734c89c30dc09c933bb67b0f8c8a58fe5bd3b46e0bd6464bdd1cbb1b6c628c77"
+    },
+    {
+      "id": "D051",
+      "language": "plantuml",
+      "kind": "@startregex",
+      "heading": "13.2.4 Regex Diagram",
+      "sourceSha256": "892e100586e585c5bcba5e6c3fbcaa1880c44adbdd7546313af7235efdd3c0e3",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "764113819e6ef0e39b1cb35a8e7c942eba9485e25b4914d78831df6b3b0d1366"
+    },
+    {
+      "id": "D052",
+      "language": "plantuml",
+      "kind": "@startnwdiag",
+      "heading": "13.2.5 Network Diagram (nwdiag)",
+      "sourceSha256": "7ace21c3f060084c6a6f4510959a27e1c48933e25890f4a56d78d607834eceae",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b1795704cc1f83c4536214538c9bc2c03c0320666c62e983f239ced5ef798fa3"
+    },
+    {
+      "id": "D053",
+      "language": "plantuml",
+      "kind": "@startsalt",
+      "heading": "13.2.6 Salt Wireframe",
+      "sourceSha256": "836129217350f36962264015fc667a5da8a74fb3d5322171bf9094e15cabb069",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "e083c0f542397a8e021bef8a287ffa65c9827306d406b52df88cf02c08b5717a"
+    },
+    {
+      "id": "D054",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.7 ArchiMate Diagram",
+      "sourceSha256": "d0346f832dc447790b8d0addd19ef51d794e57488c6c544af7261a012f5f03e9",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "d66c416b86a9b7660f8aa0b73f775ca6f853321e8ae91adb9a58b6518096601f"
+    },
+    {
+      "id": "D055",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.8 SDL Shapes",
+      "sourceSha256": "c5d6f4e932d7752fd1a2d6b106c57ffbf119685c398079092263a894f4117909",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "8b6e4ebbd7da2bc6e29ed2248c94ce61e46c11719662909187496af7ed54dbff"
+    },
+    {
+      "id": "D056",
+      "language": "plantuml",
+      "kind": "@startditaa",
+      "heading": "13.2.9 Ditaa Diagram",
+      "sourceSha256": "0925be1cc59396dd9a9c31076d2f9dc01c2d1d7f76349e1a3cc77be656ea662e",
+      "status": "error",
+      "reason": "Ditaa is not included in the bundled PlantUML JavaScript engine.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startditaa\n+------------+     +-------------+     +-----------+\n| Markdown   | --> | mdvu        | --> | Document  |\n| source {d} |     | renderer    |     | view      |\n+------------+     +------+------+     +-----------+\n                         |\n                         v\n                    +----+-----+\n                    | Cache {s}|\n                    +----------+\n@endditaajava.lang.RuntimeException: Unsupported diagram type"
+    },
+    {
+      "id": "D057",
+      "language": "plantuml",
+      "kind": "@startgantt",
+      "heading": "13.2.10 Gantt Diagram",
+      "sourceSha256": "b8a9221dfbd61308b50e8c923ee998187ecdb3cd859ca9d747ca2c6b70896791",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "f9c27a374a204572d00b853a2329d2f3c7c599165d494fa47a1663f0bbe5efcb"
+    },
+    {
+      "id": "D058",
+      "language": "plantuml",
+      "kind": "@startchronology",
+      "heading": "13.2.11 Chronology Diagram",
+      "sourceSha256": "57f54d3c668af8a84cefba9c3641825d06cf54fbbb7001b3dee7e4361a533804",
+      "status": "error",
+      "reason": "The chronology diagram factory is not registered in the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startchronology\ntitle mdvu fixture chronology\n[Draft] happens on 2026-09-01 09:00:00\n[Review] happens on 2026-09-03 12:00:00\n[Benchmark] happens on 2026-09-05 18:00:00\n@endchronologyPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D059",
+      "language": "plantuml",
+      "kind": "@startmindmap",
+      "heading": "13.2.12 MindMap Diagram",
+      "sourceSha256": "dd3c68e981c6d6d823767b380176d8658a45e1d8e8a27019b19d0f918a77af25",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "a89db156fd492b9512bb90b71cf6923631e743c91fa8c9628cda5a47a0c6d140"
+    },
+    {
+      "id": "D060",
+      "language": "plantuml",
+      "kind": "@startwbs",
+      "heading": "13.2.13 WBS Diagram",
+      "sourceSha256": "30d34657494c8aa77fe8cbb05bee12a9c153566637025cf743adabe9088eccdd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "f7dd19443b38f5fbfd4871a1d4e538cfef7fc7367744b71911a4443b71838c1e"
+    },
+    {
+      "id": "D061",
+      "language": "plantuml",
+      "kind": "@startmath",
+      "heading": "13.2.14 Standalone AsciiMath",
+      "sourceSha256": "c188a933b05256002594336d7dbcf89faab2c640239cb38f9215983b2e0d6c66",
+      "status": "error",
+      "reason": "The browser build has no PlantUML AsciiMath renderer. Ordinary MDVu LaTeX/math blocks use KaTeX separately.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startmath\nf(x)=sum_(n=0)^oo (x^n)/(n!)\n@endmathPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D062",
+      "language": "plantuml",
+      "kind": "@startlatex",
+      "heading": "13.2.15 Standalone JLaTeXMath",
+      "sourceSha256": "23e0886f891376adeed23d3b9f0359057c041055d3d02f782430f6483f7625f3",
+      "status": "error",
+      "reason": "The browser build has no PlantUML JLaTeXMath renderer. Ordinary MDVu LaTeX/math blocks use KaTeX separately.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startlatex\n\\sum_{i=0}^{n-1} (a_i + b_i^2) = \\int_0^1 f(x)\\,dx\n@endlatexPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D063",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.2.16 Information Engineering Diagram",
+      "sourceSha256": "0d2ec3dc7b20a27705d320acd2bd4c2833dd652fe22c643ccf65d8aefd7ffe6d",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "3197a27c8ab3f832688b10b5d7b6f15fa658b8d8dd7a8b494b42032297b9f011"
+    },
+    {
+      "id": "D064",
+      "language": "plantuml",
+      "kind": "@startchen",
+      "heading": "13.2.17 Chen ER Diagram",
+      "sourceSha256": "b01fb196d68c937fe916daa7e8725dbdceb29d3b95aa815d1f1356ac9ddb3e78",
+      "status": "error",
+      "reason": "The Chen ER diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startchen\nentity Document {\n  ID <<key>>\n  Title\n}\nentity Release {\n  ID <<key>>\n  Version\n}\nrelationship Publishes {\n}\nPublishes -1- Document\nPublishes -N- Release\n@endchenPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D065",
+      "language": "plantuml",
+      "kind": "@startchart",
+      "heading": "13.2.18 Chart Diagram",
+      "sourceSha256": "f9ff0dbe0ca3632362bbbb3045962f1664d9f3211a6606248ac5668b0a4b678b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1350fbe16e0babcc0a57c2289010fc8ca9fcd01cedab064951017caea4786197"
+    },
+    {
+      "id": "D066",
+      "language": "plantuml",
+      "kind": "@startfiles",
+      "heading": "13.2.19 Files Tree Diagram",
+      "sourceSha256": "b379e106e920c0c43428754d97c9725427196850732915d83db15c76073ccfe3",
+      "status": "error",
+      "reason": "The files-tree diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startfiles\n/README.md\n/docs/architecture.md\n/docs/security.md\n/docs/локализация.md\n/diagrams/mermaid.mmd\n/diagrams/plantuml.puml\n/assets/图标.svg\n/tests/test-complete.md\n@endfilesPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D067",
+      "language": "plantuml",
+      "kind": "@startboard",
+      "heading": "13.3.1 Board Diagram",
+      "sourceSha256": "53e083ba4306b47975c302d8449d6f0d16184d9308d50a9072da27a72b07e9f4",
+      "status": "error",
+      "reason": "The board diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startboard\nA1\n+U1.1\n++S1 R1\n++S1 R2\n+U1.2\nA2\n@endboardPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D068",
+      "language": "plantuml",
+      "kind": "@startwire",
+      "heading": "13.3.2 Wire Diagram",
+      "sourceSha256": "258413366f1ccba2792a4315eefb43678f9cd5b9523201ab2aad0c8a55d14745",
+      "status": "error",
+      "reason": "The wire diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startwire\n* Viewer\n* sidebar [180x420]\n* document [640x420]\n* status [820x40]\n@endwirePlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D069",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.1 Hyperlinks, Tooltips, Creole and Unicode",
+      "sourceSha256": "e59322293eb8440153b71f338aef3421ba73a259b4a980e229b144503bf7f62d",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1c806fda42a71672e3d6d062770102ef5f8c82a369245d745714caccfca6863e"
+    },
+    {
+      "id": "D070",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.2 Style and Handwritten Option",
+      "sourceSha256": "9a5c020100cc1db2b10fd490f836d167cc7070c40c159332a3f112c2db8f8f17",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b6b05b300f8fe1b98a7cad4acee51a59ccb41d4de3182d28473a3a24fc59d00e"
+    },
+    {
+      "id": "D071",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.3 Preprocessor and Standard Library Include",
+      "sourceSha256": "849e2b9c408acd593768b93c7c0806274f33f8c5fca964d2a0222ac6c2852a5c",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "6a92caca2b39c17e8755d6c4ec2a6290f6e65492630882a6d7cdc269c11407a3"
+    },
+    {
+      "id": "D072",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "13.4.4 Teoz Sequence Engine",
+      "sourceSha256": "d7641d127a202521a33b4af085226d1ef3eea7cc83623517af331dd0af6ae35f",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "4fd4cf53113b35d6430c24622016e8aaa06c167f425dc8af3727b24ff400487c"
+    },
+    {
+      "id": "D073",
+      "language": "zenuml",
+      "kind": "Viewer->Parser:",
+      "heading": "DIA-010 — Standalone zenuml fence alias",
+      "sourceSha256": "68f7671bef0b6701b713fcfe7b22d75cf80e7d3d27b6a8230e56a4ca82ed7e54",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "cb80df0b4219d8f1e78e497c39fcec4df354997e76bf5f236121674759974695"
+    },
+    {
+      "id": "D074",
+      "language": "mermaid",
+      "kind": "xychart-beta",
+      "heading": "Data becomes visible",
+      "sourceSha256": "52cb9a31c5ec784eb679229aaf88a04c7d1a1013fe18a22160db07e67b389a25",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "0c0ba966574350a05aad0e8049842d7babdf28634d5435a01b0c1708427bd774"
+    },
+    {
+      "id": "D075",
+      "language": "mermaid",
+      "kind": "usecase-beta",
+      "heading": "usecase-beta",
+      "sourceSha256": "00339c496aec5a45f8f5caf77b60b01088186cac9d7fdf4773d046e5d289bc46",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "2b6a9b5a856feebb1c4c5be2f1a359be3dbfb87cc8b669c50f5b6b0444309444"
+    },
+    {
+      "id": "D076",
+      "language": "mermaid",
+      "kind": "agentflow-beta",
+      "heading": "agentflow-beta",
+      "sourceSha256": "55831a75f37d1eeb46ac1403b17e96c8e0a95da90a4664088cc243842e8e29ef",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "7aaab2bfa47faf0552facbf449956e47bd07e2a2106c14a51e6c5998cf504528"
+    },
+    {
+      "id": "D077",
+      "language": "mermaid",
+      "kind": "railroad-beta",
+      "heading": "railroad-beta",
+      "sourceSha256": "013df6171827f1deac1fecbaa17447f1df6b96ef66498b21cbba0f998bbff825",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "e0d455d607d931db21ad812e78b64b08014b7ec82ad4fa5f743ecccea1a1993a"
+    },
+    {
+      "id": "D078",
+      "language": "mermaid",
+      "kind": "railroad-ebnf-beta",
+      "heading": "railroad-ebnf-beta",
+      "sourceSha256": "7eaf506537b9c6a56fe02f6ee2a872d9a5d9411002460550d4fe42de71823405",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "70969d3b3bd2d19b5e5f179e56204012346126f0a8942096d03b456bba8b967f"
+    },
+    {
+      "id": "D079",
+      "language": "mermaid",
+      "kind": "railroad-abnf-beta",
+      "heading": "railroad-abnf-beta",
+      "sourceSha256": "41e29febcb6136f5d838a66449cb0fe3297408d67fe1778b413198efa182e724",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "8dda76217a38f570a8aebed07262253a5b3789b36a0a24d8245833a6834c2db6"
+    },
+    {
+      "id": "D080",
+      "language": "mermaid",
+      "kind": "railroad-peg-beta",
+      "heading": "railroad-peg-beta",
+      "sourceSha256": "e825d5ab3c9b8fcf823583929f71237fb7f18d4ee348f648db686fe59dccd230",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ec9020cee5375d0f1de787d3ab57d30cbd27b737af06eccf8f99d2dae850fca5"
+    },
+    {
+      "id": "D081",
+      "language": "mermaid",
+      "kind": "flowchart-elk",
+      "heading": "Alias / flowchart-elk",
+      "sourceSha256": "15f8433ea5ceebd019e2beb5b2358455a733f8319340bb5b4b986399dae25ab7",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "6ca0041470fecbcbcc9159c3ab6c79b539408791f60e11125e505b378f055041"
+    },
+    {
+      "id": "D082",
+      "language": "mermaid",
+      "kind": "classDiagram-v2",
+      "heading": "Alias / classDiagram-v2",
+      "sourceSha256": "5cbb4fecf0f3594d5aa2fc532c9ffeffe0879d0d2001c3be9e8d7a456a14b1ff",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "44bc573894928ebec63b022e8bc96d08cb9afd94e4b43abf4fe0b9a72d29affc"
+    },
+    {
+      "id": "D083",
+      "language": "mermaid",
+      "kind": "sankey-beta",
+      "heading": "Alias / sankey-beta",
+      "sourceSha256": "a6f167a7f0b9909cfe99d066cdf197a11c7af6a408ece545de9ff166b0156057",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "dc70b2eff1a7493e94573c881a14e95de2a09bbd892f36f1b839948c4a2cd9b8"
+    },
+    {
+      "id": "D084",
+      "language": "mermaid",
+      "kind": "packet-beta",
+      "heading": "Alias / packet-beta",
+      "sourceSha256": "53e83726cd333c9123afddca499a68e58ff7007a041f2c285a7b4ca861ee8fd7",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "16ebf53dd15943243e626e0df5dd7158de01e976aa6761ae61c54b3916102d65"
+    },
+    {
+      "id": "D085",
+      "language": "mermaid",
+      "kind": "block",
+      "heading": "Alias / block",
+      "sourceSha256": "6e6209e93ba18929a0b74325cea4685c543b02538a50772ee9c995fb061e1b93",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c14d65e69d622865b4a7605643f3909dc9fc2f69a0a730f2ec0e0f631878443b"
+    },
+    {
+      "id": "D086",
+      "language": "mermaid",
+      "kind": "ishikawa",
+      "heading": "Alias / ishikawa",
+      "sourceSha256": "74f62777ff20b8997b761415d26054355a08d187bd06f575860c781c18a36496",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "c2ee811748c0f646929eb5dc3c1e8cee1c4b16c635d1d6483b1d1d0cc4feaefd"
+    },
+    {
+      "id": "D087",
+      "language": "mermaid",
+      "kind": "treemap",
+      "heading": "Alias / treemap",
+      "sourceSha256": "ea08500a5366c56a5e844dd322e2c05ebe8e77784abddfed663fe57dccf3948b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "515614c03144d6c1798c7f75d0d4ca5528f5fc05ce6507bc9b6bf43a98ea3fb3"
+    },
+    {
+      "id": "D088",
+      "language": "mermaid",
+      "kind": "requirementDiagram",
+      "heading": "Requirement with explicit Dagre layout",
+      "sourceSha256": "abc8991233cd3b60e70550174cabdbb4f928f1435f77034553752fa24e97cf21",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1c0c62bc9099abbec8d9378f3c8a6b6999a0a08f4860491544daa044cd768c36"
+    },
+    {
+      "id": "D089",
+      "language": "mermaid",
+      "kind": "info",
+      "heading": "Runtime information",
+      "sourceSha256": "96bac4de3ce48eccdafa38eb18e0581fe70d26b8d8d5a74ca8af79c77658dcde",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "8f89c04180b2098084c8d157f8ad6431aa47e3f2bc8340ed5fcd1da40c3f431b"
+    },
+    {
+      "id": "D090",
+      "language": "plantuml",
+      "kind": "@startdot",
+      "heading": "DOT",
+      "sourceSha256": "f2f1291531d9d8100b1e4ba81da62de2aec521410fe90ac6545e65db80d2ead9",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "af76145f76a32fa6df220c7766dccc3cc16df8800e463c7c9ba8185b5386ecc1"
+    },
+    {
+      "id": "D091",
+      "language": "plantuml",
+      "kind": "@startpacketdiag",
+      "heading": "PACKET",
+      "sourceSha256": "fa4947adf130e16f4fcea9df07fabd20a41e58a86794995da91d7ce9b3b8e9bd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "279b550b7e5f03476f7e89254beb26744accb26c5ccd4d583d4393da75237b78"
+    },
+    {
+      "id": "D092",
+      "language": "plantuml",
+      "kind": "@startflow",
+      "heading": "FLOW",
+      "sourceSha256": "1e1c1f58b12dda7c14e3bccb7ef575bc8357837ee06432d41692ed391bfda268",
+      "status": "error",
+      "reason": "The flow diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startflow\na \"Open\"\ns b \"Parse\"\ne c \"Render\"\n@endflowPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D093",
+      "language": "plantuml",
+      "kind": "@starthcl",
+      "heading": "HCL",
+      "sourceSha256": "193611edb17b3c2fdfeb8b1e67daaa3d6541a90a7707e05522aa1ce90f9da775",
+      "status": "error",
+      "reason": "The HCL diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@starthcl\nresource \"app\" \"viewer\" {\n  name = \"MDVu\"\n  offline = true\n}\n@endhclPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D094",
+      "language": "plantuml",
+      "kind": "@startbpm",
+      "heading": "BPM",
+      "sourceSha256": "f5348eba5b480acaea38f3254ba472aef9ec00fdd99fbf05cfbf0674217e7600",
+      "status": "error",
+      "reason": "The BPM diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startbpm\n:Open;\n:Parse;\n:Render;\n@endbpmPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D095",
+      "language": "plantuml",
+      "kind": "@startgit",
+      "heading": "GIT",
+      "sourceSha256": "5e055c357742c54b69f5b7596f0e4608f4c9931409b1530a4d4e100f3844910e",
+      "status": "error",
+      "reason": "The git diagram factory is absent from the browser build.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startgit\n* abc1234 (HEAD -> main) Render\n|\n* def5678 Parse\n|\n* aaaaaaa Open\n@endgitPlantUML rendering failed: unsupported-diagram"
+    },
+    {
+      "id": "D096",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "COMPOSITE",
+      "sourceSha256": "5a49aa5bbe719e6897a5943689e35c07675cc023cabcfa9c4482172aea3dfd85",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "24d3b4941dfe38885c62bc28ac5fa1b83f6ef87ef337c01af932f798a35f42ba"
+    },
+    {
+      "id": "D097",
+      "language": "plantuml",
+      "kind": "@startcreole",
+      "heading": "CREOLE",
+      "sourceSha256": "cde07324d1533563eef0d17bdb4ccba9e6098562c5af64966f6089a6972000cd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "9508f39d86334738cd3681aca587194c72bb4dd49bda83bac085bcfeb9db9e7a"
+    },
+    {
+      "id": "D098",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "HELP",
+      "sourceSha256": "a85a82b1ef3648f7010b98a01b709dff1acb27c063fdc33955f01adea93b00fb",
+      "status": "error",
+      "reason": "Service command help types: the browser build does not register HelpFactory. This is not a diagram family.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startuml\nhelp types\n@endumlPlantUML rendering failed: syntax-error"
+    },
+    {
+      "id": "D099",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "SPRITES",
+      "sourceSha256": "23e63f81ee2fb37240659f64e2d63f5a952c78bd5617933b2822acaf81e94ef3",
+      "status": "error",
+      "reason": "Service command listsprites: the browser build does not register ListSpriteDiagramFactory. This is not a diagram family.",
+      "svgSha256": null,
+      "diagnostic": "Diagram could not be rendered@startuml\nlistsprites\n@endumlPlantUML rendering failed: syntax-error"
+    },
+    {
+      "id": "D100",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Context",
+      "sourceSha256": "e74763f48a0b7e7a289dac20d211d442e95a5f00142981a2425fa00a8b0777c6",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ed8e11f5d87f799c0d3a4d7e16d3bea45058b8a48d2e1e7145f9ba9a9367113f"
+    },
+    {
+      "id": "D101",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Landscape",
+      "sourceSha256": "9f86672ecf56afcefa1c30afe58358b50ddd31b930479fe92b499c7bae8cad72",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "88b7673631be5eade1b6068a65dbcdcdf3bb76d10c6894cf0e29475c0538f052"
+    },
+    {
+      "id": "D102",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Container",
+      "sourceSha256": "bdd04769f47f70e2db2bd2f2f081e29273602f6dc6fa57617abe347075bcbd9f",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "75fa9ab948f6095d6b3c8e3e7b76731664c1744c508073130c4aa4e55ed8844e"
+    },
+    {
+      "id": "D103",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Component",
+      "sourceSha256": "5717dc40a3b0660c7756c42e7c3ed703def4a7b02a70b97685929eaf92eb2053",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b9824d5ee1dece2a0a50fe7f02cea2c4c1e59121ea5c9037df780a061ffa1f02"
+    },
+    {
+      "id": "D104",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Dynamic",
+      "sourceSha256": "d1bd0bd87a9fe878cf2677610ce6f1ab30d5282ada865cd301314bda7c4f68fb",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "b12cc77f608d9ce8505416864e455b65936d6e732778d1c6ce64587d229ce048"
+    },
+    {
+      "id": "D105",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Deployment",
+      "sourceSha256": "08e9c5250939f1a95718ffb90c6aa6a9363199e2e5778b96e021bffe5b85bbbd",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "840f55b298fbda6b3a88f5c46593db3ece425bf71ed56ad3e877b3de653bebdf"
+    },
+    {
+      "id": "D106",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / Sequence",
+      "sourceSha256": "98ee6b673543df2793fba0dbabd618e2e71e9bc5cae187e4c0e52cebfd12ed07",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "904eb7275ccb3b019a61856a1821a97f4d2fdb8244412a9dcce7e4ebe62b357c"
+    },
+    {
+      "id": "D107",
+      "language": "plantuml",
+      "kind": "@startproject",
+      "heading": "Gantt project alias",
+      "sourceSha256": "1148a6774672c1af3deb8dcb4620f8ba1b0b20ce0978607c29b011e2c16fb31b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "38e10abbe1820409f429e9813b5ea1b162edc4cf8c080f55df99c2e2cbc56f8b"
+    },
+    {
+      "id": "D108",
+      "language": "zenuml",
+      "kind": "title",
+      "heading": "ZenUML nested calls, branches, loops, parallel and exceptions",
+      "sourceSha256": "cf7fd0c4a2e6488e34b80f6ae2f807947773ee249f808b6ff0bcda0177289193",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1a36a5e44f5b2e2aa92991fb054890ea027a5ddff0aacc207accc79e1d5d1387"
+    },
+    {
+      "id": "D109",
+      "language": "mermaid",
+      "kind": "zenuml",
+      "heading": "ZenUML plugin / same control flow",
+      "sourceSha256": "5968b69141c3bf2ee3d44a7f5d1f19519476e300a0235474c312fa026713772d",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1a36a5e44f5b2e2aa92991fb054890ea027a5ddff0aacc207accc79e1d5d1387"
+    },
+    {
+      "id": "D110",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "ArchiMate / business, application and technology layers",
+      "sourceSha256": "fd61109bfe34124684ace76e916bee4d4a03fd043e103095baea556d2f4c0c1e",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "6beec4bbba8d112bca737e2d09b6c39d469f263f818ca5b7b423126e553baeb2"
+    },
+    {
+      "id": "D111",
+      "language": "puml",
+      "kind": "@startuml",
+      "heading": "ArchiMate / motivation, strategy, physical and implementation",
+      "sourceSha256": "94c453862bf3919ef796c23bd787f9a9017f274bdb19a9ee1c8201df86343302",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "6e6e90b5ff94509f0ded5b3f71f1461d17e6424d98de7e9b581ffe4c95bc4564"
+    },
+    {
+      "id": "D112",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "ArchiMate / upstream catalogue of all element icons",
+      "sourceSha256": "aa2db24479a425409be47728b650ddc61a3370fb4e93c599475a7f3911501e8f",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "cf7a9db280078678a197a9a9735f2e20a9ff768f09df2cba7bed313be980835c"
+    },
+    {
+      "id": "D113",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4-PlantUML / tags, boundaries and legend",
+      "sourceSha256": "4e138900774823db9e33cad370c2a7b342c62dfd3e8272b1653afb160d2cdc3b",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "ab57340be3a94087bb60a1948127c99e85a5be6676572122e92894fa7b7cf1f8"
+    },
+    {
+      "id": "D114",
+      "language": "plantuml",
+      "kind": "@startuml",
+      "heading": "C4 / code-level view using UML classes",
+      "sourceSha256": "77f8cffd4a27112ddfafb7d9970c3ce92efb91442e96cc22e63685a3eb78fc38",
+      "status": "rendered",
+      "reason": "",
+      "svgSha256": "1a5c12e03e947743a7e38c5a56dabc324f56af4697c4ce0abe03c35c2401d161"
+    }
+  ],
+  "evidence": {
+    "nativeReport": "test-results/open-latency-20261018/all-candidates/results.json",
+    "sha256": "cdbbb315ea865a38d06675568ce85dc171bffff539b3c58bf6b40dbd385c4426"
+  }
+}

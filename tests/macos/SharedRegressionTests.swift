@@ -162,25 +162,62 @@ extension SharedRegressionTests {
 
 extension SharedRegressionTests {
     @MainActor @Test func offlineDiagramEnginesWorkUnderDocumentPolicy() async throws {
-        let markdown = "```mermaid\ngraph TD\nA-->B\n```\n\n```plantuml\nAlice -> Bob: Hello\n```"
+        let markdown = """
+        ```mermaid
+        graph TD
+        A-->B
+        ```
+
+        ```plantuml
+        Alice -> Bob: Hello
+        ```
+
+        ```plantuml
+        @startuml
+        !include <C4/C4_Context>
+        Person(reader, "Reader")
+        System(viewer, "Viewer")
+        Rel(reader, viewer, "Opens")
+        @enduml
+        ```
+
+        ```puml
+        @startuml
+        !include <archimate/Archimate>
+        Application_Component(app, "MDVu")
+        @enduml
+        ```
+
+        ```plantuml
+        @startdot
+        digraph G { A -> B; }
+        @enddot
+        ```
+
+        ```zenuml
+        Viewer.open() { Parser.parse() }
+        ```
+        """
         let body = MarkdownPipeline(dialect: .github, mermaid: true).render(markdown).body
         let html = HTMLDocument.make(body: body, title: "Offline engines", theme: .light, embedEngines: true)
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=cb=>setTimeout(cb,0)", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         configuration.userContentController.addUserScript(WKUserScript(source: "window.scriptErrors=[];addEventListener('error',e=>scriptErrors.push(e.message));", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: CGRect(x: 0,y: 0,width: 900,height: 700), configuration: configuration)
-        view.loadHTMLString(html, baseURL: nil)
+        // Exported standalone HTML has a file origin. A nil base gives WebKit an
+        // opaque origin where ZenUML's localStorage access is forbidden.
+        view.loadHTMLString(html, baseURL: URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true))
         defer { view.stopLoading() }
         try await ready(view)
         _ = try await view.callAsyncJavaScript("await Promise.all([window.__mdvuRenderDiagrams({all:true}),window.__mdvuRenderDiagrams({all:true}),window.__mdvuRenderDiagrams({all:true})]); return true", arguments: [:], in: nil, contentWorld: .page)
         var count = 0
         for _ in 0..<200 {
-            count = (try? await view.evaluateJavaScriptValue("[...document.querySelectorAll('figure.diagram')].filter(n=>n.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg')).length")) as? Int ?? 0
-            if count == 2 { break }
+            count = (try? await view.evaluateJavaScriptValue("[...document.querySelectorAll('figure.diagram')].filter(n=>window.__mdvuHasDiagramSVG?.(n)).length")) as? Int ?? 0
+            if count == 6 { break }
             try await Task.sleep(for: .milliseconds(50))
         }
         let diagnostics = try? await view.evaluateJavaScriptValue("JSON.stringify({scriptErrors:window.scriptErrors,runtime:!!window.mermaid,plantuml:typeof PlantUML,plantumlRender:typeof window.PlantUML?.renderToString,pending:[...document.querySelectorAll('figure.diagram')].map(n=>({renderer:n.dataset.renderer,classes:n.className})),error:window.__mdvuMermaidError,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.srcdoc.length,url:f.contentDocument?.URL}))})")
-        #expect(count == 2, "\(String(describing: diagnostics))")
+        #expect(count == 6, "\(String(describing: diagnostics))")
         let errors = try await view.evaluateJavaScriptValue("[...document.querySelectorAll('.diagram-error')].map(n=>n.textContent).join(' | ')")
         #expect(errors as? String == "")
         let found = try await view.evaluateJavaScriptValue("window.__mdvuFind.search('Hello').count")
@@ -341,5 +378,30 @@ extension SharedRegressionTests {
         defer { view.stopLoading() }
         await Task.yield()
         #expect(WebKitPrewarmer.takePrewarmedWebView() == nil)
+    }
+}
+
+extension SharedRegressionTests {
+    @MainActor @Test func fileDocumentKeepsRelativeAndParentImages() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("mdvu-images-\(UUID().uuidString)")
+        let folder = root.appendingPathComponent("docs", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let image = "<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><rect width='12' height='12' fill='red'/></svg>"
+        try image.write(to: root.appendingPathComponent("parent.svg"), atomically: true, encoding: .utf8)
+        try image.write(to: folder.appendingPathComponent("local.svg"), atomically: true, encoding: .utf8)
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        // loadHTMLString cannot grant file access to local/parent images.
+        let page = root.appendingPathComponent("render.html")
+        try HTMLDocument.make(body: "<img src='local.svg'><img src='../parent.svg'>", title: "Images", theme: .light, baseURL: folder).write(to: page, atomically: true, encoding: .utf8)
+        view.loadFileURL(page, allowingReadAccessTo: root)
+        defer { view.stopLoading() }
+        var loaded = false
+        for _ in 0..<100 {
+            loaded = (try? await view.evaluateJavaScriptValue("document.images.length===2 && [...document.images].every(i=>i.complete&&i.naturalWidth===12)")) as? Bool == true
+            if loaded { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(loaded)
     }
 }

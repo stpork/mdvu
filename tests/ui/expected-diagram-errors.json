@@ -1,4 +1,50 @@
 {
+  "test-complete.md": [
+    {
+      "source": "@startditaa\n+------------+     +-------------+     +-----------+\n| Markdown   | --> | mdvu        | --> | Document  |\n| source {d} |     | renderer    |     | view      |\n+------------+     +------+------+     +-----------+\n                         |\n                         v\n                    +----+-----+\n                    | Cache {s}|\n                    +----------+\n@endditaa",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startchronology\ntitle mdvu fixture chronology\n[Draft] happens on 2026-09-01 09:00:00\n[Review] happens on 2026-09-03 12:00:00\n[Benchmark] happens on 2026-09-05 18:00:00\n@endchronology",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startmath\nf(x)=sum_(n=0)^oo (x^n)/(n!)\n@endmath",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startlatex\n\\sum_{i=0}^{n-1} (a_i + b_i^2) = \\int_0^1 f(x)\\,dx\n@endlatex",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startchen\nentity Document {\n  ID <<key>>\n  Title\n}\nentity Release {\n  ID <<key>>\n  Version\n}\nrelationship Publishes {\n}\nPublishes -1- Document\nPublishes -N- Release\n@endchen",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startfiles\n/README.md\n/docs/architecture.md\n/docs/security.md\n/docs/локализация.md\n/diagrams/mermaid.mmd\n/diagrams/plantuml.puml\n/assets/图标.svg\n/tests/test-complete.md\n@endfiles",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startboard\nA1\n+U1.1\n++S1 R1\n++S1 R2\n+U1.2\nA2\n@endboard",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startwire\n* Viewer\n* sidebar [180x420]\n* document [640x420]\n* status [820x40]\n@endwire",
+      "reason": "Unsupported in the bundled PlantUML JavaScript build. Verify error recovery; this is not successful diagram support."
+    },
+    {
+      "source": "@startuml\n!define PRODUCT mdvu\n!$version = \"1.2026.7\"\n!include <archimate/Archimate>\ntitle PRODUCT + \" — stdlib / preprocessor probe\"\nApplication_Component(app, \"mdvu\")\nTechnology_Service(runtime, \"PlantUML \" + $version)\nRel_Serving_Up(runtime, app, \"renders\")\n@enduml",
+      "reason": "Invalid original fixture: an unquoted ArchiMate macro argument contains an expression. The corrected example is D071 in test-diagrams.md; this diagnostic must not count as a diagram."
+    }
+  ],
+  "test-diagrams.md": [],
+  "runtime/plantuml-includeurl-blocked.md": [
+    {
+      "source": "@startuml\n!includeurl https://example.invalid/must-not-fetch.puml\nAlice -> Bob : tail\n@enduml",
+      "message": "PlantUML rendering failed: missing-library",
+      "reason": "Intentional external-include rejection under the offline content policy. A diagnostic is expected; it must not count as a rendered diagram."
+    }
+  ],
   "test-heavy.md": [
     {
       "source": "eventmodeling\n    timeframe 01 ui Viewer\n    timeframe 02 command RenderDiagram [[RenderRequest]]\n    timeframe 03 event DiagramRendered [[RenderResult]]\n    data RenderRequest {\n      language: 'mermaid'\n      chars: 1200\n    }\n    data RenderResult {\n      format: 'svg'\n      ok: true\n    }",
@@ -35,12 +81,6 @@
     {
       "source": "futureDiagram-beta\n  item A",
       "reason": "Intentionally malformed or future diagram syntax used to test error recovery."
-    }
-  ],
-  "test-complete.md": [
-    {
-      "source": "@startditaa\n+------------+     +-------------+     +-----------+\n| Markdown   | --> | mdvu        | --> | Document  |\n| source {d} |     | renderer    |     | view      |\n+------------+     +------+------+     +-----------+\n                         |\n                         v\n                    +----+-----+\n                    | Cache {s}|\n                    +----------+\n@endditaa",
-      "reason": "The offline PlantUML runtime does not implement Ditaa."
     }
   ]
 }

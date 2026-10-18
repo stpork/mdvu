@@ -14,8 +14,8 @@ lipo -create \
 
 # Both core slices are mandatory: packaging must never silently fall back to a host-only dylib.
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
-cargo build --release -p mdvu-core --target aarch64-apple-darwin
-cargo build --release -p mdvu-core --target x86_64-apple-darwin
+cargo build --release -p mdvu-core --features bundle-assets --target aarch64-apple-darwin
+cargo build --release -p mdvu-core --features bundle-assets --target x86_64-apple-darwin
 lipo -create \
     "$ROOT/target/aarch64-apple-darwin/release/libmdvu_core.dylib" \
     "$ROOT/target/x86_64-apple-darwin/release/libmdvu_core.dylib" \
@@ -26,7 +26,7 @@ for output in "$ROOT"/*.bc; do
     if [ -f "$output" ]; then mv "$output" "$ROOT/target/swift-ir/"; fi
 done
 
-make package \
+make package BUNDLE_ASSETS=1 \
     BINARY="$ROOT/.build/mdvu-universal" \
     DYLIB="$DYLIB_PATH" \
     RESOURCE_BUNDLE="$ARM_BIN_DIR/mdvu_mdvu.bundle"

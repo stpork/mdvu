@@ -171,7 +171,7 @@
     const diagramErrors=[...article.querySelectorAll('.diagram-error')].map(n=>({message:n.querySelector('small')?.textContent,source:n.querySelector('pre')?.textContent}));
     const expected=window.__mdvuExpectedDiagramErrors||[];
     const normalize=s=>(s||'').replace(/\r\n/g,'\n').trim();
-    checks.diagramErrors=diagramErrors.length===expected.length&&diagramErrors.every(e=>expected.some(known=>normalize(known.source)===normalize(e.source)));
+    checks.diagramErrors=diagramErrors.length===expected.length&&diagramErrors.every(e=>expected.some(known=>normalize(known.source)===normalize(e.source)&&(!known.message||known.message===e.message)));
     checks.diagrams=[...article.querySelectorAll('figure.diagram')].every(n=>n.classList.contains('diagram-error')||window.__mdvuHasDiagramSVG?.(n));
     if(window.__mdvuAuditIdleProbe)await pause(5500);
     const timerOnly=window.__mdvuTimingMode==='timer';

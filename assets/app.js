@@ -218,8 +218,9 @@ svg=(await mermaid.render(`mdvu-diagram-${++renderSeq}`,source)).svg;
 if(typeof PlantUML==='undefined'||!PlantUML.renderToString){delete node.__mdvuRendering;node.__mdvuQueued=false;return}
 const lines=source.trim().split(/\r?\n/);
 if(!lines.some(l=>/^\s*@start/i.test(l))){lines.unshift('@startuml');lines.push('@enduml')}
-if(isDark&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l)))lines.splice(1,0,'skinparam backgroundColor transparent');
-svg=await new Promise((resolve,reject)=>PlantUML.renderToString(lines,value=>value?resolve(value):reject(new Error('PlantUML returned empty output')),error=>reject(new Error(error))));
+if(isDark&&!/^\s*@startdot\b/i.test(lines[0])&&!lines.some(l=>/^\s*skinparam\s+backgroundColor/i.test(l)))lines.splice(1,0,'skinparam backgroundColor transparent');
+svg=await new Promise((resolve,reject)=>PlantUML.renderToString(lines,value=>value?resolve(value):reject(new Error('PlantUML returned empty output')),error=>reject(new Error(error)),{dark:isDark}));
+window.__mdvuValidateDiagramSVG('plantuml',svg);
 }
 if(!node.isConnected)return;
 installDiagramSVG(node,svg);

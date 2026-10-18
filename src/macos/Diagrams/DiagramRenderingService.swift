@@ -16,8 +16,10 @@ import WebKit
     private var active: Job?
     private var ready = false
     private var loaded: Set<String> = []
+    private var runtimeSource: String?
     private var deadline: DispatchWorkItem?
     private let idleDelay: TimeInterval
+    private let profiler = StartupProfiler()
 
     init(idleDelay: TimeInterval = 5) { self.idleDelay = idleDelay; super.init() }
     var hasRenderer: Bool { view != nil }
@@ -30,6 +32,7 @@ import WebKit
             complete(["id": request["id"] as? String ?? "", "error": "Invalid or excessive diagram request"]); return
         }
         queue.append(Job(owner: owner, request: request, complete: complete))
+        profiler.mark("diagram.request")
         advance()
     }
 
@@ -43,7 +46,7 @@ import WebKit
         view?.stopLoading()
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "diagramResult")
         view?.navigationDelegate = nil
-        view = nil; ready = false; loaded.removeAll()
+        view = nil; ready = false; loaded.removeAll(); runtimeSource = nil
     }
 
     private func advance() {
@@ -58,7 +61,18 @@ import WebKit
         let timeout = DispatchWorkItem { [weak self] in self?.finish(["error": "Diagram rendering timed out"], discardRenderer: true) }
         deadline = timeout; DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: timeout)
         if view == nil { createRenderer() }
-        if ready { renderActive() }
+        guard let job = active, let web = view, let renderer = job.request["renderer"] as? String else { return }
+        if loaded.contains(renderer) { renderActive(); return }
+        // Decode while WebKit starts, never on the reading/UI thread.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let source = renderer == "mermaid" ? ResourceLoader.mermaidRuntime : ResourceLoader.plantumlJavaScript
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.active?.id == job.id, self.view === web else { return }
+                self.profiler.mark("diagram.decompressed")
+                self.runtimeSource = source
+                self.renderActive()
+            }
+        }
     }
 
     private func createRenderer() {
@@ -69,6 +83,7 @@ import WebKit
         let web = WKWebView(frame: CGRect(x: 0, y: 0, width: 920, height: 800), configuration: config)
         web.navigationDelegate = self
         view = web
+        profiler.mark("diagram.webview")
         let nonce = UUID().uuidString
         web.loadHTMLString("""
         <!doctype html><html><head><meta charset="utf-8"><meta name="mdvu-script-nonce" content="\(nonce)">
@@ -78,26 +93,15 @@ import WebKit
     }
 
     private func renderActive() {
-        guard let job = active, let web = view, let renderer = job.request["renderer"] as? String else { return }
-        if !loaded.contains(renderer) {
-            loaded.insert(renderer)
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let source = renderer == "mermaid" ? ResourceLoader.mermaidJavaScript : ResourceLoader.plantumlJavaScript
-                DispatchQueue.main.async { [weak self] in
-                    guard let self, self.active?.id == job.id, self.view === web else { return }
-                    web.evaluateJavaScript(source) { [weak self] _, error in
-                        guard let self, self.active?.id == job.id else { return }
-                        if let error { self.finish(["error": error.localizedDescription], discardRenderer: true) }
-                        else { self.renderActive() }
-                    }
-                }
-            }
-            return
-        }
+        guard ready, let job = active, let web = view, let renderer = job.request["renderer"] as? String else { return }
+        guard loaded.contains(renderer) || runtimeSource != nil else { return }
+        let source = runtimeSource ?? ""
+        runtimeSource = nil
+        loaded.insert(renderer)
         guard let data = try? JSONSerialization.data(withJSONObject: job.request),
               let json = String(data: data, encoding: .utf8) else { finish(["error": "Invalid diagram request"]); return }
-        web.evaluateJavaScript("window.__mdvuRunDiagramJob(\(json)); void 0") { [weak self] _, error in
-            guard let self, self.active?.id == job.id, let error else { return }
+        web.evaluateJavaScript("\(source);window.__mdvuRunDiagramJob(\(json)); void 0") { [weak self] _, error in
+            guard let self, self.active?.id == job.id, self.view === web, let error else { return }
             self.finish(["error": error.localizedDescription], discardRenderer: true)
         }
     }
@@ -107,13 +111,14 @@ import WebKit
         deadline?.cancel(); deadline = nil; active = nil
         var reply = result; reply["id"] = job.id
         job.complete(reply)
+        profiler.mark("diagram.result")
         if discardRenderer { releaseRenderer() }
         advance()
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.webView === view, message.frameInfo.isMainFrame, let result = message.body as? [String: Any] else { return }
-        if result["ready"] as? Bool == true { ready = true; renderActive() }
+        if result["ready"] as? Bool == true { profiler.mark("diagram.ready"); ready = true; renderActive() }
         else if result["id"] as? String == active?.id { finish(result) }
     }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

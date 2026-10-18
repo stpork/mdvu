@@ -8,6 +8,20 @@
     "katex": "0.19.0",
     "mermaid": "12.2.0"
   },
+  "stdlib": {
+    "c4": {
+      "version": "2.14.0",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/plantuml/plantuml/v1.2026.9/src/main/teavm/stdlib/c4.min.js",
+      "sha256": "6074a5b15fcd6dade1f0f1bd4426f2da7ff9006fb8ac762502df7351f4260b7c"
+    },
+    "archimate": {
+      "version": "3.2.2",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/plantuml/plantuml/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+      "sha256": "5a06d2cc43cecff2b720cd6cbc08d60a6259211316f779c9f666c8c5988dfd85"
+    }
+  },
   "assets": {
     "mermaid": {
       "sourceBytes": 8527159,
@@ -15,9 +29,9 @@
       "sha256": "f9fc03eaed40c96b594a816d00236c54c6f194958c36f3986a1f46e61ed22206"
     },
     "plantuml": {
-      "sourceBytes": 4630257,
-      "compressedBytes": 1237803,
-      "sha256": "b8f8fc278a1137d78e5e7cf97e5a1a27aeac2d015038cb8406a32a59bfbec7f9"
+      "sourceBytes": 4958867,
+      "compressedBytes": 1282213,
+      "sha256": "b5e3092a53b1a29b2572f58f46f64be10e43e6d0472e6617561372c3458137aa"
     },
     "katex": {
       "sourceBytes": 272868,

@@ -29,6 +29,8 @@ const char* mdvu_get_app_js(void);
  * Returns decompressed Mermaid JS engine string (cached in memory).
  */
 const char* mdvu_get_mermaid_js(void);
+// Direct bundle for native isolated workers (not safe to embed unescaped in HTML).
+const char* mdvu_get_mermaid_source(void);
 
 /**
  * Returns decompressed PlantUML JS engine string (cached in memory).

@@ -33,6 +33,7 @@ public final class MdvuCoreBridge: @unchecked Sendable {
     private var fnVersion: VersionFunc?
     private var fnGetMarkdownCss: AssetStrFunc?
     private var fnGetAppJs: AssetStrFunc?
+    private var fnGetMermaidSource: AssetStrFunc?
     private var fnGetMermaidJs: AssetStrFunc?
     private var fnGetPlantumlJs: AssetStrFunc?
     private var fnGetKatexJs: AssetStrFunc?
@@ -115,6 +116,9 @@ public final class MdvuCoreBridge: @unchecked Sendable {
         if let sym = dlsym(handle, "mdvu_get_app_js") {
             self.fnGetAppJs = unsafeBitCast(sym, to: AssetStrFunc.self)
         }
+        if let sym = dlsym(handle, "mdvu_get_mermaid_source") {
+            self.fnGetMermaidSource = unsafeBitCast(sym, to: AssetStrFunc.self)
+        }
         if let sym = dlsym(handle, "mdvu_get_mermaid_js") {
             self.fnGetMermaidJs = unsafeBitCast(sym, to: AssetStrFunc.self)
         }
@@ -144,6 +148,11 @@ public final class MdvuCoreBridge: @unchecked Sendable {
 
     public var appJavaScript: String? {
         guard isAvailable, let fn = fnGetAppJs, let ptr = fn() else { return nil }
+        return String(cString: ptr)
+    }
+
+    public var mermaidRuntime: String? {
+        guard isAvailable, let fn = fnGetMermaidSource, let ptr = fn() else { return nil }
         return String(cString: ptr)
     }
 

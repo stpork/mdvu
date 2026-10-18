@@ -284,7 +284,7 @@ pub enum UserEvent {
     DiagramRequest(String),
     DiagramCancel,
     DiagramMessage(String),
-    DiagramRuntimeReady(String, Result<&'static str, &'static str>),
+    DiagramRuntimeReady(String, String, Result<&'static str, &'static str>),
     FileChanged,
     OpenFile(PathBuf),
     OpenFileWithFragment(PathBuf, Option<String>),
@@ -1225,10 +1225,10 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(result) = diagram_worker.message(&json, &proxy) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
                     #[cfg(not(windows))] let _ = json;
                 }
-                UserEvent::DiagramRuntimeReady(id, source) => {
+                UserEvent::DiagramRuntimeReady(session, id, source) => {
                     #[cfg(windows)]
-                    if let Some(result) = diagram_worker.runtime_ready(&id, source) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
-                    #[cfg(not(windows))] let _ = (id, source);
+                    if let Some(result) = diagram_worker.runtime_ready(&session, &id, source) { let _ = webview.evaluate_script(&format!("window.__mdvuDiagramResult?.({result});void 0")); }
+                    #[cfg(not(windows))] let _ = (session, id, source);
                 }
                 UserEvent::ShellReady => {
                     #[cfg(windows)] diagram_worker.cancel();

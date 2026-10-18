@@ -208,13 +208,15 @@ import WebKit
         let service = DiagramRenderingService(idleDelay: 0.05), obsolete = UUID(), current = UUID()
         var obsoleteCompleted = false
         var reply: [String: Any]?
-        service.submit(owner: obsolete, request: ["id": "obsolete", "renderer": "mermaid", "source": "graph TD; A-->B"]) { _ in obsoleteCompleted = true }
-        service.submit(owner: current, request: ["id": "current", "renderer": "mermaid", "source": "graph TD; C-->D"]) { reply = $0 }
+        service.submit(owner: obsolete, request: ["id": "reused-id", "renderer": "mermaid", "source": "graph TD; Obsolete-->Wrong"]) { _ in obsoleteCompleted = true }
+        service.submit(owner: current, request: ["id": "reused-id", "renderer": "mermaid", "source": "graph TD; Current-->Correct"]) { reply = $0 }
         service.cancel(owner: obsolete)
         defer { service.cancel(owner: current) }
         for _ in 0..<600 where reply == nil { try await Task.sleep(for: .milliseconds(25)) }
         #expect(!obsoleteCompleted)
-        #expect(reply?["id"] as? String == "current")
+        #expect((reply?["svg"] as? String)?.contains("Current") == true)
+        #expect((reply?["svg"] as? String)?.contains("Obsolete") == false)
+        #expect(reply?["id"] as? String == "reused-id")
         #expect((reply?["svg"] as? String)?.contains("<svg") == true)
         for _ in 0..<100 where service.hasRenderer { try await Task.sleep(for: .milliseconds(25)) }
         #expect(!service.hasRenderer)

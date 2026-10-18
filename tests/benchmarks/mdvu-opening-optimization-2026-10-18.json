@@ -1,0 +1,2466 @@
+{
+  "schema": 1,
+  "date": "2026-10-18",
+  "status": "Local draft; not published",
+  "beforeApp": {
+    "name": "MDVu",
+    "path": "/Users/Roman/Sources/mdvu/dist/mdvu.app",
+    "id": "com.mdvu.viewer",
+    "version": "0.5.0",
+    "build": "1",
+    "binary": "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu",
+    "installedBytes": 10467175,
+    "architectures": "x86_64 arm64",
+    "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399",
+    "arm64InstalledBytes": 5142321
+  },
+  "afterApp": {
+    "name": "MDVu",
+    "path": "/Users/Roman/Sources/mdvu/dist/mdvu.app",
+    "id": "com.mdvu.viewer",
+    "version": "0.5.0",
+    "build": "1",
+    "binary": "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu",
+    "installedBytes": 7364248,
+    "architectures": "x86_64 arm64",
+    "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1",
+    "coreSha256": "341dff90bbbef516716f2a88d43096a52a7e84c9c7e7f8588519b1adee6c9946",
+    "runtimeAssetSha256": {
+      "mermaid.lzma": "f9fc03eaed40c96b594a816d00236c54c6f194958c36f3986a1f46e61ed22206",
+      "plantuml.lzma": "b5e3092a53b1a29b2572f58f46f64be10e43e6d0472e6617561372c3458137aa",
+      "katex.lzma": "fa1300c910fefc9d653c6954ef098fdf8a011e22c423feab73e86206cfbca255"
+    }
+  },
+  "measurements": [
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-complete-101-warm",
+      "group": "common",
+      "fixture": "common-test-complete.md",
+      "sourceSha256": "d52d91a166e294a6a709c488b07026cba41fdae9b84a5966f0254d44602ab07c",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 234.5665512084961,
+      "peakMemoryMiBFirst8s": 272.2071762084961,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-complete.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 721.3270830106921,
+      "launchToContentMs": 2570.6197912804782,
+      "firstPaintFrameBracketMs": [
+        704.6862080460414,
+        721.3535410119221
+      ],
+      "frameGapMs": 16.667332965880632,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-101-warm.json",
+          "sha256": "57d3d1567cec98c5958392d67908f0f54c23ca604408b299fcbd5f1d27f60d5f"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-101-warm.mp4",
+          "sha256": "fa2959d11e83a96437ab872c25894d6a9c47335ed7456e7708a1744709ec0e4f"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-101-warm-analysis.json",
+          "sha256": "2c68fbc3f6a92c42b081d7107363fc5af07c42e2dd88056596e0833e9b1c8213"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-101-warm.resources.json",
+          "sha256": "dd08203c98e578fd1115b1b45829e5c616e0d5c76a96d2f5529143577fa380d5"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-101-warm-first.png",
+          "sha256": "d439a815b7ae0e04d89a7948060cde424ba98ae539ef8055743c457c97f7e302"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-complete-101-warm.json",
+          "sha256": "c472c16e2c89ab2c266b7384f9ce20981739c8d296271d6e73b4792f320bee05"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-complete-201-warm",
+      "group": "common",
+      "fixture": "common-test-complete.md",
+      "sourceSha256": "d52d91a166e294a6a709c488b07026cba41fdae9b84a5966f0254d44602ab07c",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 233.8165512084961,
+      "peakMemoryMiBFirst8s": 289.4415512084961,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-complete.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 660.7655413099565,
+      "launchToContentMs": 2285.4421663214453,
+      "firstPaintFrameBracketMs": [
+        644.1189993056469,
+        660.7862082892098
+      ],
+      "frameGapMs": 16.667208983562887,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-201-warm.json",
+          "sha256": "65cb5681a659c485f444a167bad39f6e43aecf56dc7bf6b1f9293bf2668474cf"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-201-warm.mp4",
+          "sha256": "ac84832c33213e4fd928b7a9d893a41926b8839ad1f9249aa9563e539a8d2285"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-201-warm-analysis.json",
+          "sha256": "218535f6c1d1bea110c0a88285dcca6c9502f2aac60b88ac797d1402b65403f3"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-201-warm.resources.json",
+          "sha256": "ad640fc488d4515e82c33cd02456e3e81fac90fc587109040dd48f95b56ebf6a"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-complete-201-warm-first.png",
+          "sha256": "d439a815b7ae0e04d89a7948060cde424ba98ae539ef8055743c457c97f7e302"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-complete-201-warm.json",
+          "sha256": "961da682b6e1294301661650b27c96853c3062c208d67c402f0e15ba8f4b36f9"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-heavy-101-warm",
+      "group": "common",
+      "fixture": "common-test-heavy.md",
+      "sourceSha256": "15c7a274b6d6d6e820b343bb4f8c82ad7bbeb2ed4fff8989d3a338a975674fbe",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 245.84793853759766,
+      "peakMemoryMiBFirst8s": 276.00418853759766,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-heavy.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 766.4327917154878,
+      "launchToContentMs": 2370.878208312206,
+      "firstPaintFrameBracketMs": [
+        749.7931667021476,
+        766.4604577003047
+      ],
+      "frameGapMs": 16.667290998157114,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-101-warm.json",
+          "sha256": "c45efd99ec45f4848366b145b71890882b9a54e92967906d0b97240e72e8c045"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-101-warm.mp4",
+          "sha256": "6bdd1aafbb5d51ca17a9e7c1898b633fd6771a3046aaedeab3d46a51840382ec"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-101-warm-analysis.json",
+          "sha256": "0bb5bb4e5e8f6795dcaafe7b5d347811f495baa078ef6748993af0fde5545abe"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-101-warm.resources.json",
+          "sha256": "c763ded88a0b25d318c29de261f07794653a057ee8c7be0ea2ab29ae177ca0dd"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-101-warm-first.png",
+          "sha256": "2063e8804035c35131aa6e42b4c2a493664adc3e1a6d5ebb9078ed5f24816997"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-heavy-101-warm.json",
+          "sha256": "a6309f62d7a778d86ae5edc5e326653288638a12806f8a6068117897bf470179"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-heavy-201-warm",
+      "group": "common",
+      "fixture": "common-test-heavy.md",
+      "sourceSha256": "15c7a274b6d6d6e820b343bb4f8c82ad7bbeb2ed4fff8989d3a338a975674fbe",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 251.74633026123047,
+      "peakMemoryMiBFirst8s": 295.95729064941406,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-heavy.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 772.5827500107698,
+      "launchToContentMs": 2473.9647500100546,
+      "firstPaintFrameBracketMs": [
+        755.9383329935372,
+        772.6054579834454
+      ],
+      "frameGapMs": 16.66712498990819,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-201-warm.json",
+          "sha256": "206464dc10dff6d4d78e146f11f9a40b4fb3e07724a27552f69f0dd944c85085"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-201-warm.mp4",
+          "sha256": "28e2c0b9e54cc119afbf99991ff07a2ec117a472d050f3772bb7cc0fd06aad27"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-201-warm-analysis.json",
+          "sha256": "af1958bb60665cf7d46f02b17e56a77ed8fe36d608bab56e6bb96d4f5b9f1c25"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-201-warm.resources.json",
+          "sha256": "b7e2237b4f8d5fb90d071753cf36da42a51483c035fcc5cf082f2e3c9b0d6bd7"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-heavy-201-warm-first.png",
+          "sha256": "bdedaaac1d73c3650e4625c95a59e17f0a36041b7a7807faa6c24b5346ead0b0"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-heavy-201-warm.json",
+          "sha256": "51c326b151a59c562d4985750d1a3b5d9041adf9a0de11bbc39f3315244a3326"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-101-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 204.83971405029297,
+      "peakMemoryMiBFirst8s": 246.50377655029297,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 787.9775000037625,
+      "launchToContentMs": 2721.3456666795537,
+      "firstPaintFrameBracketMs": [
+        771.3397493353114,
+        788.0069993552752
+      ],
+      "frameGapMs": 16.66725001996383,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-101-warm.json",
+          "sha256": "39016c4c19a1b533dc57f7d1ed925687fcaeb1c11e2bfc6122bb4e55bc740266"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-101-warm.mp4",
+          "sha256": "06653fbc68174b62beae3df12b89aba5472670e0a076fb3de0886d657c07f9f4"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-101-warm-analysis.json",
+          "sha256": "d8a5bbfa84384e0c803a6416253354676b5a699070668d3f29eb5810e607a44d"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-101-warm.resources.json",
+          "sha256": "8731a02b42bd172b7b267657316e6a410006df2f862fbe7ab4cfe48e0bf5db73"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-101-warm-first.png",
+          "sha256": "85c1e35af24cdd79ed2ad3311c6680746d8a98947d92861bc5ceb771a8add3f4"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-101-warm.json",
+          "sha256": "f51f79c328c3aa03a19f03a8a7b6932192e1b5f901185c88513435248d370f01"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-102-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 207.81636810302734,
+      "peakMemoryMiBFirst8s": 264.45701599121094,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 573.3952499576844,
+      "launchToContentMs": 2365.863499988336,
+      "firstPaintFrameBracketMs": [
+        556.7474999697879,
+        573.414790967945
+      ],
+      "frameGapMs": 16.667290998157114,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-102-warm.json",
+          "sha256": "5a250d2defe1dffc194b6f34a310747db7f7f3892df0111e7d49c95d0a0d828c"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-102-warm.mp4",
+          "sha256": "ba7a0b61c0a505f81b47271ab900251661a6acf9acd55a53b8b5fee2962cc4db"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-102-warm-analysis.json",
+          "sha256": "c1206b1c837fad63cbf35e9e8ed7acad1d1cc9359661d0d350a5ccbcc32a872c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-102-warm.resources.json",
+          "sha256": "06e1572ba80bc1b05debb49b47004c3731599cc51046a4b9b41fd096e00e91bc"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-102-warm-first.png",
+          "sha256": "05358b670c3dbeabe71d382243bef333b546f4c5c5f2889843b656f9957d4985"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-102-warm.json",
+          "sha256": "a023bddf772ca122d707aad147a41703c25f8a55e6d2d0a91306eb02b36be355"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-103-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 208.9259033203125,
+      "peakMemoryMiBFirst8s": 314.4259033203125,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/test-results/open-latency-20261018/before/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 824.5780826546252,
+      "launchToContentMs": 2626.0369576630183,
+      "firstPaintFrameBracketMs": [
+        791.2684996845201,
+        824.6029166621156
+      ],
+      "frameGapMs": 33.33441697759554,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-103-warm.json",
+          "sha256": "60b48c590080a3bcb1dde3e4607166d410f3c35840461e32b3cd018eca88cb91"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-103-warm.mp4",
+          "sha256": "885a910fb0e34e55e1522317bbeb410ccf060659d21826552b781dfde75968d6"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-103-warm-analysis.json",
+          "sha256": "a556049f1a6f5e50a0542101cf10dd7e55abe5bcae88c6c2e0c8252830de5eff"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-103-warm.resources.json",
+          "sha256": "010aa96507294e34abf835797f409a75eb27bebf775a7cbff1b223a45bac816d"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-103-warm-first.png",
+          "sha256": "1cc193153fe887f659903056fbb48128cbcc201925864877b7f77aae7a2c8a62"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-103-warm.json",
+          "sha256": "5fe29f4cd1960b73eaf905b1bbfc3b54dfb412540c2e88f26f9234cd240031ae"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-110",
+      "group": "launch",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 146.2217254638672,
+      "peakMemoryMiBFirst8s": 193.8154754638672,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 889.8515416076407,
+      "launchToContentMs": 866.5243749273941,
+      "firstPaintFrameBracketMs": [
+        873.2130829594098,
+        889.8802909534425
+      ],
+      "frameGapMs": 16.66720799403265,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-110.json",
+          "sha256": "bacf7e506542c3a46dc04ea358fb9b8ee47f33d4539c4ffe33609315fc69a565"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-110.mp4",
+          "sha256": "5ee9845b47738649f882eedaade9676e26547eba39145087b8143099440f3800"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-110-analysis.json",
+          "sha256": "206a8acaa4490e28d2b3e00f489bf104ef7f8daffd165b77a2127605b5e9eabc"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-110.resources.json",
+          "sha256": "4ff896f71406fec203aaaa797bb39f86511d8e94ec31d0d98b31f41a0a8ec257"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-110-first.png",
+          "sha256": "66e09640b8579a610216e331750ae30588d29c3751b53892f46336e55689fec0"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-110.json",
+          "sha256": "d7f84d5d865d8c27e41065d02638024e826238cfba9a5d14ae7ad1db92affdf7"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-201-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 210.58199310302734,
+      "peakMemoryMiBFirst8s": 245.64449310302734,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 631.6171662765555,
+      "launchToContentMs": 2695.03879128024,
+      "firstPaintFrameBracketMs": [
+        614.9693326442502,
+        631.6364576341584
+      ],
+      "frameGapMs": 16.66712498990819,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-201-warm.json",
+          "sha256": "24a060939c17417ce6937f96b4247137623b238c36e008b3babb2c6043694f6b"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-201-warm.mp4",
+          "sha256": "d3985edef533adf0a80f03b6a1409bc16baf034cadd42ca842d88bee1e07e89a"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-201-warm-analysis.json",
+          "sha256": "bbdbe49191aaf0746d6a114030ac88da435dbc18a4bf93803cb1e3dc1c73448b"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-201-warm.resources.json",
+          "sha256": "894d84a4b0d595cc562f68efe12533c44e88c86d5643c592748661bf4de9c95c"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-201-warm-first.png",
+          "sha256": "435183977c30fdc924ff261d90eda1b8b5aeb6db09ec2193f60304c6c84a5dcf"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-201-warm.json",
+          "sha256": "b0291607f54af498497388a6c3268d3cd050e61fa65cad17da4e29bdcac7335a"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-202-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 182.45697021484375,
+      "peakMemoryMiBFirst8s": 265.78509521484375,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 626.3076242757961,
+      "launchToContentMs": 2122.771040943917,
+      "firstPaintFrameBracketMs": [
+        609.659499314148,
+        626.3266663299873
+      ],
+      "frameGapMs": 16.667167015839368,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-202-warm.json",
+          "sha256": "431674107684497e1f071f32aa19213173986a8b2eb3c8eff6f15885b833ef86"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-202-warm.mp4",
+          "sha256": "b836a0225630ffbe49b1bbd795d55af7a72537289f61e08538e6053078dd1bac"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-202-warm-analysis.json",
+          "sha256": "d87b420139b2098712bfb4545e482a71fef51f9a620ee0d11975ec2fc2efcc68"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-202-warm.resources.json",
+          "sha256": "857fc01c6d33e93058a6df78de895b1e62977932d4e7723ebb0199d48eeb88c5"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-202-warm-first.png",
+          "sha256": "894ff248b14282c4447da99ee27a5416767c2192991396cae9f74959989ae245"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-202-warm.json",
+          "sha256": "3d48cc73efebd0703ece1d1623e606a7d92723660a14aa3f2dfdb72fc73f35e4"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-203-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 213.64451599121094,
+      "peakMemoryMiBFirst8s": 268.44141387939453,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 789.7684159688652,
+      "launchToContentMs": 2442.348707700148,
+      "firstPaintFrameBracketMs": [
+        773.1277082930319,
+        789.794999291189
+      ],
+      "frameGapMs": 16.667290998157114,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-203-warm.json",
+          "sha256": "94b71c5e09a1d37fe88a826f20266ce1a8890a620cddbe0fb8dc28927f5834ad"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-203-warm.mp4",
+          "sha256": "cd45ef6cc7cd56dae473e809d54f5d6cca171b84ca99681e6dce393ff1fe7f91"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-203-warm-analysis.json",
+          "sha256": "7df06faa52a5a41543fee64f1aec0f72a7d25c8d28ed13ebc40c15d3e033ec9c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-203-warm.resources.json",
+          "sha256": "9750b807f4baded3d3d41fa129e71ccda7d7348db7bdb89ba97cdfec388a1721"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-203-warm-first.png",
+          "sha256": "1771eb3b3a28bd43fa704ba9ae11c984385397cb6c10f0fa3bc3a0a75527e44e"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-203-warm.json",
+          "sha256": "bb585dc48979d3f4df09f4d15d3df5bf8dc28d44bb8d937c077ca27dc72a08ca"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-light-210",
+      "group": "launch",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 151.55001068115234,
+      "peakMemoryMiBFirst8s": 249.47188568115234,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1089.9451243458316,
+      "launchToContentMs": 1067.4262493266724,
+      "firstPaintFrameBracketMs": [
+        1073.3106246916577,
+        1089.977749681566
+      ],
+      "frameGapMs": 16.66712498990819,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-210.json",
+          "sha256": "dc02fceb113ef87621c032a63c451be4737f7e28f348cadd4cf17c6c141e756a"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-210.mp4",
+          "sha256": "9926863bfef711b375e13cd603037b69c8ef27cda5accc8fb6b5608537dad722"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-210-analysis.json",
+          "sha256": "2b2b804982627d757a41d2351deac4d3809a266cb00939433912ff2f1efa7344"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-210.resources.json",
+          "sha256": "0278b981c1f5e5f5c32cec82cb2d70e01d4d74ed53ef0755c9a53e2711abc26d"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-light-210-first.png",
+          "sha256": "dc885fbc3527bec1ec04bf961fb4a49cd460ae996401123b142acc7456f44fc0"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-light-210.json",
+          "sha256": "17dc9a909c0b85c7219399211160b45b377e9bf46442dc991fc9f67f54789ae0"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-medium-101-warm",
+      "group": "common",
+      "fixture": "common-test-medium.md",
+      "sourceSha256": "c05fb606017b8d3e7af61ec721952419a06e409af3fb12775a8ccd6520721f0b",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 207.59748077392578,
+      "peakMemoryMiBFirst8s": 249.7537078857422,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-medium.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 612.3228742508218,
+      "launchToContentMs": 2065.2745826519094,
+      "firstPaintFrameBracketMs": [
+        595.6773742800578,
+        612.3446663259529
+      ],
+      "frameGapMs": 16.66729204589501,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-101-warm.json",
+          "sha256": "d26f0cdd1aa2cb89e458dfd1093315b72b6f1288c2c658624802ea80e5340443"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-101-warm.mp4",
+          "sha256": "182dc2024c4192848c3b4b2e40d09ab14fb2aa392cb2722bbf07b793b4954c93"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-101-warm-analysis.json",
+          "sha256": "a2d32a226262490ec57af3b295dee1da67da2027811b88892d0767baee0e55b9"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-101-warm.resources.json",
+          "sha256": "8260d4a4739ecf8257d855e7a33e2dd13aa58a1ace639fcedb3a3abd81e40e34"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-101-warm-first.png",
+          "sha256": "43843d4779d2abf1a712034ad4b418b27f86d9959a5ab59d9e92eb2be18e68ce"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-medium-101-warm.json",
+          "sha256": "6e0f15dfb540828f1709a17290054128a5b77e9cecb6e98cadc2cda986b04f2e"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-medium-201-warm",
+      "group": "common",
+      "fixture": "common-test-medium.md",
+      "sourceSha256": "c05fb606017b8d3e7af61ec721952419a06e409af3fb12775a8ccd6520721f0b",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 213.9099349975586,
+      "peakMemoryMiBFirst8s": 235.784912109375,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-medium.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 595.5522076110356,
+      "launchToContentMs": 2174.9091660021804,
+      "firstPaintFrameBracketMs": [
+        578.901749337092,
+        595.5689583206549
+      ],
+      "frameGapMs": 16.667208983562887,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-201-warm.json",
+          "sha256": "a477dad300c2a80fb15e65e1bf6eb5e76b9091b2664070c47611a9dce07ba020"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-201-warm.mp4",
+          "sha256": "6366abfc6a49423ccb725217a4cd6f5af705a0d3e3a55c7bbab490011576ccef"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-201-warm-analysis.json",
+          "sha256": "5202cc7aa97dbedaafee1ac1592c0079ae39a241e7dc8c24b016015e1ddfba2c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-201-warm.resources.json",
+          "sha256": "7b7a586a895447bef19929405772324829a9f98357227cb0e3e0dd2af636b097"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-medium-201-warm-first.png",
+          "sha256": "a60f31d3dcea563d46fc552c84e757a37f23de3bf1a98796b99db751f399e962"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-medium-201-warm.json",
+          "sha256": "a0009cea11fcb0c481368538b9458229293815a09711a9fec70fe3f0e2971b26"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-onescreen-101-warm",
+      "group": "common",
+      "fixture": "common-test-onescreen.md",
+      "sourceSha256": "ee437bffcc3f9ce67cf319dddde9b1b3ad516475086e4ddc841141c615cf059e",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 160.08203887939453,
+      "peakMemoryMiBFirst8s": 213.30078887939453,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-onescreen.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 637.9273743368685,
+      "launchToContentMs": 2305.128665990196,
+      "firstPaintFrameBracketMs": [
+        604.6149577014148,
+        637.9493746790104
+      ],
+      "frameGapMs": 33.33441697759554,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-101-warm.json",
+          "sha256": "d5414d6dd19b5f8da5b147941c5939c0e74b098beb6b2e07015a0731ff6693b3"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-101-warm.mp4",
+          "sha256": "948768adb9c8592cc2037896cf45bc7096748e1f1214720a3ab897fc28ac7b6f"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-101-warm-analysis.json",
+          "sha256": "0a6ca79e5ff84bcf4a205a1fb2965edd3839ecd1bbf3caebd674934c0fa568cc"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-101-warm.resources.json",
+          "sha256": "7e08850bf3a47dc61c43621a3d275fcffcd01d501a51723e53e6319771d3de37"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-101-warm-first.png",
+          "sha256": "fa79f019edbcd3a92d4d2c9830e5de8c8129b8d6be20f329cbf1bb2f6c40c7cc"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-onescreen-101-warm.json",
+          "sha256": "0deadd0bff35d03b188f0f4209924b54c414a1a868a2b003b68185b424008c5c"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-common-test-onescreen-201-warm",
+      "group": "common",
+      "fixture": "common-test-onescreen.md",
+      "sourceSha256": "ee437bffcc3f9ce67cf319dddde9b1b3ad516475086e4ddc841141c615cf059e",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 167.73822021484375,
+      "peakMemoryMiBFirst8s": 213.64447021484375,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "common-test-onescreen.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 713.8545417110436,
+      "launchToContentMs": 2232.9226250294596,
+      "firstPaintFrameBracketMs": [
+        697.2078327089548,
+        713.8750416925177
+      ],
+      "frameGapMs": 16.667208983562887,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-201-warm.json",
+          "sha256": "b98d1b24e985d560c9738ba926318344c977ecb5930d1947e86d3077dd3d4735"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-201-warm.mp4",
+          "sha256": "18545109984479f6274c26056b374538cf92ef4a3c17a4bcaaaf8610659f1881"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-201-warm-analysis.json",
+          "sha256": "25a17771b074c9711ca6bfe68a1a94d079c7d883d6149a0b0b9f7bb8d9f3308e"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-201-warm.resources.json",
+          "sha256": "0d817fe8ec2ad05628d1b0df545d820dcce85c9d16192855862144ad85272715"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-common-test-onescreen-201-warm-first.png",
+          "sha256": "9b499637a8c93dad138de6094ed16157c7449146bd34112a78bb8f8d36f1ca53"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-common-test-onescreen-201-warm.json",
+          "sha256": "eb1aacc429e508e9f6567cb251dbb3227e7d69b7230f025d77081b516966270e"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-101-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 174.94125366210938,
+      "peakMemoryMiBFirst8s": 381.5359420776367,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1308.6422076448798,
+      "launchToContentMs": 2815.6999993370846,
+      "firstPaintFrameBracketMs": [
+        1275.356499303598,
+        1308.6911243153736
+      ],
+      "frameGapMs": 33.33462501177564,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-101-warm.json",
+          "sha256": "6652e82d539e207a01048c26281cc453dad128a42fa3b50231874c12c772772e"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-101-warm.mp4",
+          "sha256": "c68bca7a482a6f8544cf2fccb8589bd25a8e509186f15c69b4599d9c6da5bcaa"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-101-warm-analysis.json",
+          "sha256": "a0a6330500fd072fbecbfb61d56e8c135990a8ee42bc17786bf2cf2001e51d8e"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-101-warm.resources.json",
+          "sha256": "beacdc646fafbd13233c242f79e426f28a6c5b7dcc4006f7b18d2255f54da3b6"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-101-warm-first.png",
+          "sha256": "aa625089b6eaef4929044a7c393c151d006a4d4c8cd7237eb5d95a3102538d14"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-101-warm.json",
+          "sha256": "b4fbd8157f342531f236b42b52e88c9b05d3e891d6de1f05d66e95b1d0f00372"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-102-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 164.0661849975586,
+      "peakMemoryMiBFirst8s": 369.45770263671875,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1205.1281666499563,
+      "launchToContentMs": 2870.73766667163,
+      "firstPaintFrameBracketMs": [
+        1188.501249300316,
+        1205.1684163161553
+      ],
+      "frameGapMs": 16.667167015839368,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-102-warm.json",
+          "sha256": "745c7e08dd59fe41ff324d8c7aa10f263d73d66204b4b3bc284829fe39250f0d"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-102-warm.mp4",
+          "sha256": "9ac75d082e15066a88dd783fc792a5d69ea9d159c449a93b95d2fd2c62664e61"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-102-warm-analysis.json",
+          "sha256": "c57d6c055fa9145513de6f90b0a7e0e101db4887facf9dd7282f4c25df66d17a"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-102-warm.resources.json",
+          "sha256": "3e6ac15811fbfb0357a2c03f58650cefd015a1acc0fa4a966642af1cb2a2eb99"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-102-warm-first.png",
+          "sha256": "602ff712bdaec7ba8065d890d44468c06b0c62a74d116fa9ad3dd85acb354fd6"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-102-warm.json",
+          "sha256": "61fe78e0cc9f08a6f107717c11cd1e65ad68087d22e31b768adca83052c36fe7"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-103-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 176.4568099975586,
+      "peakMemoryMiBFirst8s": 372.05145263671875,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/test-results/open-latency-20261018/before/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1509.7724166698754,
+      "launchToContentMs": 3363.4933333378285,
+      "firstPaintFrameBracketMs": [
+        1493.1471243035048,
+        1509.8143332870677
+      ],
+      "frameGapMs": 16.667208983562887,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-103-warm.json",
+          "sha256": "8a172376e6da65982f4b840000b1df12ba70eb2784e0b24ad98fd8327a53df3d"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-103-warm.mp4",
+          "sha256": "9e889619521d785227d94df9c8a1712ec3a255301ece29f0cb2c68aa146e9234"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-103-warm-analysis.json",
+          "sha256": "55de16d3e4307adb3cd61983b24556f89d24b3ea84d9887646ed6cde27c83638"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-103-warm.resources.json",
+          "sha256": "d51f1871e6e25b2676609f048bbc601099b536019ee6a53bd40572cbd1b54e42"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-103-warm-first.png",
+          "sha256": "dee8a829566c3f315230c3103c372aafc5770110654b2fd70f89e1a14bf5b592"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-103-warm.json",
+          "sha256": "6cb9f7fbbf41fcec6ba70de50ea8a8d262eef2d4f6c384146c7df560a2694f52"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-201-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 176.6129913330078,
+      "peakMemoryMiBFirst8s": 317.5044631958008,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1081.2692493200302,
+      "launchToContentMs": 2817.6797076594085,
+      "firstPaintFrameBracketMs": [
+        1064.633957692422,
+        1081.3011666759849
+      ],
+      "frameGapMs": 16.667208983562887,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-201-warm.json",
+          "sha256": "6d38bd76474a633e3e30ae0034f889fddeb9a16e6a98568815a53c8ff394bbbb"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-201-warm.mp4",
+          "sha256": "c48981a8aa5df784ad1cd4bf47734a97c3d31db54d361c339dded08609060467"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-201-warm-analysis.json",
+          "sha256": "14915ca8108ad1fa912aaffdb475c5d204f294d0a830106718f4bd20f033fdb6"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-201-warm.resources.json",
+          "sha256": "bc079cdcb788c65249ab873b3aeb9b5a492c5372885b113a0867d2501d4a11c8"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-201-warm-first.png",
+          "sha256": "6d127ad354d8e6bbf55e8bfc14b8084378826f1eaa2106394517d3ba2800788d"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-201-warm.json",
+          "sha256": "8e73f6fb4d49150c322cc92cdda3804b60c72efec006b4ce8acfd77e92e5d67c"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-202-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 158.2693099975586,
+      "peakMemoryMiBFirst8s": 310.31712341308594,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1137.349541648291,
+      "launchToContentMs": 3122.1849999856204,
+      "firstPaintFrameBracketMs": [
+        1120.7218749914318,
+        1137.3891250113957
+      ],
+      "frameGapMs": 16.66725001996383,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-202-warm.json",
+          "sha256": "ec3e728b31025534dbf09297a8f019f4bd06f34fd7decc9a20844990b6cf20af"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-202-warm.mp4",
+          "sha256": "c8095373fe039955671e9d206f77a216363f79d0b5d8b5de9ac1991ffbd2bdd3"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-202-warm-analysis.json",
+          "sha256": "c4acd3ff4faf4cfa47af16494e6759ed3c4bd2feea1c916e4ffd695f3b8ed963"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-202-warm.resources.json",
+          "sha256": "f1f69e43c6d5174302740983a54fb4dc80d3223f9ec602fd3147b60de20b1717"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-202-warm-first.png",
+          "sha256": "89435ad9130f539d101afabbfc373ad9755e32f4d1b13413d1999e8c902a0881"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-202-warm.json",
+          "sha256": "920e88a3b506380bbf5886d2e5303a5314d475f61e093f945a3c999551d149c7"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-diagram-control-204-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 175.59752655029297,
+      "peakMemoryMiBFirst8s": 329.75464630126953,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "diagram-control.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 1104.029874666594,
+      "launchToContentMs": 3059.3231246457435,
+      "firstPaintFrameBracketMs": [
+        1087.3979583266191,
+        1104.0651663206518
+      ],
+      "frameGapMs": 16.66720799403265,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-204-warm.json",
+          "sha256": "a492302639806ce3aadda068aa94f0e23fb34a36aec8635623feb83a48c1afb1"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-204-warm.mp4",
+          "sha256": "35f34889498e4db804bdbb850a4534f96077d766bcc380c0237accd31ce97cf7"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-204-warm-analysis.json",
+          "sha256": "62de7ad0202e6a13e3f668985459075cdfb49d2c58dad7d7601a7da617603cd5"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-204-warm.resources.json",
+          "sha256": "6ea1ef4eff698c1bbbca72ff3c899bf06bc4bbb2f7fedfdbe861984329893163"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-diagram-control-204-warm-first.png",
+          "sha256": "57bacbdfcd331f457dc9ecf8f3b298df2b9be82e9ccdfdefc0af9c4d80aa6759"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-diagram-control-204-warm.json",
+          "sha256": "fbd8ce84618a3d9334e7666c61b8875e17cc2e89a6aa8e232af62ecf870e8d1e"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-complete-101-warm",
+      "group": "original",
+      "fixture": "test-complete.md",
+      "sourceSha256": "1758df456e7b9f3a1a0445d4f4c6ca9bd72ca6408dd0cb3a2d69e27cbcc662cd",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 233.2853240966797,
+      "peakMemoryMiBFirst8s": 252.9103240966797,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-complete.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 887.7204163582064,
+      "launchToContentMs": 2481.796791369561,
+      "firstPaintFrameBracketMs": [
+        871.0837077233009,
+        887.7509997109883
+      ],
+      "frameGapMs": 16.66729198768735,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-101-warm.json",
+          "sha256": "ec33acc7baf438b6c5ab3cba1cbd03a47169d68883fd19012ab4397dfc703c55"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-101-warm.mp4",
+          "sha256": "33f9104e3d9f3e5b0b76893460a82bc6e985de49e2c6cb1377d9073fb9d9d798"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-101-warm-analysis.json",
+          "sha256": "05a5750363538c83e8afcb8affd9bc09aad11044f6626c6c8cc2389a476774da"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-101-warm.resources.json",
+          "sha256": "1059ccb0264385f49f092b75a07efcf38045295c60ec29fd0568444ea0bda946"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-101-warm-first.png",
+          "sha256": "5e3f7d660eff58c2d59bb00acf36ea3a1d3f6ef751392e1042203826323328d7"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-complete-101-warm.json",
+          "sha256": "033134f9e806395b2dedfedeee4d467d4087e4ea4f9482a59e3c767616f677ba"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-complete-201-warm",
+      "group": "original",
+      "fixture": "test-complete.md",
+      "sourceSha256": "1758df456e7b9f3a1a0445d4f4c6ca9bd72ca6408dd0cb3a2d69e27cbcc662cd",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 235.28534698486328,
+      "peakMemoryMiBFirst8s": 292.0978469848633,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-complete.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 701.9140826305375,
+      "launchToContentMs": 2313.5253326618113,
+      "firstPaintFrameBracketMs": [
+        685.2702493197285,
+        701.9374992814846
+      ],
+      "frameGapMs": 16.66724996175617,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-201-warm.json",
+          "sha256": "0f12b43b22119365d8b2f623178930d58df6086c888fee9fe55bf30a8c409890"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-201-warm.mp4",
+          "sha256": "95e0a9c27bc95aaefe64c6601eef560bfbc491ace1bff36a07ef864282470342"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-201-warm-analysis.json",
+          "sha256": "00c3fcb4e7247b1e3e1a79e97ad1e69b393d2f0cf7e104625439f4252cb98c75"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-201-warm.resources.json",
+          "sha256": "6f643c64a67829f771118baf02fa7f46e039e9a8f127a0553066962ef22fd6bf"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-complete-201-warm-first.png",
+          "sha256": "e42ba37db74b5d0b0ec3aaa12cf01bc7c4b14ba274c1bf506fff3a827c69f067"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-complete-201-warm.json",
+          "sha256": "117cdfc4264357c9e504d0d9f62f2c6c8e91b1ebc7f1f5b24829ee79c1d1fa82"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-diagrams-101-warm",
+      "group": "catalogue",
+      "fixture": "test-diagrams.md",
+      "sourceSha256": "876c24376213ce93cd67957982882161e4d82fc5900011ccffd413b825d8bde2",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 208.61324310302734,
+      "peakMemoryMiBFirst8s": 544.9423522949219,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-diagrams.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 701.9814583472908,
+      "launchToContentMs": 2437.881916644983,
+      "firstPaintFrameBracketMs": [
+        685.336249996908,
+        702.0034579909407
+      ],
+      "frameGapMs": 16.66720799403265,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-101-warm.json",
+          "sha256": "fdef7ec6471d0588787b45b11059cbbfbe061403d60ceae50446a3530183b756"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-101-warm.mp4",
+          "sha256": "ee1439cc26d95f0a8a40a6d252f8dbdfcde6d5a8618f59040793f47d623bb3d6"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-101-warm-analysis.json",
+          "sha256": "4e2a9b01f8ceee5b9f7cca637fd54aa60d281dc3d329a69f27e14f2e2e9ecb1c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-101-warm.resources.json",
+          "sha256": "96f719b81cf412cd98611cdecc0dd4195c89e05b01d6eaad40e7bee6bb8b2828"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-101-warm-first.png",
+          "sha256": "eb2ce65b7dbcd6eed36f2006dbb92719d3ae03faa8dd0a2241836b757baed8d3"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-diagrams-101-warm.json",
+          "sha256": "30e85127a81a98d82900493f4812f9034b415c204755af082047df410ece0d5c"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-diagrams-201-warm",
+      "group": "catalogue",
+      "fixture": "test-diagrams.md",
+      "sourceSha256": "876c24376213ce93cd67957982882161e4d82fc5900011ccffd413b825d8bde2",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 229.30072021484375,
+      "peakMemoryMiBFirst8s": 479.0360336303711,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-diagrams.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 709.1128743486479,
+      "launchToContentMs": 2156.2713326420635,
+      "firstPaintFrameBracketMs": [
+        692.4665829865262,
+        709.1337079764344
+      ],
+      "frameGapMs": 16.66712498990819,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-201-warm.json",
+          "sha256": "b09eaeac0c4106eab168548a563cf7e991319b886d3f7686fff66db54cb063c2"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-201-warm.mp4",
+          "sha256": "266fec1df21d1be3b68a8e36edd4d37feddec6b07d16cda97fbc0b97315eebe8"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-201-warm-analysis.json",
+          "sha256": "639b82891cb3685a75bf71dcd4200021d6fe58e24a8695687bfa886213eff57d"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-201-warm.resources.json",
+          "sha256": "76463d61d3f259f4ad93c3348b6e09f82326480aac8585dd1b7df89a7d35c445"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-diagrams-201-warm-first.png",
+          "sha256": "6f16666dc6546224ebee86a2d116c4a2dc06b797277b06b1294c08375996c5d7"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-diagrams-201-warm.json",
+          "sha256": "2ff9ea88d82bc7a71ed8ff3083f43941a227ae0cb23186fa55e92011da628317"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-heavy-101-warm",
+      "group": "original",
+      "fixture": "test-heavy.md",
+      "sourceSha256": "7c0543f86ca09f1f43d6e2fd4d92e5a36ebb1eeaf652dbb4a01bcc10a4276f74",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 264.34014892578125,
+      "peakMemoryMiBFirst8s": 281.83233642578125,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-heavy.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 762.3289583134465,
+      "launchToContentMs": 2293.599750031717,
+      "firstPaintFrameBracketMs": [
+        745.6874992931262,
+        762.3547083348967
+      ],
+      "frameGapMs": 16.667209041770548,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-101-warm.json",
+          "sha256": "516f08cb03fd7311b076055e6df299265d74af01420de32269ae34028de9c399"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-101-warm.mp4",
+          "sha256": "e5a83a5b1f2e4947cdb72d35b7c0b2c14858c6525cc2f0e38ebb8ba489e8d751"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-101-warm-analysis.json",
+          "sha256": "c8f8640c334fe46702f96d72ddd3699442e87f41bc96194fff565d029382585c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-101-warm.resources.json",
+          "sha256": "7827dfcdfc4a1d26cabfbd5059966b5bbbcc44fe0c742689290ccb53a8c24d35"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-101-warm-first.png",
+          "sha256": "323e3ce4a45cd2653b5dcb2fe9322779901ea3a66d170930d52a462710574153"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-heavy-101-warm.json",
+          "sha256": "629fa3a5a705feb3309e77f50ea177fea37ea4ef5fa07df7248ebe9c3aae38e9"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-heavy-201-warm",
+      "group": "original",
+      "fixture": "test-heavy.md",
+      "sourceSha256": "7c0543f86ca09f1f43d6e2fd4d92e5a36ebb1eeaf652dbb4a01bcc10a4276f74",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 265.94166564941406,
+      "peakMemoryMiBFirst8s": 278.87916564941406,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-heavy.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 653.9484583190642,
+      "launchToContentMs": 2460.2913750568405,
+      "firstPaintFrameBracketMs": [
+        637.3018749873154,
+        653.969082981348
+      ],
+      "frameGapMs": 16.66720799403265,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-201-warm.json",
+          "sha256": "6dba84b1ea7c92726199df4fac49ecc905318e2b0473be5881cb01520d6dfbff"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-201-warm.mp4",
+          "sha256": "6f6a79ab52f9b1ecd44d2b9f429b891803c32380f71f423f9a47b66353a70907"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-201-warm-analysis.json",
+          "sha256": "c2f81ddc55cddf21f961eed7ee79c3380794970142b64c9b7fce06199ab8c323"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-201-warm.resources.json",
+          "sha256": "7328c60d192f02411b34380ac2a3222764f550a4f37793d70ab2c54c49534b42"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-heavy-201-warm-first.png",
+          "sha256": "004221d06ed62af30073adaf9d82313cb30194d288683d4ed5358fe30ad3b3fa"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-heavy-201-warm.json",
+          "sha256": "219e43357afdc550ab5424911a22451278bcf224a40b096b092b0016675c96d2"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-light-101-warm",
+      "group": "original",
+      "fixture": "test-light.md",
+      "sourceSha256": "4bcfb2f870087fd7e0d0ca078159de30c3973618306a10251339669c0a541907",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 203.91004943847656,
+      "peakMemoryMiBFirst8s": 225.66007232666016,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 767.0668332721107,
+      "launchToContentMs": 2291.3829582976177,
+      "firstPaintFrameBracketMs": [
+        733.7601243052632,
+        767.0947492588311
+      ],
+      "frameGapMs": 33.33462495356798,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-101-warm.json",
+          "sha256": "01f82937ba41700fe90b443f2627db2a959f8cc0dd9a25e49f7859666c46d3dd"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-101-warm.mp4",
+          "sha256": "bb445a1440c9a5fa4ba273f09d7b5f640a9bcb1de2578686259d5b8089858e0a"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-101-warm-analysis.json",
+          "sha256": "67773c0c6b771c47cd96ada2254f9177363a6f327952c80cb21b997aefe393d1"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-101-warm.resources.json",
+          "sha256": "8c37a2d6b324bccd2bf251d8e5c28ff01d2f5d3a5b4559ff8e260726998ff67a"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-101-warm-first.png",
+          "sha256": "55a204c0f33af39f000dbac71db85a7d39e952e9b81f443018f5fdf05ad41e39"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-light-101-warm.json",
+          "sha256": "67f58442c609f58aa0681ff75afc851f74108f154e892b5abf97e5c2faf02e47"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-light-201-warm",
+      "group": "original",
+      "fixture": "test-light.md",
+      "sourceSha256": "4bcfb2f870087fd7e0d0ca078159de30c3973618306a10251339669c0a541907",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 211.00379943847656,
+      "peakMemoryMiBFirst8s": 248.72254943847656,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-light.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 839.024624961894,
+      "launchToContentMs": 2518.734333338216,
+      "firstPaintFrameBracketMs": [
+        822.3812493379228,
+        839.0484162955545
+      ],
+      "frameGapMs": 16.667166957631707,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-201-warm.json",
+          "sha256": "286f161327c9f2ca201c4bdb13c2aa223c7fbaf51c174cfd1a9bd05b560bf465"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-201-warm.mp4",
+          "sha256": "a4753d4d2845fa753a27aaac78a2ddd725ad5bdac4c1b9007faedbe625410cb6"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-201-warm-analysis.json",
+          "sha256": "979725f2aec3ae2788275be20bb653082ea9b93a1b9b3fc933e308371a2b5387"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-201-warm.resources.json",
+          "sha256": "815b97d23c0b89193d7cfb1b14e4f1b0ce406f503cbfd3013f293f96302a4fc4"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-light-201-warm-first.png",
+          "sha256": "04d19b83101b36d48f5300270dfb57be85a4edbd48a1e46eef9cbdf6cd5d086d"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-light-201-warm.json",
+          "sha256": "2ede894a64937bf1e4f1ea68f89e70f8bdc6d8b4fe50ba43f35c5c4cb815a8e7"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-medium-101-warm",
+      "group": "original",
+      "fixture": "test-medium.md",
+      "sourceSha256": "d797c549ab66d7d1cb01c5e01e5379b9e9000334a58e75252ef14866662966f1",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 208.21466827392578,
+      "peakMemoryMiBFirst8s": 247.7380828857422,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-medium.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 573.0360826710239,
+      "launchToContentMs": 2684.1260826331563,
+      "firstPaintFrameBracketMs": [
+        539.7207497153431,
+        573.0552077293396
+      ],
+      "frameGapMs": 33.33445801399648,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-101-warm.json",
+          "sha256": "fc29c11cd5bd537a9e2103ae09b53d5028f6e68c81145fe2c3eb5cb540bf42e4"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-101-warm.mp4",
+          "sha256": "433546d5471f0af1d49431fb51a33219d3a4ce0924f7754267680f6587e4c85b"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-101-warm-analysis.json",
+          "sha256": "9f0422dfbcc15b02be900e7145b833d71c1f6e289dd52ae369953c4bd69b4399"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-101-warm.resources.json",
+          "sha256": "3e9c4acb5cbc70e28990af77e4496d23ec43cd002b977eb1910b1fa046801dc4"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-101-warm-first.png",
+          "sha256": "c546643fea104f6420ffe54ad973ecfb8c7742510088c5a4c96c786025f74aac"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-medium-101-warm.json",
+          "sha256": "d52a405bc6c8f0400c3808623af67625678f19819adceae25c34ad61195bf433"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-medium-201-warm",
+      "group": "original",
+      "fixture": "test-medium.md",
+      "sourceSha256": "d797c549ab66d7d1cb01c5e01e5379b9e9000334a58e75252ef14866662966f1",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 212.9568099975586,
+      "peakMemoryMiBFirst8s": 246.6755599975586,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-medium.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 600.0713746761903,
+      "launchToContentMs": 2197.2483746358193,
+      "firstPaintFrameBracketMs": [
+        583.42074934626,
+        600.0879163620993
+      ],
+      "frameGapMs": 16.667167015839368,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-201-warm.json",
+          "sha256": "48f0a9f36d249327a68d79ba654362b63b107b2778b7ae95cdba289b95946cde"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-201-warm.mp4",
+          "sha256": "e517eac74be3319565eb7545da3ba2b6779a06f4fb08bc111b1278a4296613a3"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-201-warm-analysis.json",
+          "sha256": "7aec2a604c169476112340cbeec1986952cb6072de99e4a0ed695edef33ba1fa"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-201-warm.resources.json",
+          "sha256": "eb74c62c47e0f240e8d3e06ce668016de649cfaa0c33b20917df14c15c4c7f8e"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-medium-201-warm-first.png",
+          "sha256": "710c5837e4a53933c38655a8678cd6f184456f03cb60156995f122f2937e1293"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-medium-201-warm.json",
+          "sha256": "9c4b366d9457a2d0d47ca7d3c9f31ea1e73878b1c9dc3265b70b23ee14fd949e"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-onescreen-101-warm",
+      "group": "original",
+      "fixture": "test-onescreen.md",
+      "sourceSha256": "8128bdd9ba45a815a5634f8ae462a1a00630f968259ef60372a94b2070639a02",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 204.3790283203125,
+      "peakMemoryMiBFirst8s": 512.5676040649414,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-onescreen.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 568.1118333013728,
+      "launchToContentMs": 2317.8500832873397,
+      "firstPaintFrameBracketMs": [
+        551.4628743403591,
+        568.1301243021153
+      ],
+      "frameGapMs": 16.66724996175617,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-101-warm.json",
+          "sha256": "12bd562d74ba2866b15bf8fa0b6bd1b7565c5849fdbeb49f51c4ad4ad31d2f4e"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-101-warm.mp4",
+          "sha256": "d8aa81486cd76db2e08073fc7b3c94dd63c29b7396581069f4a029970a02608f"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-101-warm-analysis.json",
+          "sha256": "a543d7f7718c6540b7dd6b2755f8a2d368a7c6ffd51ba98210336cb1c931a742"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-101-warm.resources.json",
+          "sha256": "a04a4d738d04c25299860aa03715851e3a6d24c5da44b32601037de52fa58113"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-101-warm-first.png",
+          "sha256": "12b688e42c95da6d75842dea3e03a8380df2ab6a177bab131b775333c2a084c6"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-onescreen-101-warm.json",
+          "sha256": "5c77ad9a8b7a9f218cff0699cb4d0d9ef47369fc8e83196e4bc60995a17f8d09"
+        }
+      },
+      "build": "before",
+      "binarySha256": "0f9db2df183610ad3d6d1b911f9095dce9d27751c547bc39fcdf30c376c5b399"
+    },
+    {
+      "app": "MDVu",
+      "label": "MDVu-test-onescreen-201-warm",
+      "group": "original",
+      "fixture": "test-onescreen.md",
+      "sourceSha256": "8128bdd9ba45a815a5634f8ae462a1a00630f968259ef60372a94b2070639a02",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 205.20708465576172,
+      "peakMemoryMiBFirst8s": 524.7080917358398,
+      "memorySamplesAt8s": 4,
+      "processesAt8s": [
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/com.apple.WebKit.GPU",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking",
+        "/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent",
+        "/Users/Roman/Sources/mdvu/dist/mdvu.app/Contents/MacOS/mdvu"
+      ],
+      "windowRects": [
+        [
+          0,
+          30,
+          1617,
+          980
+        ]
+      ],
+      "windowTitles": [
+        "test-onescreen.md"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 559.1679166536778,
+      "launchToContentMs": 2089.7995833074674,
+      "firstPaintFrameBracketMs": [
+        542.5177493016236,
+        559.1849163174629
+      ],
+      "frameGapMs": 16.667167015839368,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-201-warm.json",
+          "sha256": "1c95ae8818d3a7ef9c9188d3e526e90e7a6d9a6516becb57c79691f2ea4671a8"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-201-warm.mp4",
+          "sha256": "fa00ab5a5d8f5c4be666631d76f35c580a033680c2fe8cae83393c0b3d237319"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-201-warm-analysis.json",
+          "sha256": "ddac33a9b0fcf1481af45269b1e20b5bc843963875fee59f278c00878471e8c4"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-201-warm.resources.json",
+          "sha256": "0bab1c4cd05e012b9dedb963c3c30995c7d1df3eab97fb7b231b3c1b27202ea1"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/MDVu-test-onescreen-201-warm-first.png",
+          "sha256": "14f8532d3413545a284496c4d8c5e2435c3ce36951a4d307f8355132964635cf"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/MDVu-test-onescreen-201-warm.json",
+          "sha256": "e063496c4f2c4be55cbc03c62096c7d0db5f997c48b969020ecedf3ea3bd50a0"
+        }
+      },
+      "build": "after",
+      "binarySha256": "452dcb1886942556a8df2f6c022ccbf99e898bb8516eb37dcf5c28804d48c4b1"
+    },
+    {
+      "app": "Obsidian",
+      "label": "Obsidian-common-test-light-301-warm",
+      "group": "common",
+      "fixture": "common-test-light.md",
+      "sourceSha256": "ee007297552fa4a610332da70869687fa34c3a1f8cb0b36b00165168014dfde0",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 406.72511291503906,
+      "peakMemoryMiBFirst8s": 494.49073791503906,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper (Renderer).app/Contents/MacOS/Obsidian Helper (Renderer)",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper.app/Contents/MacOS/Obsidian Helper",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/MacOS/Obsidian"
+      ],
+      "windowRects": [
+        [
+          339,
+          961,
+          66,
+          20
+        ],
+        [
+          328,
+          190,
+          1024,
+          800
+        ]
+      ],
+      "windowTitles": [
+        "Window",
+        "common-test-light - project-fixtures - Obsidian 1.14.4"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 335.4446250014007,
+      "launchToContentMs": 3878.1684583518654,
+      "firstPaintFrameBracketMs": [
+        318.7860833131708,
+        335.4531663353555
+      ],
+      "frameGapMs": 16.66708302218467,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-common-test-light-301-warm.json",
+          "sha256": "a1865af31795dbace5552da56737d49e860a1db8ddeb19bfa8c71648c869a586"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-common-test-light-301-warm.mp4",
+          "sha256": "ac8075146ab0eb54742fb1264caabdea6335f71a8120d976ea44340659145616"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-common-test-light-301-warm-analysis.json",
+          "sha256": "9fa5fb27827bae63abf0bead29c4061f37df877f66589f2ae3c3a436a85cb84c"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-common-test-light-301-warm.resources.json",
+          "sha256": "d84dd6b57fba2f0f3363be98fedf87093880d0bce8acff7f4bb341709a9ce6b6"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-common-test-light-301-warm-first.png",
+          "sha256": "03fa2e551b560da4d9b2bf8f259bd3bb1c35b161e15bb8fd7910492cca03a4aa"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/Obsidian-common-test-light-301-warm.json",
+          "sha256": "46c7d1aa60669fd87376fb1f9f77eb9ac770e00aedbabf367c2c1a15e323d47a"
+        }
+      },
+      "build": "control",
+      "binarySha256": "0f0195afd45f4befbd552050d542886e1c203d012c66976745538e9408754d52"
+    },
+    {
+      "app": "Obsidian",
+      "label": "Obsidian-diagram-control-301-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 275.7402801513672,
+      "peakMemoryMiBFirst8s": 320.5527801513672,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper (Renderer).app/Contents/MacOS/Obsidian Helper (Renderer)",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper.app/Contents/MacOS/Obsidian Helper",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/MacOS/Obsidian"
+      ],
+      "windowRects": [
+        [
+          339,
+          961,
+          66,
+          20
+        ],
+        [
+          328,
+          190,
+          1024,
+          800
+        ]
+      ],
+      "windowTitles": [
+        "Window",
+        "diagram-control - project-fixtures - Obsidian 1.14.4"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 518.2158329989761,
+      "launchToContentMs": 4098.636124690529,
+      "firstPaintFrameBracketMs": [
+        501.5619580517523,
+        518.229166045785
+      ],
+      "frameGapMs": 16.66720799403265,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-301-warm.json",
+          "sha256": "7fc8cd83bd7b169c0a791537dc8105fa22f6202a81803f894c59cdb8dcd442d1"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-301-warm.mp4",
+          "sha256": "ea4d08d2ac712ec0c69ab883824227ee54e2ab40775ed70ec13ac77425bf8aa6"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-301-warm-analysis.json",
+          "sha256": "9f2ac5d5841459950e4ea21d623b9146f75c4d2286d6d1e16c6cb38b40a4cbe1"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-301-warm.resources.json",
+          "sha256": "84fc0a25b0c39c416e075dd9630041f4395827998b3719cc45d5a68b65d8d415"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-301-warm-first.png",
+          "sha256": "6c43eadc5e77e034fa1b8df259bbfe33d25ba92c164e4ea9117283988c1320ff"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/Obsidian-diagram-control-301-warm.json",
+          "sha256": "48a5144e7e9fbfe1451f8c021eb15fb953470e344f736c109181af25da3a5df1"
+        }
+      },
+      "build": "control",
+      "binarySha256": "0f0195afd45f4befbd552050d542886e1c203d012c66976745538e9408754d52"
+    },
+    {
+      "app": "Obsidian",
+      "label": "Obsidian-diagram-control-302-warm",
+      "group": "diagram-control",
+      "fixture": "diagram-control.md",
+      "sourceSha256": "d537cc4ad3648c267450abad1e325aab712c1409781d2fd8d5cfdfc43660ea46",
+      "captureSeconds": 8.0,
+      "memoryMiBAt8s": 262.9434509277344,
+      "peakMemoryMiBFirst8s": 311.2715759277344,
+      "memorySamplesAt8s": 5,
+      "processesAt8s": [
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper (Renderer).app/Contents/MacOS/Obsidian Helper (Renderer)",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/Frameworks/Obsidian Helper.app/Contents/MacOS/Obsidian Helper",
+        "/Users/Roman/Sources/mdvu/test-results/competitors/apps/Obsidian.app/Contents/MacOS/Obsidian"
+      ],
+      "windowRects": [
+        [
+          339,
+          961,
+          66,
+          20
+        ],
+        [
+          328,
+          190,
+          1024,
+          800
+        ]
+      ],
+      "windowTitles": [
+        "Window",
+        "diagram-control - project-fixtures - Obsidian 1.14.4"
+      ],
+      "writerDroppedFrames": 0,
+      "status": "observed",
+      "dispatchToContentMs": 485.1206666789949,
+      "launchToContentMs": 3487.060791696422,
+      "firstPaintFrameBracketMs": [
+        468.46520801773295,
+        485.13229098170996
+      ],
+      "frameGapMs": 16.66708296397701,
+      "evidence": {
+        ".json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-302-warm.json",
+          "sha256": "99daf355d5a581b94f460314644a307fd52b146b7096197ed2e8359104d4ca45"
+        },
+        ".mp4": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-302-warm.mp4",
+          "sha256": "8efe761d3e52813cacaa7cf345ff73b6b72e5f41001a24e0c3915d523877714f"
+        },
+        "-analysis.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-302-warm-analysis.json",
+          "sha256": "39f660a51456005e71ef02e1ad8531d9787a6602b5c4936ef8cd3e2065f4aeee"
+        },
+        ".resources.json": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-302-warm.resources.json",
+          "sha256": "3f97db2837cf9aa25a0efef21bc0ba50cefea2bc730c9d85b845373c53640529"
+        },
+        "firstFrame": {
+          "path": "test-results/open-latency-20261018/capture/Obsidian-diagram-control-302-warm-first.png",
+          "sha256": "fefca17fab66cca38bb36752247ca3b0493e1224ae3055e24fe85059fa4dca1d"
+        },
+        "resourceSamples": {
+          "path": "test-results/open-latency-20261018/samples/Obsidian-diagram-control-302-warm.json",
+          "sha256": "0a0e6b38363b368018a8d94464e90956946528beb32c98a73950d3892e46e30d"
+        }
+      },
+      "build": "control",
+      "binarySha256": "0f0195afd45f4befbd552050d542886e1c203d012c66976745538e9408754d52"
+    }
+  ],
+  "excluded": [
+    {
+      "label": "MDVu-diagram-control-203-warm",
+      "reason": "Previous test tab retained after automation quit was refused; replaced by fresh-process repeat 204."
+    }
+  ],
+  "scope": "Paired untouched saved baseline and optimized Universal app. Three process-isolated repeats for warm common light and first Mermaid, one for each other input. Same file bytes, empty MDVu SVG cache per prepared process, OS and WebKit disk caches retained. Fresh complete cache-cleared study is separate."
+}

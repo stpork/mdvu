@@ -40,7 +40,7 @@ The core repository logic lives in `src/core` and is shared across all frontends
 
 ### A. High-Throughput Markdown Parsing & GFM
 * Powered by `pulldown-cmark`, an event-driven pull-parser. HTML output and dialect transforms allocate storage as needed.
-* Full GitHub Flavored Markdown (GFM) compliance: tables, strikethrough, autolinks, task lists, and footnotes.
+* GFM extensions: tables, strikethrough, autolinks, task lists, and footnotes.
 * Strict GFM Security Tagfilter: disarms malicious `<script>`, `<iframe>`, `<textarea>`, `<title>`, `<xmp>`, `<noembed>`, `<noframes>`, and `<plaintext>` tags across block and inline HTML, while explicitly preserving user-defined `<style>` blocks per the MDVu specification.
 
 ### B. Dialect Preprocessing Pipeline
@@ -54,11 +54,12 @@ The core repository logic lives in `src/core` and is shared across all frontends
 * **YAML FrontMatter**: Structured conversion into a clean document metadata table.
 
 ### C. Embedded Offline Diagram & Math Engines
-All engine assets are compressed with **LZMA Ultra** and compiled into the core binary:
+All engine assets use **LZMA Ultra**. Windows and default Cargo builds embed them in the core. Packaged macOS release builds use `bundle-assets` and keep one copy in `Contents/Resources`, shared by the ARM and Intel code slices:
 * **Mermaid 12.2.0 + ZenUML 1.0.1** (`mermaid.lzma`, ~1.64 MiB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
-* **PlantUML Core 1.2026.9 + Viz.js 3.31.0** (`plantuml.lzma`, ~1.18 MiB): Offline TeaVM/Viz.js execution with Graphviz 16.1.0. **Zero Java runtime (JVM/JRE) requirement.**
+* **PlantUML Core 1.2026.9 + Viz.js 3.31.0** (`plantuml.lzma`, ~1.22 MiB): Offline TeaVM/Viz.js execution with Graphviz 16.1.0, C4-PlantUML 2.14.0 and ArchiMate 3.2.2. **Zero Java runtime (JVM/JRE) requirement.**
 * **KaTeX 0.19.0 MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
 * **Deterministic Diagram Caching**: Four domain-separated 64-bit hashes (`compute_diagram_cache_key`) distinguish source, theme, application version and the locked runtime manifest, including asset hashes. Updating an engine invalidates old SVG cache entries.
+* **Runtime startup**: decode concurrently with native worker creation, then inject the direct runtime source and first job in one call. The decoder-only `lzma-rust2` build bounds its dictionary to the known output size in the locked manifest. Standalone HTML keeps a separate escaped loader so script text cannot break out of its container.
 * **Native diagram isolation**: macOS shares one lazy, nonpersistent renderer WebView between document windows. Windows uses an isolated renderer origin within the same WebView2 environment, sharing its browser and GPU. Jobs run serially, obsolete work is cancelled, each job has a 30-second deadline, and the renderer is released after five idle seconds. Diagram engines never enter the reading document. Standalone HTML retains its browser fallback.
 * **Bounded reading DOM and cache writes**: offscreen diagrams retain SVG text and a size placeholder; SVG nodes are restored near the viewport or for matching search results. Cache writes run away from the UI thread through a bounded queue; slow storage can skip an optional cache write instead of delaying input.
 * **Regression checks**: both native CI jobs render every Markdown fixture. Their explicit timer mode checks correctness and renderer cleanup without claiming display-frame performance. The system runners' default mode measures actual animation frames while scrolling and zooming during cold rendering.
@@ -67,7 +68,7 @@ All engine assets are compressed with **LZMA Ultra** and compiled into the core 
 * **Shared application UI**: `assets/sidebar-policy.json` defines TOC widths, row height, indentation, text size, initial expansion threshold, and the navigator's initial width for both frontends. Both TOCs expose a hierarchy with disclosure controls, truncated labels with full titles, and keyboard navigation. The Windows outline uses ARIA tree semantics; macOS uses `NSOutlineView`.
 * **Platform conventions**: AppKit owns the macOS title bar, toolbar, menus, search control, and window management. Windows retains its standard Win32 title bar and menu, with equivalent document controls below them. Shortcuts use Cmd on macOS and Ctrl/Alt/F-keys on Windows. Icons share meanings and placement while retaining platform rendering; window controls and system menus are not imitated.
 
-### D. C-ABI Foreign Function Interface (`include/mdvu_core.h`)
+### D. C-ABI Foreign Function Interface (`src/core/include/mdvu_core.h`)
 * Stable C-ABI interface for language interop:
   * `mdvu_version()`: Returns engine version string.
   * `mdvu_render_to_html(...)`: Renders markdown to HTML, returning an opaque `MdvuDocument*`.
@@ -114,6 +115,8 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
   * `Ctrl+R` / `F5`: Reload preview.
   * `Ctrl++` / `Ctrl+-` / `Ctrl+0`: Zoom in, zoom out, reset zoom.
   * `Ctrl+B`: Toggle Table of Contents sidebar.
+  * `Ctrl+Shift+O`: Open a folder or vault.
+  * `Ctrl+Shift+D`: Toggle File Navigator; `Ctrl+Shift+W`: toggle Full Width.
   * `F11`: Borderless fullscreen mode.
 
 ---
@@ -166,4 +169,4 @@ mdvu document.md --toc
 
 Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
 
-The JavaScript PlantUML build does not implement Ditaa. Its npm package excludes optional standard-library bundles; `!include <...>` requires separately supplied library data. These limits are distinct from parsing/rendering the diagram families in the core.
+The JavaScript PlantUML build registers fewer diagram factories than the Java engine. Unsupported-type and syntax-error SVG panels are rejected before display/caching. C4 and ArchiMate library data are embedded in the PlantUML bundle, with their script-loader states pre-registered, so includes require no network or separate files. Other optional libraries are not included. `scripts/runtime-assets/stdlib-lock.json` pins the library URLs, versions and source hashes; the renderer asset generator verifies them before bundling. Updating the runtime manifest invalidates old SVG cache entries on both platforms. `assets/plantuml-adapter.mjs` routes `@startdot` directly to the same memoized Viz.js instance used by the PlantUML layout engine. The shared Rust parser normalizes standalone `zenuml` fences to Mermaid ZenUML input before computing their SVG cache key.

@@ -1,0 +1,132 @@
+{
+  "version": "PlantUML Java 1.2026.9",
+  "scope": "Validates the additional PlantUML probe syntax independently of MDVu browser runtime; not performance comparison",
+  "cases": [
+    {
+      "id": "D090",
+      "sourceSha256": "f2f1291531d9d8100b1e4ba81da62de2aec521410fe90ac6545e65db80d2ead9",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D090.svg",
+      "svgSha256": "815061a1bd5a955d66d08d6743456892c8d446b2cf60a501683f59dabcc470c0"
+    },
+    {
+      "id": "D091",
+      "sourceSha256": "fa4947adf130e16f4fcea9df07fabd20a41e58a86794995da91d7ce9b3b8e9bd",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D091.svg",
+      "svgSha256": "4b7761e9ef20898aa45868b3561fab4a5dc7d937522146f387e71933e1d1bc94"
+    },
+    {
+      "id": "D092",
+      "sourceSha256": "1e1c1f58b12dda7c14e3bccb7ef575bc8357837ee06432d41692ed391bfda268",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D092.svg",
+      "svgSha256": "49274b5f7ff16dcdcca96a51527bb853c653c06a98dc7e10364cf0dac5081aba"
+    },
+    {
+      "id": "D093",
+      "sourceSha256": "193611edb17b3c2fdfeb8b1e67daaa3d6541a90a7707e05522aa1ce90f9da775",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D093.svg",
+      "svgSha256": "1492b3b442f9d4639f7907e1e319ebc5680144ba88c0066d1e3b314203ee514d"
+    },
+    {
+      "id": "D094",
+      "sourceSha256": "f5348eba5b480acaea38f3254ba472aef9ec00fdd99fbf05cfbf0674217e7600",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D094.svg",
+      "svgSha256": "a702a6a085535fed04484edf718b112919d64e18fa99e92e1ca4f5c7249a4263"
+    },
+    {
+      "id": "D095",
+      "sourceSha256": "5e055c357742c54b69f5b7596f0e4608f4c9931409b1530a4d4e100f3844910e",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D095.svg",
+      "svgSha256": "69def1bf148f4617276f794a16e2b1dc32c54e387f08c649313320fccecdf7fd"
+    },
+    {
+      "id": "D096",
+      "sourceSha256": "5a49aa5bbe719e6897a5943689e35c07675cc023cabcfa9c4482172aea3dfd85",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D096.svg",
+      "svgSha256": "1c4ab87d787f82dd301bb5ec4b5c9931aeb0ca9234ebd5944aec3b13020e706b"
+    },
+    {
+      "id": "D097",
+      "sourceSha256": "cde07324d1533563eef0d17bdb4ccba9e6098562c5af64966f6089a6972000cd",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D097.svg",
+      "svgSha256": "a279cd8dd6dfc323c7f731591bfbcfebb1d439c747dd4a3db25b201b8e7869ef"
+    },
+    {
+      "id": "D098",
+      "sourceSha256": "a85a82b1ef3648f7010b98a01b709dff1acb27c063fdc33955f01adea93b00fb",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D098.svg",
+      "svgSha256": "1d59d4c02163ff011946a83ea5bae2938db0afd932201d4ae612a6f78738ce84"
+    },
+    {
+      "id": "D099",
+      "sourceSha256": "23e63f81ee2fb37240659f64e2d63f5a952c78bd5617933b2822acaf81e94ef3",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D099.svg",
+      "svgSha256": "68c938fa1cc3dad400350752944d16550410401b330fba6604eaf03010057878"
+    },
+    {
+      "id": "D100",
+      "sourceSha256": "e74763f48a0b7e7a289dac20d211d442e95a5f00142981a2425fa00a8b0777c6",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D100.svg",
+      "svgSha256": "b8ac23ba29ff5a97fd5ad2509f85a86329c09b32d0c41cf522768e7ef5e535fa"
+    },
+    {
+      "id": "D101",
+      "sourceSha256": "9f86672ecf56afcefa1c30afe58358b50ddd31b930479fe92b499c7bae8cad72",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D101.svg",
+      "svgSha256": "f8b1cce040ab8f8085473f11724faf3e7d8d73e2e98bb67ec0a2a59c58845b5f"
+    },
+    {
+      "id": "D102",
+      "sourceSha256": "bdd04769f47f70e2db2bd2f2f081e29273602f6dc6fa57617abe347075bcbd9f",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D102.svg",
+      "svgSha256": "14e4d472ff21db20aad2b012d53d4be0c33cb21a16f74a3c174f72e44c37512a"
+    },
+    {
+      "id": "D103",
+      "sourceSha256": "5717dc40a3b0660c7756c42e7c3ed703def4a7b02a70b97685929eaf92eb2053",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D103.svg",
+      "svgSha256": "cf08c92e753277dd223f38502743f6a2c8f6eb7e210175889b3acc9d1fa5a419"
+    },
+    {
+      "id": "D104",
+      "sourceSha256": "d1bd0bd87a9fe878cf2677610ce6f1ab30d5282ada865cd301314bda7c4f68fb",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D104.svg",
+      "svgSha256": "3f52546434f1d09c49fc6d483c389ca3b56cce5a07491ba4d4fd23e1ae4db78f"
+    },
+    {
+      "id": "D105",
+      "sourceSha256": "08e9c5250939f1a95718ffb90c6aa6a9363199e2e5778b96e021bffe5b85bbbd",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D105.svg",
+      "svgSha256": "dd4b12e8751a144f26498a81d485bf062b9fe125858692264cff1ea3bb8bc890"
+    },
+    {
+      "id": "D106",
+      "sourceSha256": "98ee6b673543df2793fba0dbabd618e2e71e9bc5cae187e4c0e52cebfd12ed07",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D106.svg",
+      "svgSha256": "c6248134947d071fe4a96ca0294d9d9a9b2c6c114a90484402bc457867131240"
+    },
+    {
+      "id": "D107",
+      "sourceSha256": "1148a6774672c1af3deb8dcb4620f8ba1b0b20ce0978607c29b011e2c16fb31b",
+      "status": "rendered",
+      "evidence": "/tmp/mdvu-reference-plantuml/D107.svg",
+      "svgSha256": "d32c983fb8ef0d6e83b1cea8fe10a4ff940a986bc7d9115d47e20962fc7754f8"
+    }
+  ]
+}
