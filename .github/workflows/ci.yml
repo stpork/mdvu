@@ -141,6 +141,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
 
+      - name: Validate PowerShell build and test scripts
+        shell: pwsh
+        run: |
+          Get-ChildItem build.ps1, scripts/*.ps1 | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors) { throw ($parseErrors | Out-String) }
+          }
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -187,6 +197,21 @@ jobs:
           }
           Write-Host "Found release zip: $($zip.FullName) ($($zip.Length) bytes)"
           Write-Host "Found release MSI: $($msi.FullName) ($($msi.Length) bytes)"
+
+      - name: Test MSI admin and non-admin installation
+        id: installer
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dist/mdvu-*-windows-x86_64.msi | Select-Object -First 1
+          ./scripts/test-windows-installer.ps1 -Msi $msi.FullName
+
+      - name: Upload MSI installation diagnostics
+        if: always() && steps.installer.outcome != 'skipped'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: installer-windows
+          path: test-results/installer-windows/
+          retention-days: 7
 
       - name: Test Windows Headless CLI & Benchmarks
         shell: pwsh

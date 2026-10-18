@@ -30,22 +30,22 @@
 
         <!-- Dual-purpose package properties: ALLUSERS=2 allows per-user or per-machine selection -->
         <Property Id="ALLUSERS" Value="2" />
-        <Property Id="MSIINSTALLPERUSER" Value="0" />
         <Property Id="ApplicationFolderName" Value="MDVu" />
-        <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
 
         <!-- Folder targets: 64-bit Program Files for per-machine, LocalAppData\Programs for per-user -->
-        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]" Before="CostInitialize" Sequence="both">
+        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]\" Before="CostInitialize" Sequence="both">
             <![CDATA[VersionNT64]]>
         </SetProperty>
-        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]" Before="CostInitialize" Sequence="both" />
+        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]\" Before="CostInitialize" Sequence="both" />
 
-        <SetProperty Id="APPLICATIONFOLDER" Action="SetAppFolderPerUser" Value="[WixPerUserFolder]" After="CostFinalize" Sequence="both">
-            <![CDATA[MSIINSTALLPERUSER = "1"]]>
-        </SetProperty>
-        <SetProperty Id="APPLICATIONFOLDER" Action="SetAppFolderPerMachine" Value="[WixPerMachineFolder]" After="CostFinalize" Sequence="both">
-            <![CDATA[NOT (MSIINSTALLPERUSER = "1")]]>
-        </SetProperty>
+        <!-- SetDirectory schedules the property before CostFinalize, so MSI resolves
+             files, shortcuts and working directories from the same target path. -->
+        <SetDirectory Id="APPLICATIONFOLDER" Action="SetAppFolderPerUser" Value="[WixPerUserFolder]">
+            <![CDATA[NOT Installed AND (NOT ALLUSERS OR (ALLUSERS = 2 AND MSIINSTALLPERUSER = 1))]]>
+        </SetDirectory>
+        <SetDirectory Id="APPLICATIONFOLDER" Action="SetAppFolderPerMachine" Value="[WixPerMachineFolder]">
+            <![CDATA[NOT Installed AND (ALLUSERS = 1 OR (ALLUSERS = 2 AND NOT (MSIINSTALLPERUSER = 1)))]]>
+        </SetDirectory>
 
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="ProgramFiles64Folder">
@@ -65,14 +65,14 @@
                     <RegistryValue Type="string" Value="Markdown Document" />
                     <RegistryValue Name="FriendlyTypeName" Type="string" Value="Markdown Document" />
                     <RegistryKey Key="DefaultIcon">
-                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
                     </RegistryKey>
                     <RegistryKey Key="shell">
                         <RegistryValue Type="string" Value="open" />
                         <RegistryKey Key="open">
                             <RegistryValue Type="string" Value="&amp;Open with MDVu" />
                             <RegistryKey Key="command">
-                                <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                                <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot; &quot;%1&quot;" />
                             </RegistryKey>
                         </RegistryKey>
                     </RegistryKey>
@@ -143,7 +143,7 @@
                 <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe">
                     <RegistryValue Name="FriendlyAppName" Type="string" Value="MDVu" />
                     <RegistryKey Key="DefaultIcon">
-                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
                     </RegistryKey>
                     <RegistryKey Key="SupportedTypes">
                         <RegistryValue Name=".md" Type="string" Value="" />
@@ -154,7 +154,7 @@
                         <RegistryValue Name=".mdtxt" Type="string" Value="" />
                     </RegistryKey>
                     <RegistryKey Key="shell\open\command">
-                        <RegistryValue Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot; &quot;%1&quot;" />
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot; &quot;%1&quot;" />
                     </RegistryKey>
                 </RegistryKey>
 
@@ -165,7 +165,7 @@
                 <RegistryKey Root="HKMU" Key="Software\MDVu\Capabilities">
                     <RegistryValue Name="ApplicationName" Type="string" Value="MDVu" />
                     <RegistryValue Name="ApplicationDescription" Type="string" Value="Fast, lightweight native Markdown and Mermaid viewer" />
-                    <RegistryValue Name="ApplicationIcon" Type="string" Value="&quot;[APPLICATIONFOLDER]mdvu.exe&quot;,0" />
+                    <RegistryValue Name="ApplicationIcon" Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
                     <RegistryKey Key="FileAssociations">
                         <RegistryValue Name=".md" Type="string" Value="MDVu.MarkdownDocument" />
                         <RegistryValue Name=".markdown" Type="string" Value="MDVu.MarkdownDocument" />
@@ -221,7 +221,7 @@
                     Id="ApplicationStartMenuShortcut"
                     Name="MDVu"
                     Description="Markdown and Mermaid Viewer"
-                    Target="[APPLICATIONFOLDER]mdvu.exe"
+                    Target="[#MdvuExe]"
                     WorkingDirectory="APPLICATIONFOLDER"
                     Icon="MdvuIcon.ico" />
                 <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
@@ -265,6 +265,7 @@
             <DialogRef Id="ResumeDlg" />
             <DialogRef Id="UserExit" />
             <DialogRef Id="ExitDialog" />
+            <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
 
             <Dialog Id="QuickInstallDlg" Width="370" Height="270" Title="MDVu Setup">
                 <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
@@ -290,8 +291,9 @@
                     <Condition Action="show">NOT (MSIINSTALLPERUSER = "1")</Condition>
                     <Condition Action="hide">MSIINSTALLPERUSER = "1"</Condition>
                     <Publish Property="ALLUSERS" Value="1" Order="1">1</Publish>
-                    <Publish Property="WixAppFolder" Value="WixPerMachineFolder" Order="2">1</Publish>
-                    <Publish Event="EndDialog" Value="Return" Order="3">1</Publish>
+                    <Publish Property="APPLICATIONFOLDER" Value="[WixPerMachineFolder]" Order="2">1</Publish>
+                    <Publish Event="SetTargetPath" Value="APPLICATIONFOLDER" Order="3">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="4">1</Publish>
                 </Control>
 
                 <!-- Install button WITHOUT UAC shield (active when MSIINSTALLPERUSER IS 1) -->
@@ -300,9 +302,10 @@
                     <Condition Action="disable">NOT (LicenseAccepted = "1")</Condition>
                     <Condition Action="show">MSIINSTALLPERUSER = "1"</Condition>
                     <Condition Action="hide">NOT (MSIINSTALLPERUSER = "1")</Condition>
-                    <Publish Property="ALLUSERS" Order="1">1</Publish>
-                    <Publish Property="WixAppFolder" Value="WixPerUserFolder" Order="2">1</Publish>
-                    <Publish Event="EndDialog" Value="Return" Order="3">1</Publish>
+                    <Publish Property="ALLUSERS" Value="{}" Order="1">1</Publish>
+                    <Publish Property="APPLICATIONFOLDER" Value="[WixPerUserFolder]" Order="2">1</Publish>
+                    <Publish Event="SetTargetPath" Value="APPLICATIONFOLDER" Order="3">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="4">1</Publish>
                 </Control>
 
                 <Control Id="Cancel" Type="PushButton" X="298" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
