@@ -814,7 +814,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         renderQueue.addOperation(operation)
     }
 
-    private func loadRenderedHTML(_ html: String, baseURL: URL) {
+    private func loadRenderedHTML(_ html: String, baseURL: URL?) {
         if hasLoadedDocument && !webView.isLoading {
             let generation = renderGeneration
             webView.callAsyncJavaScript("""
@@ -859,7 +859,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
 
     private func showMessage(_ title: String, detail: String) {
         isRestoringDocumentZoom = false
-        webView.loadHTMLString(HTMLDocument.make(body: "<div class=\"empty\"><h1>\(HTML.escape(title))</h1><p>\(HTML.escape(detail))</p></div>", title: title, theme: options.theme, fullWidth: isFullWidth), baseURL: nil)
+        loadRenderedHTML(HTMLDocument.make(body: "<div class=\"empty\"><h1>\(HTML.escape(title))</h1><p>\(HTML.escape(detail))</p></div>", title: title, theme: options.theme, fullWidth: isFullWidth), baseURL: nil)
     }
     private func handleDrop(_ urls: [URL]) { urls.forEach { onOpenURL?($0) } }
     private var effectiveAppearanceIsDark: Bool { window?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }

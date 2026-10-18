@@ -80,9 +80,8 @@ gh workflow run 'Deploy MDVu website' --repo stpork/stpork.github.io
 
 git switch develop
 NEXT_VERSION=$(python3 -c 'import sys; a,b,_=map(int,sys.argv[1].split(".")); print(f"{a}.{b+1}.0")' "$VERSION")
-printf '%s\n' "$NEXT_VERSION" > version.txt
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEXT_VERSION" packaging/macos/Info.plist
-git add version.txt packaging/macos/Info.plist
+python3 scripts/set-version.py "$NEXT_VERSION"
+git add version.txt packaging/macos/Info.plist src/core/Cargo.toml src/windows/Cargo.toml Cargo.lock
 git commit -m "chore: bump version to $NEXT_VERSION"
 git push origin develop
 echo "Published $TAG with all six packages. Website refresh requested; develop is $NEXT_VERSION."

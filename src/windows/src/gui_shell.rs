@@ -947,7 +947,9 @@ pub fn build_gui_html(
       return;
     }}
     if (lower.startsWith('file:')) return;
-    const [beforeHash, hashPart] = rawHref.split('#');
+    const hashIndex = rawHref.indexOf('#');
+    const beforeHash = hashIndex < 0 ? rawHref : rawHref.slice(0, hashIndex);
+    const hashPart = hashIndex < 0 ? '' : rawHref.slice(hashIndex + 1);
     const pathPart = beforeHash.split('?')[0];
     if (/\.(md|markdown|mdown|mkd|txt)$/i.test(pathPart)) {{
       evt.preventDefault();
@@ -957,7 +959,7 @@ pub fn build_gui_html(
       if (decodedHash) {{
         try {{ decodedHash = decodeURIComponent(decodedHash); }} catch {{}}
       }}
-      window.ipc?.postMessage('open_rel_path:' + decoded + (decodedHash ? '#' + decodedHash : ''));
+      window.ipc?.postMessage('open_rel_path:' + JSON.stringify({{path: decoded, fragment: decodedHash || null}}));
     }}
   }});
 

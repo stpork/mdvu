@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
 
 ### Current 0.5.0 work
+- Preserve the macOS reader and loaded math runtime through error pages so subsequent documents render formulas correctly.
+- Keep decoded Windows link paths separate from fragments, including filenames containing `#` and `%`.
+- Update all release/native/Rust versions together and verify packaged CLI versions against release metadata.
 - Bundle C4-PlantUML 2.14.0 and ArchiMate 3.2.2; reuse Graphviz for DOT and the Mermaid engine for standalone ZenUML fences.
 - Keep one compressed-runtime resource copy in Universal macOS bundles; run native diagrams in isolated renderers on both platforms.
 - Preserve unrelated warm SVG entries when replacing an entry at the cache limit.

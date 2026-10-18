@@ -126,6 +126,42 @@ struct SharedRegressionTests {
 }
 
 extension SharedRegressionTests {
+    @MainActor @Test(arguments: [false, true])
+    func mathRenderingRecoversAfterAnErrorPage(previouslyLoadedMath: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = directory.appendingPathComponent("first.md"), second = directory.appendingPathComponent("second.md")
+        let missing = directory.appendingPathComponent("missing.md")
+        try "# First\n\n$x^2$".write(to: first, atomically: true, encoding: .utf8)
+        try "# Second\n\n$y^2$".write(to: second, atomically: true, encoding: .utf8)
+        let controller = DocumentWindowController(url: previouslyLoadedMath ? first : missing, directoryMode: false, options: .default, profiler: StartupProfiler())
+        defer { controller.close() }
+        func findWebView(_ view: NSView) -> WKWebView? {
+            if let web = view as? WKWebView { return web }
+            return view.subviews.lazy.compactMap(findWebView).first
+        }
+        let web = try #require(controller.window?.contentView.flatMap(findWebView))
+        func waitFor(_ script: String) async throws -> Bool {
+            for _ in 0..<200 {
+                if (try? await web.evaluateJavaScriptValue(script)) as? Bool == true { return true }
+                try await Task.sleep(for: .milliseconds(25))
+            }
+            return false
+        }
+        if previouslyLoadedMath {
+            #expect(try await waitFor("!!document.querySelector('.math-rendered math')"))
+            _ = try await web.evaluateJavaScriptValue("window.auditKatex = window.katex; true")
+            controller.openDocument(missing)
+        }
+        #expect(try await waitFor("document.querySelector('h1')?.textContent.includes('Unable to open document') === true"))
+        controller.openDocument(second)
+        #expect(try await waitFor("document.querySelector('h1')?.textContent.includes('Second') === true && !!document.querySelector('.math-rendered math')"))
+        if previouslyLoadedMath {
+            #expect(try await web.evaluateJavaScriptValue("!!window.auditKatex && window.katex === window.auditKatex") as? Bool == true)
+        }
+    }
+
     @MainActor @Test func documentNavigationReusesRuntimeAndBlocksScriptNavigation() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

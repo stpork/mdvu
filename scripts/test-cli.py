@@ -17,6 +17,11 @@ class NativeCLI(unittest.TestCase):
         self.root = pathlib.Path(self.temp.name)
     def tearDown(self):
         self.temp.cleanup()
+    def test_version_matches_release_metadata(self):
+        version = (pathlib.Path(__file__).resolve().parents[1] / 'version.txt').read_text().strip()
+        result = subprocess.run([BINARY, '--version'], cwd=self.root, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), 'mdvu ' + version)
     def run_cli(self, content, *flags):
         path = self.root / "схема note.md"
         path.write_bytes(content.encode() if isinstance(content, str) else content)

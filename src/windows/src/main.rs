@@ -10,8 +10,8 @@ mod win32;
 use clap::Parser as ClapParser;
 use mdvu_core::{
     get_base_url_for_file, get_katex_js, get_mermaid_js, get_plantuml_js, navigator,
-    render_markdown_body, render_markdown_full_options, split_path_and_fragment, DiagramCache,
-    MarkdownDialect, NavigationHistory, RenderedDocument, ZoomPolicy,
+    render_markdown_body, render_markdown_full_options, DiagramCache, MarkdownDialect,
+    NavigationHistory, RenderedDocument, ZoomPolicy,
 };
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Deserialize;
@@ -288,7 +288,7 @@ pub enum UserEvent {
     FileChanged,
     OpenFile(PathBuf),
     OpenFileWithFragment(PathBuf, Option<String>),
-    OpenRelativePath(String),
+    OpenRelativePath(PathBuf, Option<String>),
     OpenFolder(PathBuf),
     OpenExternal(String),
     TriggerOpenFile,
@@ -326,6 +326,12 @@ pub enum UserEvent {
     UiTestResult(String),
     SystemThemeChanged(bool),
     RuntimeReady(&'static str, Result<&'static str, &'static str>),
+}
+
+#[derive(Deserialize)]
+struct RelativeLink {
+    path: PathBuf,
+    fragment: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -1037,8 +1043,10 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         } else if let Some(path_str) = msg.strip_prefix("open_path:") {
             let p = PathBuf::from(path_str);
             let _ = proxy_ipc.send_event(UserEvent::OpenFile(p));
-        } else if let Some(rel_str) = msg.strip_prefix("open_rel_path:") {
-            let _ = proxy_ipc.send_event(UserEvent::OpenRelativePath(rel_str.to_string()));
+        } else if let Some(json) = msg.strip_prefix("open_rel_path:") {
+            if let Ok(link) = serde_json::from_str::<RelativeLink>(json) {
+                let _ = proxy_ipc.send_event(UserEvent::OpenRelativePath(link.path, link.fragment));
+            }
         } else if let Some(ext_url) = msg.strip_prefix("open_external:") {
             let _ = proxy_ipc.send_event(UserEvent::OpenExternal(ext_url.to_string()));
         } else if let Some(cache_json) = msg.strip_prefix("cache_diagram:") {
@@ -1332,19 +1340,17 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                 UserEvent::OpenExternal(url) => {
                     open_external_url(&url);
                 }
-                UserEvent::OpenRelativePath(raw_rel) => {
-                    let (rel_path, frag) = split_path_and_fragment(&raw_rel);
-                    let frag_owned = frag.map(|s| s.to_string());
+                UserEvent::OpenRelativePath(rel_path, fragment) => {
                     let resolved = {
                         let st = state.lock().unwrap();
                         st.current_file
                             .as_ref()
                             .and_then(|cur| cur.parent())
-                            .map(|dir| dir.join(rel_path))
-                            .or_else(|| st.vault_root.as_ref().map(|root| root.join(rel_path)))
+                            .map(|dir| dir.join(&rel_path))
+                            .or_else(|| st.vault_root.as_ref().map(|root| root.join(&rel_path)))
                     };
                     if let Some(p) = resolved {
-                        let _ = proxy.send_event(UserEvent::OpenFileWithFragment(p, frag_owned));
+                        let _ = proxy.send_event(UserEvent::OpenFileWithFragment(p, fragment));
                     }
                 }
                 UserEvent::OpenFolder(folder) => {
@@ -1785,6 +1791,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use mdvu_core::{TocEntry, VaultItem};
+
+    #[test]
+    fn relative_links_keep_decoded_path_separate_from_fragment() {
+        for (path, fragment) in [
+            ("notes#draft.md", None),
+            ("notes#draft.md", Some("section#1")),
+            ("folder/схема #100%.md", Some("раздел")),
+            ("notes%23draft.md", None),
+        ] {
+            let payload = serde_json::json!({"path": path, "fragment": fragment}).to_string();
+            let link: RelativeLink = serde_json::from_str(&payload).unwrap();
+            assert_eq!(link.path, PathBuf::from(path));
+            assert_eq!(link.fragment.as_deref(), fragment);
+        }
+        for invalid in [r#""notes#draft.md""#, r#"{"fragment":"section"}"#] {
+            assert!(serde_json::from_str::<RelativeLink>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn native_window_theme_preserves_system_preference() {
