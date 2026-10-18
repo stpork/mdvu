@@ -24,9 +24,11 @@
       checks.showcaseInsets=parseFloat(style.paddingTop)===12&&parseFloat(style.paddingRight)===12;
       const previousWidth=article.style.width;
       try {
-        checks.showcaseResponsiveLayout=[[680,1],[1040,2],[1440,4]].every(([width,columns])=>{
+        checks.showcaseResponsiveLayout=[[680,1],[1040,2],[2440,4]].every(([width,columns])=>{
           article.style.width=width+'px';
-          return getComputedStyle(board).gridTemplateColumns.split(' ').length===columns;
+          const contentWidth=article.clientWidth-24;
+          const fontSize=contentWidth<1300?14:Math.max(11,Math.min(contentWidth*.00745,64));
+          return getComputedStyle(board).gridTemplateColumns.split(' ').length===columns&&Math.abs(parseFloat(getComputedStyle(board).fontSize)-fontSize)<.1;
         });
       } finally { article.style.width=previousWidth }
     }
