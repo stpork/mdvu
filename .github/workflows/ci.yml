@@ -203,7 +203,18 @@ jobs:
         shell: pwsh
         run: |
           $msi = Get-ChildItem dist/mdvu-*-windows-x86_64.msi | Select-Object -First 1
-          ./scripts/test-windows-installer.ps1 -Msi $msi.FullName
+          # The disposable hosted VM blocks unmanaged per-user MSIs (1625).
+          # Allow the integration test, then restore its original policy.
+          $policy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer'
+          $previous = (Get-ItemProperty $policy -ErrorAction SilentlyContinue).DisableMSI
+          try {
+            New-Item $policy -Force | Out-Null
+            New-ItemProperty $policy -Name DisableMSI -PropertyType DWord -Value 0 -Force | Out-Null
+            ./scripts/test-windows-installer.ps1 -Msi $msi.FullName
+          } finally {
+            if ($null -eq $previous) { Remove-ItemProperty $policy -Name DisableMSI }
+            else { Set-ItemProperty $policy -Name DisableMSI -Value $previous }
+          }
 
       - name: Upload MSI installation diagnostics
         if: always() && steps.installer.outcome != 'skipped'

@@ -214,7 +214,10 @@ try {
     throw
 } finally {
     if ($Process) { if (-not $Process.HasExited) { $Process.Kill() }; $Process.Dispose() }
-    if ($InstallStarted -and $ProductCode) { Invoke-Msi "/x $ProductCode $ScopeProperties /qn /norestart /l*v `"$(Join-Path $Output "$Scope-cleanup.log")`"" }
+    if ($InstallStarted -and $ProductCode) {
+        try { Invoke-Msi "/x $ProductCode $ScopeProperties /qn /norestart /l*v `"$(Join-Path $Output "$Scope-cleanup.log")`"" }
+        catch { $Report.cleanupError = $_.ToString(); Write-Warning $Report.cleanupError }
+    }
     $Report | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $Output "$Scope.json") -Encoding UTF8
     Stop-Transcript | Out-Null
 }
