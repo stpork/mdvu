@@ -56,10 +56,15 @@ New-Item -ItemType Directory -Force $env:TEMP | Out-Null
 '@ | Set-Content (Join-Path $Stage 'user-test.ps1')
         $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$Stage/user-test.ps1`""
         $Credential = [Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$Name", (ConvertTo-SecureString $Password -AsPlainText -Force))
-        $Child = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList $Arguments -Credential $Credential -LoadUserProfile -PassThru
+        New-Item -ItemType Directory -Force $UserOutput | Out-Null
+        # Use Windows' system shell rather than inheriting a caller-installed host
+        # whose startup can depend on the invoking account's private environment.
+        $Shell = "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe"
+        $Child = Start-Process -FilePath $Shell -ArgumentList $Arguments -Credential $Credential -LoadUserProfile -WorkingDirectory $Stage -RedirectStandardOutput "$UserOutput/launcher.log" -RedirectStandardError "$UserOutput/launcher-error.log" -PassThru
         try {
             if (-not $Child.WaitForExit(180000)) { $Child.Kill(); throw 'Non-admin MSI test timed out' }
         } finally { $Child.Dispose() }
+        if (-not (Test-Path "$UserOutput/User.json")) { throw "Standard-user test did not produce a report: $(Get-Content "$UserOutput/launcher-error.log" -Raw)" }
         $ChildReport = Get-Content (Join-Path $UserOutput 'User.json') -Raw | ConvertFrom-Json
         if (-not $ChildReport.passed -or $ChildReport.elevated) { throw 'Non-admin MSI verification did not pass' }
         Write-Host 'MSI: machine/admin and user/non-admin install, Finish, shortcut, launch and uninstall passed.'
