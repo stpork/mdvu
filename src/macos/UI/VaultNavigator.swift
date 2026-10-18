@@ -220,7 +220,7 @@ final class VaultNavigatorView: NSView, NSOutlineViewDataSource, NSOutlineViewDe
 
     // Used only by the opt-in native UI harness, through the normal outline API.
     func auditOutline(action: String) -> [String: Any] {
-        let branch = (0..<outline.numberOfRows).compactMap { outline.item(atRow: $0) }.first { outline.isExpandable($0) }
+        let branch = (0..<outline.numberOfRows).lazy.compactMap { self.outline.item(atRow: $0) }.first { outline.isExpandable($0) }
         if let branch, mode == .tree {
             if action == "navCollapse" { outline.collapseItem(branch) }
             if action == "navExpand" { outline.expandItem(branch) }

@@ -1257,7 +1257,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 case "navList": vaultNavigatorView?.setMode(.list)
                 default: break
                 }
-                let branch = (0..<tocOutline.numberOfRows).compactMap { tocOutline.item(atRow: $0) }.first { tocOutline.isExpandable($0) }
+                let branch = (0..<tocOutline.numberOfRows).lazy.compactMap { self.tocOutline.item(atRow: $0) }.first { tocOutline.isExpandable($0) }
                 if let branch {
                     if action == "tocCollapse" { tocOutline.collapseItem(branch) }
                     if action == "tocExpand" { tocOutline.expandItem(branch) }

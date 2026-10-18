@@ -4,23 +4,27 @@ import WebKit
 @testable import mdvu
 
 @MainActor struct DiagramRenderingTests {
-    @Test func diagramVisibilityBatchesFreshGeometryBeforeDOMChanges() async throws {
+    @Test func diagramVisibilityUsesIntersectionSnapshotAndBatchesRetentionGeometry() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: """
             window.observers=[];
             window.IntersectionObserver=class {
-                constructor(callback,options){this.callback=callback;this.margin=options?.rootMargin;window.observers.push(this)}
+                constructor(callback,options){this.callback=callback;this.margin=options?.rootMargin;this.root=options?.root;window.observers.push(this)}
                 observe(){} unobserve(){} disconnect(){}
             };
             """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
         let figure = "<figure class='diagram diagram-rendered' style='margin:0;padding:0;height:50px'><svg xmlns='http://www.w3.org/2000/svg' width='100' viewBox='0 0 100 50'><text>Diagram</text></svg></figure>"
-        view.loadHTMLString(HTMLDocument.make(body: figure + figure, title: "Visibility", theme: .light), baseURL: nil)
+        let html = HTMLDocument.make(body: figure + figure, title: "Visibility", theme: .light)
+            .replacingOccurrences(of: "<article>", with: "<main id='mdvu-main-content' style='height:600px;overflow:auto'><article>")
+            .replacingOccurrences(of: "</article>", with: "</article></main>")
+        view.loadHTMLString(html, baseURL: nil)
         defer { view.stopLoading() }
         for _ in 0..<100 {
             if try await view.evaluateJavaScriptValue("document.querySelectorAll('.diagram-content').length===2") as? Bool == true { break }
             try await Task.sleep(for: .milliseconds(25))
         }
+        #expect(try await view.evaluateJavaScriptValue("observers.every(o=>o.root===document.getElementById('mdvu-main-content'))") as? Bool == true)
         _ = try await view.evaluateJavaScriptValue("""
             window.operations=[];
             const bounds=Element.prototype.getBoundingClientRect;
@@ -32,7 +36,7 @@ import WebKit
             const entries=[...document.querySelectorAll('figure')].map(target=>({target,isIntersecting:true}));
             observers.find(o=>o.margin==='400px 0px').callback(entries);true
             """)
-        #expect(try await view.evaluateJavaScriptValue("operations.join(',')") as? String == "read,read,mount,mount")
+        #expect(try await view.evaluateJavaScriptValue("operations.join(',')") as? String == "mount,mount")
         _ = try await view.evaluateJavaScriptValue("operations=[];observers.find(o=>o.margin==='400px 0px').callback(entries);true")
         #expect(try await view.evaluateJavaScriptValue("operations.length") as? Int == 0)
         // Stale leave notifications must not remove a diagram which moved back into view.
@@ -43,6 +47,31 @@ import WebKit
         #expect(try await view.evaluateJavaScriptValue("[...document.querySelectorAll('.diagram-content')].every(n=>!n.shadowRoot.firstChild)") as? Bool == true)
         _ = try await view.evaluateJavaScriptValue("operations=[];observers.find(o=>o.margin==='800px 0px').callback(entries);true")
         #expect(try await view.evaluateJavaScriptValue("operations.length") as? Int == 0)
+    }
+
+    @Test func pendingDiagramDoesNotDiscardItsIntersectionNotification() async throws {
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(WKUserScript(source: """
+            window.observers=[];window.jobs=[];
+            window.IntersectionObserver=class {
+                constructor(callback){this.callback=callback;this.targets=new Set;observers.push(this)}
+                observe(target){this.targets.add(target)} unobserve(target){this.targets.delete(target)} disconnect(){this.targets.clear()}
+            };
+            window.__mdvuNativeDiagramTransport={post:job=>jobs.push(job),cancel:()=>{}};
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        view.loadHTMLString(HTMLDocument.make(body: "<figure class='diagram diagram-pending' data-renderer='mermaid'><pre>graph TD; A--&gt;B</pre></figure>", title: "Intersection", theme: .light), baseURL: nil)
+        defer { view.stopLoading() }
+        for _ in 0..<100 {
+            if try await view.evaluateJavaScriptValue("typeof window.__mdvuRenderDiagrams==='function'&&observers.some(o=>o.targets.has(document.querySelector('figure')))") as? Bool == true { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        _ = try await view.evaluateJavaScriptValue("""
+            const target=document.querySelector('figure');
+            target.getBoundingClientRect=()=>{throw Error('Deferred layout invalidated the enter notification')};
+            observers.find(o=>o.targets.has(target)).callback([{target,isIntersecting:true}]);true
+            """)
+        #expect(try await view.evaluateJavaScriptValue("jobs.length") as? Int == 1)
     }
 
     @Test func articleInitializationDefersDiagramGeometryUntilIntersection() async throws {

@@ -26,7 +26,7 @@
       while(performance.now()-begin<30000&&!node.classList.contains('diagram-error')&&!(visible(node)&&visible(svg(node)))){
         // Deferred text/math layout can move the target after scrollIntoView.
         // Bring the actual figure onscreen before judging whether it is blank.
-        if((!visible(node)||svg(node)&&!visible(svg(node)))&&corrections<3){node.scrollIntoView({block:'center',behavior:'instant'});corrections++}
+        if(!visible(node)||svg(node)&&!visible(svg(node))){node.scrollIntoView({block:'center',behavior:'instant'});corrections++}
         await nextFrame();
       }
       cases.push({pass,heading:heading?.textContent,id:heading?.id,ms:performance.now()-begin,
@@ -35,8 +35,10 @@
         cached:!!window.__mdvuHasDiagramSVG?.(node),hostStyle:node.querySelector('.diagram-content')?.getAttribute('style')});
       if(cases.filter(c=>!c.visible).length===3)break;
     }
-    const checks={diagramsVisibleBeforeZoom:cases.length>0&&cases.every(c=>c.visible)};
-    const result={checks,cases,mounted:figures.filter(node=>!!svg(node)).length,passed:Object.values(checks).every(Boolean),visibility:document.visibilityState};
+    const farMounted=()=>figures.filter(node=>{if(!svg(node))return false;const r=rect(node),v=viewport();return r.bottom<v.top-2000||r.top>v.bottom+2000});
+    for(let n=0;n<60&&farMounted().length;n++)await nextFrame();
+    const checks={diagramsVisibleBeforeZoom:cases.length>0&&cases.every(c=>c.visible),offscreenDiagramsReleased:farMounted().length===0};
+    const result={checks,cases,mounted:figures.filter(node=>!!svg(node)).length,farMounted:farMounted().length,passed:Object.values(checks).every(Boolean),visibility:document.visibilityState};
     window.ipc?.postMessage('ui_test:'+JSON.stringify(result));
     window.webkit?.messageHandlers?.uiTest?.postMessage(result);
   } catch(error) {
