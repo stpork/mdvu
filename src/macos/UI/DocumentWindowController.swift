@@ -1109,6 +1109,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         return proposedMaximumPosition
     }
 
+    func splitView(_ splitView: NSSplitView, shouldAdjustSizeOfSubview view: NSView) -> Bool {
+        view === webView
+    }
+
     func splitViewDidResizeSubviews(_ notification: Notification) {
         guard !isApplyingSidebarPosition else { return }
         if isSidebarVisible, sidebarContainer.superview === split, sidebarContainer.frame.width >= SidebarSizing.minimumWidth {

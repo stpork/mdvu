@@ -11,3 +11,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Keep Markdown processing at O3; compact only the Windows OS/UI glue.
+[profile.release.package.mdvu-windows]
+opt-level = "s"

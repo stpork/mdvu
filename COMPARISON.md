@@ -155,6 +155,24 @@ The regression changes preserve the macOS math runtime through error pages, sepa
 
 The subsequent MSI fix (`cd56a3e`) was tested natively on Windows NAS (Windows 10 build 19045). On 19 October, the revised harness repeated both interactive scopes using application revision `2143586`: Program Files under the elevated account, and LocalAppData under a separate temporary standard account. Each passed 19 installer assertions and all seven installed-GUI checks, including Finish, Start Menu/CLI launch, associations, Markdown/images/diagrams, and complete uninstall. The harness stages NAS's explicitly configured private Scoop WebView2 runtime for the temporary account; this dependency is not added to the application. These are installer correctness checks, not startup performance measurements. Raw MSI logs and reports stay locally under `test-results/installer-20261019/`.
 
+### Release-size and visibility recheck · 19 October
+
+[CI at `ddd8e59`](https://github.com/stpork/mdvu/actions/runs/39175259892) passed on macOS, Windows and Linux, including MSI installation in both scopes and native Heavy/catalogue visibility checks. A subsequent local AppKit regression test reproduced TOC width drift when resizing a window. Restricting split-view size adjustment to the reader fixes that drift; the local Swift suite passes 91 tests. Fullscreen auditing now waits for AppKit's completion callback, so the next zoom is not timed during the operating system's fullscreen animation.
+
+On NAS, optimizing only the Windows host for size reduced the executable from **6,074,368 to 5,876,736 bytes** (5.79 to 5.60 MiB; −3.25%). The shared Rust processing core retains O3. Paired CLI runs below use the same original project fixtures, three alternating process pairs and 60 measured iterations per process; each cell is the median of the three reported medians. These timings cover Markdown processing with diagram placeholders, not browser layout or SVG generation.
+
+| Fixture | Windows host O3 | Compact Windows host |
+| --- | ---: | ---: |
+| Light | 2.82 ms | 2.76 ms |
+| Medium | 3.39 ms | 3.37 ms |
+| Complete | 10.52 ms | 10.53 ms |
+| Heavy | 23.17 ms | 23.16 ms |
+| Onescreen | 1.30 ms | 1.23 ms |
+
+Both Windows variants passed the six main native fixtures, cold UI interaction, full zoom range, navigation/panels and fullscreen. Individual UI timings still vary: Heavy's maximum zoom action was 326 → 292 ms, while its second scroll-pass p95 was 31.9 → 43.7 ms and peak tree private bytes 664 → 688 MiB. These single desktop observations do not establish a UI speed or memory improvement. RDP's approximately 32 ms display interval is not input latency. Moving the entire core to size optimization was rejected: roughly 3% smaller library files cost 19–31% in paired fixture processing.
+
+The visibility audit visits each actual SVG before any zoom, then revisits in reverse to exercise DOM restoration. It opens enclosing `details` and corrects scroll targets displaced by deferred layout; merely intersecting a figure's padding does not prove its SVG is onscreen. The NAS baseline showed all 315 valid Heavy diagrams and all 73 catalogue examples before zoom. A 350-node Heavy flowchart took about 3.5 seconds to become visible; waiting for SVG generation is distinct from a cached SVG failing to mount. No rendering-engine or application-cache limit was increased. Raw build identities, paired measurements, visibility geometry and native reports remain under local, ignored `test-results/performance-recheck-20261019/`; these are separate from the earlier competitor startup series.
+
 ## Native performance observations · 18 October 2026
 
 This is the earlier native MDVu validation, separate from the incomplete competitor study above and the later correctness fixes. Its binaries contain a later cache correction; the earlier comparative startup numbers are not claimed as post-correction measurements.

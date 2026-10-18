@@ -441,3 +441,27 @@ extension SharedRegressionTests {
         #expect(loaded)
     }
 }
+
+extension SharedRegressionTests {
+    @MainActor @Test func resizingTheWindowKeepsSidebarWidths() async throws {
+        let sidebarPreference = UserDefaults.standard.object(forKey: "layout.sidebarVisible")
+        defer { UserDefaults.standard.set(sidebarPreference, forKey: "layout.sidebarVisible") }
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".md")
+        try "# Sidebar\n\nContent".write(to: file, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let controller = DocumentWindowController(url: file, directoryMode: false, options: .default, profiler: StartupProfiler())
+        defer { controller.close() }
+        controller.showWindow(nil)
+        if !controller.isSidebarVisible { controller.toggleContents(nil) }
+        let window = try #require(controller.window)
+        let split = try #require(window.contentView?.subviews.compactMap { $0 as? NSSplitView }.first)
+        try await Task.sleep(for: .milliseconds(300))
+        let initial = split.arrangedSubviews[0].frame.width
+        for width: CGFloat in [1440, 900, 1280] {
+            window.setContentSize(NSSize(width: width, height: 760))
+            window.contentView?.layoutSubtreeIfNeeded()
+            await Task.yield()
+            #expect(abs(split.arrangedSubviews[0].frame.width - initial) < 2)
+        }
+    }
+}
