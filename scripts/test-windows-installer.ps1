@@ -44,9 +44,9 @@ if ($Scope -eq 'All') {
         # Task Scheduler's separate "Log on as a batch job" security policy.
         @'
 $ErrorActionPreference = 'Stop'
-$env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
-$env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
-$env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
+$env:USERPROFILE = [Environment]::GetFolderPath('UserProfile', 'Create')
+$env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData', 'Create')
+$env:APPDATA = [Environment]::GetFolderPath('ApplicationData', 'Create')
 $env:TEMP = Join-Path $env:LOCALAPPDATA 'Temp'
 $env:TMP = $env:TEMP
 Remove-Item Env:WEBVIEW2_USER_DATA_FOLDER,Env:MDVU_CACHE_DIR,Env:MDVU_UI_SCRIPT,Env:MDVU_UI_RESULT_FILE -ErrorAction SilentlyContinue
@@ -57,10 +57,7 @@ New-Item -ItemType Directory -Force $env:TEMP | Out-Null
         $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$Stage/user-test.ps1`""
         $Credential = [Management.Automation.PSCredential]::new("$env:COMPUTERNAME\$Name", (ConvertTo-SecureString $Password -AsPlainText -Force))
         New-Item -ItemType Directory -Force $UserOutput | Out-Null
-        # Use Windows' system shell rather than inheriting a caller-installed host
-        # whose startup can depend on the invoking account's private environment.
-        $Shell = "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe"
-        $Child = Start-Process -FilePath $Shell -ArgumentList $Arguments -Credential $Credential -LoadUserProfile -WorkingDirectory $Stage -RedirectStandardOutput "$UserOutput/launcher.log" -RedirectStandardError "$UserOutput/launcher-error.log" -PassThru
+        $Child = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList $Arguments -Credential $Credential -LoadUserProfile -WorkingDirectory $Stage -RedirectStandardOutput "$UserOutput/launcher.log" -RedirectStandardError "$UserOutput/launcher-error.log" -PassThru
         try {
             if (-not $Child.WaitForExit(180000)) { $Child.Kill(); throw 'Non-admin MSI test timed out' }
         } finally { $Child.Dispose() }
