@@ -17,7 +17,19 @@
     const roots=()=>[article,...[...article.querySelectorAll('figure.diagram')].map(n=>n.querySelector('.diagram-content')?.shadowRoot).filter(Boolean)];
     const diagramCount=()=>[...article.querySelectorAll('figure.diagram')].filter(n=>window.__mdvuHasDiagramSVG?.(n)).length;
     checks.article = !!article && article.textContent.trim().length > 0;
-    if (document.getElementById('mdvu-one-screen')) checks.customStylesheet = getComputedStyle(document.querySelector('.board')).display === 'grid';
+    if (document.getElementById('mdvu-one-screen')) {
+      const board=document.querySelector('.board');
+      checks.customStylesheet = getComputedStyle(board).display === 'grid';
+      const style=getComputedStyle(article);
+      checks.showcaseInsets=parseFloat(style.paddingTop)===12&&parseFloat(style.paddingRight)===12;
+      const previousWidth=article.style.width;
+      try {
+        checks.showcaseResponsiveLayout=[[680,1],[1040,2],[1440,4]].every(([width,columns])=>{
+          article.style.width=width+'px';
+          return getComputedStyle(board).gridTemplateColumns.split(' ').length===columns;
+        });
+      } finally { article.style.width=previousWidth }
+    }
     const needs = renderer => !!document.querySelector(`.diagram-pending[data-renderer="${renderer}"]`);
     const math = !!document.querySelector('.math-inline,.math-display');
     for (let n = 0; n < 400; n++) {
