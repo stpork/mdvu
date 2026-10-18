@@ -20,7 +20,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
     return {zoom:parseFloat(document.getElementById('mdvu-zoom-val').value)/100,
       toc:!document.getElementById('mdvu-toc-sidebar').classList.contains('hidden'),
       navigator:!document.getElementById('mdvu-navigator-sidebar').classList.contains('hidden'),
-      fullWidth:document.documentElement.classList.contains('full-width'),fullscreen:!!window.__mdvuAuditFullscreen,
+      fullWidth:document.documentElement.classList.contains('full-width'),fullscreen:!!window.__mdvuAuditFullscreen,fullscreenTransitioning:false,
       tocRows:[...document.querySelectorAll('#mdvu-toc-tree [role=treeitem]')].filter(n=>!n.closest('[hidden]')).length,
       tocBranch:branch?branch.getAttribute('aria-expanded')==='true':null,
       nav:{mode:window.__mdvuNavMode,rows:document.querySelectorAll('#mdvu-nav-tree .nav-file').length,
@@ -127,8 +127,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
     // Fullscreen follows the primary control and reflow scenarios.
     if(fullscreen) {
       const originalViewport={width:innerWidth,height:innerHeight};
-      await act('fullscreen',null,{fullscreen:!initial.fullscreen});
-      await pause(400);
+      await act('fullscreen',null,{fullscreen:!initial.fullscreen,fullscreenTransitioning:false});
       checks.fullscreenViewport=innerWidth>=originalViewport.width&&innerHeight>=originalViewport.height;
       await act('zoomIn',null,{zoom:1.1});await act('zoomReset',null,{zoom:1});
       for(const action of ['toc','navigator']) {
@@ -139,7 +138,7 @@ window.__mdvuCheckControls = async ({checks, metrics, article, nextFrame, pause,
       checks.fullscreenEnd=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
       window.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',cancelable:true,bubbles:true}));await nextFrame();await nextFrame();
       checks.fullscreenHome=scroller.scrollTop<3;
-      await act('fullscreen',null,{fullscreen:initial.fullscreen});await pause(400);
+      await act('fullscreen',null,{fullscreen:initial.fullscreen,fullscreenTransitioning:false});
       checks.fullscreenRestore=Math.abs(innerWidth-originalViewport.width)<3&&Math.abs(innerHeight-originalViewport.height)<3;
     }
   } finally {window.__mdvuCaptureReadingAnchor=capture;observer.disconnect()}

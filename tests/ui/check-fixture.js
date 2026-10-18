@@ -106,9 +106,13 @@
     if(firstDiagram&&window.__mdvuTimingMode!=='timer'){
       firstDiagram.scrollIntoView({block:'center',behavior:'instant'});
       const surface=()=>firstDiagram.querySelector('.diagram-content')?.shadowRoot?.querySelector('svg');
-      for(let n=0;n<60&&!surface();n++)await nextFrame();
+      const onscreen=()=>{const r=firstDiagram.getBoundingClientRect(),v=scroller===document.scrollingElement?{top:0,bottom:innerHeight}:scroller.getBoundingClientRect();return r.bottom>v.top&&r.top<v.bottom};
+      for(let n=0;n<60&&(!surface()||!onscreen());n++){
+        if(!onscreen())firstDiagram.scrollIntoView({block:'center',behavior:'instant'});
+        await nextFrame();
+      }
       const picture=surface();
-      checks.visibleDiagram=!!picture&&picture.getBoundingClientRect().width>0&&picture.getBoundingClientRect().height>0;
+      checks.visibleDiagram=onscreen()&&!!picture&&picture.getBoundingClientRect().width>0&&picture.getBoundingClientRect().height>0;
     }
     const headings = [...article.querySelectorAll('h1,h2,h3,h4,h5,h6')];
     const tocTree=document.getElementById('mdvu-toc-tree');

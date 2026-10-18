@@ -85,7 +85,9 @@ jobs:
 
       - name: Verify all native WebKit fixtures
         id: native-fixtures
-        run: python3 scripts/test-macos-system.py --timer-only --fail-fast --output test-results/native-fixtures-macos
+        run: |
+          python3 scripts/test-macos-system.py --timer-only --fail-fast --output test-results/native-fixtures-macos
+          python3 scripts/test-macos-system.py --timer-only --fixture test-heavy.md --fixture test-diagrams.md --audit-script tests/ui/check-visible-diagrams.js --output test-results/native-fixtures-macos/visible-before-zoom
 
       - name: Upload native fixture diagnostics
         if: always() && steps.native-fixtures.outcome != 'skipped'
@@ -262,7 +264,11 @@ jobs:
       - name: Verify all native WebView2 fixtures
         id: native-fixtures
         shell: pwsh
-        run: ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -TimerOnly -SampleSeconds 1 -BenchmarkRuns 3 -Output test-results/native-fixtures-windows
+        run: |
+          ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -TimerOnly -SampleSeconds 1 -BenchmarkRuns 3 -Output test-results/native-fixtures-windows
+          foreach ($fixture in @('test-heavy.md','test-diagrams.md')) {
+            ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -FixtureFilter $fixture -AuditScript tests/ui/check-visible-diagrams.js -TimerOnly -SampleSeconds 1 -BenchmarkRuns 1 -Output "test-results/native-fixtures-windows/visible-before-zoom/$fixture"
+          }
 
       - name: Upload native Windows fixture diagnostics
         if: always() && steps.native-fixtures.outcome != 'skipped'

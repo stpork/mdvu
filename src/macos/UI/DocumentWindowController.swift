@@ -235,6 +235,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var userSelectedDialect: MarkdownDialect?
     private(set) var currentDialect: MarkdownDialect
     private var hasShown = false
+    private var auditFullScreenTransitioning = false
     private var snapshotWritten = false
     private(set) var isFullWidth: Bool
     private(set) var isSidebarVisible: Bool = false
@@ -422,6 +423,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         tearDown()
         onClose?()
     }
+    func windowDidEnterFullScreen(_ notification: Notification) { auditFullScreenTransitioning = false }
+    func windowDidExitFullScreen(_ notification: Notification) { auditFullScreenTransitioning = false }
 
     private func configureLayout() {
         split.isVertical = true; split.dividerStyle = .thin; split.delegate = self
@@ -1244,6 +1247,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                     window?.collectionBehavior = [.fullScreenPrimary, .managed]
                     NSApp.activate(ignoringOtherApps: true)
                     window?.makeKeyAndOrderFront(nil)
+                    auditFullScreenTransitioning = true
                     window?.toggleFullScreen(nil)
                 case "navTree": vaultNavigatorView?.setMode(.tree)
                 case "navList": vaultNavigatorView?.setMode(.list)
@@ -1257,6 +1261,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
                 let state: [String: Any] = ["id": id, "zoom": effectiveZoom, "toc": isSidebarVisible,
                     "navigator": isFileNavigatorVisible, "fullWidth": isFullWidth,
                     "fullscreen": window?.styleMask.contains(.fullScreen) ?? false,
+                    "fullscreenTransitioning": auditFullScreenTransitioning,
                     "tocRows": tocOutline.numberOfRows, "tocBranch": branch.map { tocOutline.isItemExpanded($0) as Any } ?? NSNull(),
                     "nav": vaultNavigatorView?.auditOutline(action: action) ?? [:]]
                 if let data = try? JSONSerialization.data(withJSONObject: state), let json = String(data: data, encoding: .utf8) {

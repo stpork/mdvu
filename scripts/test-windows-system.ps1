@@ -4,6 +4,7 @@ param(
     [string]$Exe = "dist/windows/mdvu.exe",
     [string]$Msi,
     [string]$FixtureFilter = '*.md',
+    [string]$AuditScript,
     [switch]$Install,
     [switch]$SkipUI,
     [switch]$TimerOnly,
@@ -124,6 +125,7 @@ public static class MdvuCapture {
 '@
         }
         $UISource = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-controls.js').Path) + [Environment]::NewLine + [IO.File]::ReadAllText((Resolve-Path 'tests/ui/check-fixture.js').Path)
+        if ($AuditScript) { $UISource = [IO.File]::ReadAllText((Resolve-Path 'assets/diagram-output.js').Path) + [Environment]::NewLine + [IO.File]::ReadAllText((Resolve-Path $AuditScript).Path) }
         $UISource = "window.__mdvuWarmPasses=$WarmPasses;" + [Environment]::NewLine + $UISource
         if ($TimerOnly) { $UISource = "window.__mdvuTimingMode='timer';window.requestAnimationFrame=callback=>setTimeout(()=>callback(performance.now()),16);" + $UISource }
         $ExpectedErrors = [IO.File]::ReadAllText((Resolve-Path 'tests/ui/expected-diagram-errors.json').Path) | ConvertFrom-Json
