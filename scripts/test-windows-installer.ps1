@@ -44,9 +44,12 @@ if ($Scope -eq 'All') {
         # Task Scheduler's separate "Log on as a batch job" security policy.
         @'
 $ErrorActionPreference = 'Stop'
-$env:USERPROFILE = [Environment]::GetFolderPath('UserProfile', 'Create')
-$env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData', 'Create')
-$env:APPDATA = [Environment]::GetFolderPath('ApplicationData', 'Create')
+# Secondary logon inherits the caller's environment even with LoadUserProfile.
+# Resolve this fresh account's profile by its token SID before expanding paths.
+$Sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$env:USERPROFILE = Get-ItemPropertyValue "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$Sid" -Name ProfileImagePath
+$env:LOCALAPPDATA = Join-Path $env:USERPROFILE 'AppData\Local'
+$env:APPDATA = Join-Path $env:USERPROFILE 'AppData\Roaming'
 $env:TEMP = Join-Path $env:LOCALAPPDATA 'Temp'
 $env:TMP = $env:TEMP
 Remove-Item Env:WEBVIEW2_USER_DATA_FOLDER,Env:MDVU_CACHE_DIR,Env:MDVU_UI_SCRIPT,Env:MDVU_UI_RESULT_FILE -ErrorAction SilentlyContinue
