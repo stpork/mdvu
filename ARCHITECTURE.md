@@ -14,7 +14,7 @@ The application shares parsing, dialect handling, reader JavaScript/CSS and offl
 │  • Dialect Pipeline: Obsidian, MkDocs, Docusaurus, CriticMarkup, Math, TOC  │
 │  • High-Throughput Parser: pulldown-cmark + GFM (tables, tasks, footnotes)  │
 │  • Embedded Offline Engines: Mermaid, PlantUML (TeaVM/Wasm), KaTeX (LZMA)   │
-│  • Zero-Copy SIMD byte scanning (memchr, memmem)                            │
+│  • SIMD byte scanning and borrowed unchanged text (memchr, memmem)          │
 │  • C-ABI FFI Layer: mdvu_render_to_html, mdvu_document_get_toc_json, etc.   │
 └──────────────────────┬───────────────────────────────┬──────────────────────┘
                        │                               │
@@ -75,7 +75,7 @@ All engine assets use **LZMA Ultra**. Windows and default Cargo builds embed the
   * `mdvu_render_to_html(...)`: Renders markdown to HTML, returning an opaque `MdvuDocument*`.
   * `mdvu_document_get_html()`, `mdvu_document_get_body()`, `mdvu_document_get_title()`, `mdvu_document_get_toc_json()`.
   * `mdvu_document_free()`: Safely deallocates the document.
-* Backed by NUL-terminated `CString` storage in `assets.rs` for memory-safe C and Swift interop.
+* Documents own their NUL-terminated `CString` fields in `ffi.rs`; `assets.rs` owns the shared runtime strings. Borrowed pointers remain valid until their owning document is freed, or for the process lifetime for shared assets.
 
 ---
 
@@ -128,7 +128,7 @@ The Windows frontend is a lightweight standalone binary leveraging native Win32 
 
 Each platform uses the same frontend executable for GUI and CLI. The macOS bundle also contains the Rust shared library and resources; Windows links the core into its executable:
 * **Interactive Mode (GUI)**: When invoked without CLI export flags (`mdvu document.md` or via Desktop/Finder/Explorer), MDVu launches its full hardware-accelerated GUI viewport.
-* **Headless Mode (CLI)**: When invoked with export or batch flags (`-o`, `--stdout`, `--toc`, `-s`, stdin `-`), MDVu skips window creation, directly invokes the `mdvu-core` rendering pipeline, streams the result to the target file or stdout, and exits with code 0.
+* **Headless Mode (CLI)**: `-o`, `--stdout`, `--toc`, stdin `-` or `--benchmark` skip GUI creation and use the shared Rust pipeline. Successful commands exit with code 0; read, render and write failures exit nonzero. `--standalone` is an export modifier, not a headless trigger by itself. macOS `--snapshot` uses an offscreen WebView to capture rendered output.
 * **Windows Console Integration (`AttachConsole`)**: On Windows, the binary is compiled with `windows_subsystem = "windows"` to ensure clean launches from File Explorer without terminal flashing. When CLI flags are detected, it dynamically calls Win32 `AttachConsole(ATTACH_PARENT_PROCESS)` to pipe standard I/O directly to the caller's console (Windows Terminal, PowerShell, Git Bash, cmd).
 
 ```sh
@@ -174,10 +174,14 @@ mdvu document.md --toc
 
 ### Updating embedded renderers
 
-Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
+Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3.11+. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
 
 The JavaScript PlantUML build registers fewer diagram factories than the Java engine. Unsupported-type and syntax-error SVG panels are rejected before display/caching. C4 and ArchiMate library data are embedded in the PlantUML bundle, with their script-loader states pre-registered, so includes require no network or separate files. Other optional libraries are not included. `scripts/runtime-assets/stdlib-lock.json` pins the library URLs, versions and source hashes; the renderer asset generator verifies them before bundling. Updating the runtime manifest invalidates old SVG cache entries on both platforms. `assets/plantuml-adapter.mjs` routes `@startdot` directly to the same memoized Viz.js instance used by the PlantUML layout engine. The shared Rust parser normalizes standalone `zenuml` fences to Mermaid ZenUML input before computing their SVG cache key.
 
 ### Source checkout and generated data
 
 Only application/build sources, locked runtimes, regression tests, fixtures, approved snapshots and human-readable documentation belong in Git. Build output is ignored under `.build/`, `target/` and `dist/`. Competitor apps, ad hoc comparison tools, raw JSON/video/screenshots and browser profiles remain local under `test-results/`. Native correctness runners derive catalogue cases directly from `tests/fixtures/test-diagrams.md`; a fresh checkout never needs local benchmark registries or results. Repository tests reject tracked downloads and generated diagnostics.
+
+Rust sources use `cargo fmt` and pass Clippy with warnings denied, including the Windows-specific configuration. Shared reader behavior lives in `assets/`; host code owns platform integration. `make clean` removes Swift and Rust build products and `dist/`, while retaining local evidence.
+
+`packaging/assets/` contains the README screenshot and source icons; `packaging/macos/` and `packaging/windows/` contain platform metadata and generated branding. To regenerate the Windows installer images, install Pillow and run `python3 scripts/generate-wix-bitmaps.py`. `--output <directory>` previews the two RGB bitmaps elsewhere. The same optional image library is used by the visual reference comparison; no image-processing library ships with the app.

@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - Unreleased
 
+### Repository maintenance
+- Refresh installation, CLI, architecture and verification documentation against the merged macOS/Windows codebase.
+- Enforce Rust formatting and lint checks, remove unused helpers and stale version fallbacks, and make macOS cleanup remove Rust build output too.
+- Replace the installer-branding tool's custom PNG decoder, resampler and BMP writer with Pillow, already used by the optional visual reference tools.
+- Align native benchmark defaults and option handling; report failed or missing benchmark input with a nonzero exit code. Share the macOS About/CLI version lookup.
+
 ### Release distribution
 - Publish the universal macOS DMG, ARM/Universal/Intel portable ZIPs, Windows x64 MSI and portable ZIP together, with SHA-256 sidecars and a source-commit manifest.
 - Keep releases as drafts until the complete upload is verified; reuse tested CI builds and never replace public release assets.

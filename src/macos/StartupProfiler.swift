@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 final class StartupProfiler {
     private let start = ContinuousClock.now

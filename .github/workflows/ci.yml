@@ -157,13 +157,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-          components: llvm-tools-preview
+          components: llvm-tools-preview, clippy
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2.9.2
 
       - name: Run Rust Workspace Tests
         run: cargo test --workspace --verbose
+
+      - name: Lint Windows and shared Rust sources
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Measure Windows Rust coverage
         shell: pwsh
@@ -298,7 +301,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2.9.2
+      - name: Check Rust formatting and lints
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy -p mdvu-core --all-targets -- -D warnings
       - run: cargo test -p mdvu-core
       - name: Verify release packages and embedded renderer integrity
         run: python3 -m unittest discover -s tests -p 'test_*.py'

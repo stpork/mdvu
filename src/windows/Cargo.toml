@@ -33,7 +33,5 @@ windows-sys = { version = "0.59", features = [
     "Win32_Storage_FileSystem",
 ] }
 
-[build-dependencies]
-
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }

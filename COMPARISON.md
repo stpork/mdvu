@@ -149,6 +149,27 @@ All attempts, binary/source hashes, cache states, geometry, exclusions and memor
 
 ## Current MDVu verification · 19 October 2026
 
+The release-candidate baseline is merged `develop` revision **`fe8de20`**, whose source tree matches the reviewed `4f55734`. [Post-merge CI](https://github.com/stpork/mdvu/actions/runs/39226613456) passed on macOS, Windows and Linux: **93 Swift tests, 27 core unit + 17 integration tests, nine Windows unit tests, 18 repository/runtime/release checks and 39/39 native fixtures per platform**. The current fence-metadata, automatic-dialect, stale-folder and debounced-find regressions are present in the test logs. Hosted fixture runs use timer mode for correctness; their timings are not display-frame or competitor measurements.
+
+Both native CI jobs passed separate forward/reverse SVG visibility checks before zoom: 630 visits for the 315 valid Heavy diagrams and 146 visits for the 73 catalogue examples. Windows finished with five/three mounted SVGs respectively and none beyond the retention area. Both MSI installation scopes passed 19 assertions each, including Finish, shortcut launch, installed rendering and uninstall.
+
+NAS (Windows 10) independently rebuilt `4f55734`, passed the six main fixtures and metadata-fence fixture, three warm scroll passes and representative zoom, panel, navigation and fullscreen scenarios. Its separate visibility passes confirmed the same 315/73 diagrams before zoom. A clean debug rebuild then passed all 53 Rust workspace tests; the initial stale debug binaries are excluded. The NAS release executable is 5,878,784 bytes (5.61 MiB). Local evidence is in `test-results/performance-recheck-20261019/nas-pr2-4f55734/` and `test-results/performance-recheck-20261019/nas-pr2-tests-4f55734/`.
+
+All six packages from the merged CI run were downloaded together and their SHA-256 sidecars verified. These are download sizes for that exact build, not installed sizes or competitor measurements:
+
+| Package | Bytes | MiB |
+| --- | ---: | ---: |
+| `mdvu-0.5.0-macos.dmg` | 5,429,423 | 5.18 |
+| `mdvu-0.5.0-macos-arm64.zip` | 4,025,064 | 3.84 |
+| `mdvu-0.5.0-macos-universal.zip` | 4,984,624 | 4.75 |
+| `mdvu-0.5.0-macos-x86_64.zip` | 4,120,512 | 3.93 |
+| `mdvu-0.5.0-windows-x86_64.msi` | 4,997,120 | 4.77 |
+| `mdvu-0.5.0-windows-x86_64.zip` | 4,547,852 | 4.34 |
+
+Build identities, checksums and native reports: `test-results/merge-develop-20261019/` (local evidence, excluded from Git). Later maintenance builds do not replace these recorded measurements.
+
+### Earlier regression verification
+
 [PR #2 CI on revision `7230777`](https://github.com/stpork/mdvu/actions/runs/39165392352) passed on macOS, Windows and Linux. This verification covers 90 Swift tests, 27 shared Rust unit tests plus 16 integration tests, 8 Windows host unit tests, 11 packaged CLI contract cases and 38/38 native fixtures per platform, including all 73 catalogue examples. Hosted native fixture runs use timer mode to verify correctness; they are not frame-rate or competitor measurements.
 
 The regression changes preserve the macOS math runtime through error pages, separate decoded Windows filenames from URL fragments and synchronize native/Rust release versions. No rendering engine or permanent cache was added. The Windows executable changed from 6,075,392 to 6,078,464 bytes (+3,072 bytes) in that CI pair. These identities are separate from the earlier performance series below.
