@@ -17,11 +17,13 @@ RAM attribution is corrected: sample physical footprint every 200 ms for bundle 
 | MDVu | 6.96 | 1.31 s / 0.78 s | 1.20 s / 0.66 s | 146.2 / 143.0 |
 | Typora | 44.53 | 2.19 s / 1.36 s | 1.76 s / 1.39 s | 347.3 / 343.0 |
 | Obsidian | 527.28 | 1.75 s / 1.45 s | 1.32 s / 1.21 s | 476.9 / 417.9 |
-| MacDown 3000 | 16.54 | 1.37 s / 1.64 s | 1.04 s / 0.71 s | 138.4 / 149.1 |
+| MacDown 3000 | 16.54 | 1.37 s / 1.64 s | 1.04 s / 1.10 s | 138.4 / 201.0 |
 | MarkViewer | 58.15 | 2.15 s / 2.16 s | 1.40 s / 1.19 s | 358.6 / 356.1 |
 | MD Viewer | 410.02 | 2.49 s / 1.83 s | N/A / N/A | 428.8 / 447.8 |
 | VS Code | 1388.93 | 3.56 s / 3.13 s | 3.31 s / 2.51 s | 1245.5 / 1272.1 |
 | Marked | 145.18 | 4.03 s / 3.01 s | 3.23 s / 2.94 s | 314.6 / 309.1 |
+
+The MacDown warm reference above and on the website uses the maintainer’s final manual measurements supplied on 19 October: **201 MiB RAM and 1.1 s to the first diagram**. These are maintainer-reported values, not a new system-capture run. The original automated paired Light observation (149.1 MiB and 0.71 s) remains in the immutable JSON evidence. No benchmark was rerun for this correction. The cold cells and the Complete/Heavy RAM observations below retain their recorded scope.
 
 `N/A` for MD Viewer means the control was shown as source, not a rendered graph. **Render · Page on the home page means the first visible two-node Mermaid, not completion of the entire document.** Warm SVG cache hits are allowed. EOF is independently verified by overlapping viewport steps, final context and terminal scrollbar; it does not prove every optional diagram rendered. Traversal duration contains test cadence and is not a rendering-speed metric.
 
