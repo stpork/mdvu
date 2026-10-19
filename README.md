@@ -1,18 +1,22 @@
 <div align="center">
-  <img src="packaging/assets/AppIcon-256.png" alt="MDVu App Icon" width="128" height="128">
-  <h1>MDVu - Superfast Markdown Viewer</h1>
+  <a href="https://stpork.github.io/mdvu/"><img src="packaging/assets/AppIcon-256.png" alt="MDVu Markdown viewer" width="128" height="128"></a>
+  <h1>MDVu — Markdown Viewer for Mac &amp; Windows</h1>
 
-  <p>
-    The tiny, ultra-fast, ultra-compact and lightweight native Markdown viewer for <b>macOS &amp; Windows</b>.<br>
-    Built with pure AppKit &amp; WebKit (macOS) and Win32 &amp; WebView2 (Windows). Zero Electron. Zero Node. Zero Telemetry. Markdown, math and diagrams render offline.
+  <p><a href="https://stpork.github.io/mdvu/"><strong>stpork.github.io/mdvu</strong></a><br>
+    <a href="https://stpork.github.io/mdvu/#download">Downloads</a> · <a href="https://stpork.github.io/mdvu/diagrams/">Diagram examples</a> · <a href="https://stpork.github.io/mdvu/#comparison">Comparison</a>
   </p>
 
   <p>
-    <a href="https://github.com/stpork/mdvu/actions"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
-    <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
-    <a href="#3-windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
-    <a href="https://github.com/stpork/mdvu/releases"><img src="https://img.shields.io/github/v/release/stpork/mdvu" alt="Latest published release"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
+    Superfast Markdown viewing in an ultracompact native app for <b>macOS &amp; Windows</b>.<br>
+    Read MD files, LaTeX math and diagrams offline. No Electron, account or telemetry.
+  </p>
+
+  <p>
+    <a href="https://github.com/stpork/mdvu/releases/latest"><img src="https://img.shields.io/github/v/release/stpork/mdvu" alt="Latest stable release"></a>
+    <a href="https://github.com/stpork/mdvu/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=main" alt="macOS, Windows and Linux build and tests"></a>
+    <a href="#installation"><img src="https://img.shields.io/badge/macOS-13%2B-58677c?logo=apple" alt="macOS 13+"></a>
+    <a href="#3-windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-58677c" alt="Windows 10 and 11"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-58677c" alt="MIT license"></a>
   </p>
 </div>
 
@@ -76,7 +80,7 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-The Windows packages and updated engine/catalogue features documented here require **0.5.0 or later**. Check the [published release assets](https://github.com/stpork/mdvu/releases) for available versions; a development checkout can include changes that have not been released yet.
+**0.5.0 is the current stable release**, with native macOS and Windows packages. Download the [macOS DMG](https://github.com/stpork/mdvu/releases/download/v0.5.0/mdvu-0.5.0-macos.dmg), [Windows MSI](https://github.com/stpork/mdvu/releases/download/v0.5.0/mdvu-0.5.0-windows-x86_64.msi), or a portable ZIP from [GitHub Releases](https://github.com/stpork/mdvu/releases/tag/v0.5.0). Each package has a published SHA-256 checksum.
 
 Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Other versions · portable ZIPs** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
 
