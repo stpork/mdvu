@@ -37,7 +37,7 @@ class NativeCLI(unittest.TestCase):
         for mode in ('auto', 'automatic', ' AUTO '):
             with self.subTest(mode=mode):
                 self.assertIn('href="Architecture%20Overview.md"', self.run_cli(
-                    source, '--stdout', '--dialect', 'generic', '--dialect', mode))
+                    source, '--stdout', '--dialect', mode))
     def test_nul_is_not_end_of_document(self):
         self.assertIn('After', self.run_cli(b'# Before\n\0\n# After', '--stdout'))
     def test_diagram_option_and_selective_standalone(self):
