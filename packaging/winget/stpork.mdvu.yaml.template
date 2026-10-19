@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
+PackageIdentifier: stpork.mdvu
+PackageVersion: VERSION_PLACEHOLDER
+PackageLocale: en-US
+Publisher: Finn de Bear
+PublisherUrl: https://github.com/stpork
+PublisherSupportUrl: https://github.com/stpork/mdvu/issues
+PackageName: MDVu
+PackageUrl: https://github.com/stpork/mdvu
+License: MIT
+LicenseUrl: https://github.com/stpork/mdvu/blob/main/LICENSE
+ShortDescription: Fast, lightweight native Markdown and Mermaid viewer for Windows
+Description: >-
+  MDVu is an ultra-fast, lightweight native Markdown viewer with offline Mermaid,
+  PlantUML, and KaTeX math rendering, multi-dialect support (GitHub, GitLab,
+  Obsidian, CommonMark), file tree and vault navigation, live reload, and headless CLI export.
+Moniker: mdvu
+Tags:
+  - markdown
+  - mermaid
+  - plantuml
+  - katex
+  - obsidian
+  - viewer
+  - cli
+FileExtensions:
+  - md
+  - markdown
+  - mdown
+  - mkd
+Commands:
+  - mdvu
+Installers:
+  - Architecture: x64
+    InstallerType: wix
+    InstallerUrl: https://github.com/stpork/mdvu/releases/download/vVERSION_PLACEHOLDER/mdvu-VERSION_PLACEHOLDER-windows-x86_64.msi
+    InstallerSha256: MSI_SHA256_PLACEHOLDER
+    UpgradeBehavior: install
+  - Architecture: x64
+    InstallerType: zip
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: mdvu.exe
+        PortableCommandAlias: mdvu
+    InstallerUrl: https://github.com/stpork/mdvu/releases/download/vVERSION_PLACEHOLDER/mdvu-VERSION_PLACEHOLDER-windows-x86_64.zip
+    InstallerSha256: ZIP_SHA256_PLACEHOLDER
+ManifestType: singleton
+ManifestVersion: 1.6.0

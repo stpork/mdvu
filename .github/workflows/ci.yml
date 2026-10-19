@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/**' ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
@@ -10,14 +11,21 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-and-build:
-    name: Test & Build (macOS)
-    runs-on: macos-14
-    timeout-minutes: 20
+  # =========================================================================
+  # macOS Runner: AppKit GUI, WebKit, Rust Core FFI, Universal Packaging
+  # =========================================================================
+  macos:
+    name: macOS (Tests & Release Build)
+    runs-on: macos-15
+    timeout-minutes: 25
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Select Xcode
         run: |
@@ -29,18 +37,38 @@ jobs:
           echo "Active Developer Directory: $(xcode-select -p)"
           swift --version
 
-      - name: Run Test Suite (all fixtures)
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Run Rust Core Unit Tests
+        run: cargo test -p mdvu-core --verbose
+
+      - name: Run shared Rust coverage
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install cargo-llvm-cov --locked
+          mkdir -p target/coverage
+          cargo llvm-cov -p mdvu-core --lcov --output-path target/coverage/rust.lcov
+
+      - name: Run Swift & AppKit Test Suite
         run: |
           set -o pipefail
           mkdir -p test-results
-          make test 2>&1 | tee test-results/tests.log
+          ./scripts/coverage-swift.sh 2>&1 | tee test-results/tests.log
+          python3 scripts/coverage-summary.py | tee test-results/coverage.txt
 
       - name: Upload test diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
-          name: test-diagnostics
-          path: test-results/
+          name: test-diagnostics-macos
+          path: |
+            test-results/
+            target/coverage/
+            .build/**/codecov/*.json
           retention-days: 7
 
       - name: Build Application Bundle
@@ -53,8 +81,37 @@ jobs:
           codesign -v --deep --strict dist/mdvu.app
           SIZE=$(stat -f %z "$BINARY")
           echo "Binary size: $SIZE bytes"
-          # Ensure binary is stripped and compact (< 2MB)
           test $SIZE -lt 2097152
+
+      - name: Verify all native WebKit fixtures
+        id: native-fixtures
+        run: |
+          python3 scripts/test-macos-system.py --timer-only --fail-fast --output test-results/native-fixtures-macos
+          python3 scripts/test-macos-system.py --timer-only --fixture test-heavy.md --fixture test-diagrams.md --audit-script tests/ui/check-visible-diagrams.js --output test-results/native-fixtures-macos/visible-before-zoom
+
+      - name: Upload native fixture diagnostics
+        if: always() && steps.native-fixtures.outcome != 'skipped'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: native-fixtures-macos
+          path: test-results/native-fixtures-macos/
+          retention-days: 7
+
+      - name: Test Headless CLI Functionality
+        run: |
+          set -o pipefail
+          CLI="dist/mdvu.app/Contents/MacOS/mdvu"
+          $CLI --help
+          $CLI --version
+          $CLI README.md -o /tmp/cli-output.html --standalone
+          test -f /tmp/cli-output.html
+          $CLI README.md --toc > /tmp/cli-toc.json
+          grep -q "why-mdvu" /tmp/cli-toc.json
+          $CLI - --stdout < README.md > /tmp/cli-stdout.html
+          grep -q "MDVu" /tmp/cli-stdout.html
+
+      - name: Run cross-platform CLI contract
+        run: python3 scripts/test-cli.py dist/mdvu.app/Contents/MacOS/mdvu
 
       - name: Run Performance Benchmark
         run: make benchmark
@@ -62,14 +119,219 @@ jobs:
       - name: Package Universal Release
         run: make archive
 
-      - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload macOS Release Artifacts
+        uses: actions/upload-artifact@v7.0.2
         with:
-          name: mdvu-release-packages
+          name: mdvu-macos-release
           path: |
             dist/mdvu-*.zip
             dist/mdvu-*.zip.sha256
             dist/mdvu-*.dmg
             dist/mdvu-*.dmg.sha256
             dist/mdvu.rb
+          if-no-files-found: error
           retention-days: 14
+
+  # =========================================================================
+  # Windows Runner: Win32, WebView2, Rust Core, Standalone Packaging
+  # =========================================================================
+  windows:
+    name: Windows (Tests & Release Build)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Validate PowerShell build and test scripts
+        shell: pwsh
+        run: |
+          Get-ChildItem build.ps1, scripts/*.ps1 | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors) { throw ($parseErrors | Out-String) }
+          }
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: llvm-tools-preview, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2.9.2
+
+      - name: Run Rust Workspace Tests
+        run: cargo test --workspace --verbose
+
+      - name: Lint Windows and shared Rust sources
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Measure Windows Rust coverage
+        shell: pwsh
+        run: |
+          cargo install cargo-llvm-cov --locked
+          ./scripts/coverage-windows.ps1 -TimerOnly
+
+      - name: Build Windows Release Binary
+        run: cargo build --release -p mdvu-windows --bin mdvu
+
+      - name: Package Windows Release Archive
+        shell: pwsh
+        run: ./scripts/build-windows.ps1
+
+      - name: Validate Windows Artifacts (.exe, .zip, .msi, manifests)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/windows/mdvu.exe")) {
+            throw "dist/windows/mdvu.exe was not created"
+          }
+          $zip = Get-ChildItem "dist" -Filter "mdvu-*-windows-x86_64.zip" | Select-Object -First 1
+          if (-not $zip) {
+            throw "Release zip archive not found in dist/"
+          }
+          $msi = Get-ChildItem "dist" -Filter "mdvu-*-windows-x86_64.msi" | Select-Object -First 1
+          if (-not $msi) {
+            throw "Release MSI installer not found in dist/"
+          }
+          foreach ($manifest in @("dist/mdvu.json", "dist/stpork.mdvu.yaml", "dist/chocolatey/mdvu.nuspec")) {
+            if (-not (Test-Path $manifest)) {
+              throw "Package manager manifest $manifest was not generated"
+            }
+          }
+          Write-Host "Found release zip: $($zip.FullName) ($($zip.Length) bytes)"
+          Write-Host "Found release MSI: $($msi.FullName) ($($msi.Length) bytes)"
+
+      - name: Test MSI admin and non-admin installation
+        id: installer
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dist/mdvu-*-windows-x86_64.msi | Select-Object -First 1
+          # The disposable hosted VM blocks unmanaged per-user MSIs (1625).
+          # Allow the integration test, then restore its original policy.
+          $policy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer'
+          $previous = (Get-ItemProperty $policy -ErrorAction SilentlyContinue).DisableMSI
+          try {
+            New-Item $policy -Force | Out-Null
+            New-ItemProperty $policy -Name DisableMSI -PropertyType DWord -Value 0 -Force | Out-Null
+            ./scripts/test-windows-installer.ps1 -Msi $msi.FullName
+          } finally {
+            if ($null -eq $previous) { Remove-ItemProperty $policy -Name DisableMSI }
+            else { Set-ItemProperty $policy -Name DisableMSI -Value $previous }
+          }
+
+      - name: Upload MSI installation diagnostics
+        if: always() && steps.installer.outcome != 'skipped'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: installer-windows
+          path: test-results/installer-windows/
+          retention-days: 7
+
+      - name: Test Windows Headless CLI & Benchmarks
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist/windows/mdvu.exe").Path
+          & $exe --help | Out-Host
+          & $exe --version | Out-Host
+          $proc = Start-Process -FilePath $exe -ArgumentList "README.md -o dist/test-output.html --standalone" -Wait -NoNewWindow -PassThru
+          if ($proc.ExitCode -ne 0) {
+            throw "CLI HTML generation failed with exit code $($proc.ExitCode)"
+          }
+          if (-not (Test-Path "dist/test-output.html")) {
+            throw "CLI HTML output was not generated"
+          }
+          $toc = & $exe README.md --toc | Out-String
+          if ($toc -notmatch "why-mdvu") {
+            throw "CLI TOC JSON extraction failed"
+          }
+          & $exe --benchmark tests/fixtures/test-complete.md | Out-Host
+          & $exe --benchmark tests/fixtures/test-heavy.md | Out-Host
+          Write-Host "Windows CLI and benchmark tests passed successfully" -ForegroundColor Green
+
+      - name: Verify native Windows CLI and WebView2 GUI
+        shell: pwsh
+        run: |
+          python scripts/test-cli.py dist/windows/mdvu.exe
+          if ($LASTEXITCODE -ne 0) { throw "CLI contract failed" }
+          ./scripts/test-windows-gui.ps1 -Exe dist/windows/mdvu.exe
+
+      - name: Upload Windows coverage
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: coverage-windows
+          path: target/coverage/
+
+      - name: Verify all native WebView2 fixtures
+        id: native-fixtures
+        shell: pwsh
+        run: |
+          ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -TimerOnly -SampleSeconds 1 -BenchmarkRuns 3 -Output test-results/native-fixtures-windows
+          foreach ($fixture in @('test-heavy.md','test-diagrams.md')) {
+            ./scripts/test-windows-system.ps1 -Exe dist/windows/mdvu.exe -FixtureFilter $fixture -AuditScript tests/ui/check-visible-diagrams.js -TimerOnly -SampleSeconds 1 -BenchmarkRuns 1 -Output "test-results/native-fixtures-windows/visible-before-zoom/$fixture"
+          }
+
+      - name: Upload native Windows fixture diagnostics
+        if: always() && steps.native-fixtures.outcome != 'skipped'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: native-fixtures-windows
+          path: test-results/native-fixtures-windows/
+          retention-days: 7
+
+      - name: Upload Windows Release Artifacts
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: mdvu-windows-x86_64
+          path: |
+            dist/mdvu-*-windows-x86_64.zip
+            dist/mdvu-*-windows-x86_64.msi
+            dist/*.sha256
+            dist/mdvu.json
+            dist/stpork.mdvu.yaml
+            dist/chocolatey/**
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-core:
+    name: Cross-platform Rust core (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2.9.2
+      - name: Check Rust formatting and lints
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy -p mdvu-core --all-targets -- -D warnings
+      - run: cargo test -p mdvu-core
+      - name: Verify release packages and embedded renderer integrity
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+  release:
+    name: Publish all six release packages
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows, linux-core]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: mdvu-*
+          merge-multiple: true
+          path: release
+      - name: Validate tag and publish the complete tested build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          VERSION=$(tr -d '[:space:]' < version.txt)
+          test "$RELEASE_TAG" = "v$VERSION"
+          python3 scripts/release-assets.py release "$VERSION" --publish --commit "$RELEASE_COMMIT"
