@@ -1,6 +1,6 @@
 [package]
 name = "mdvu-core"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 description = "Core high-performance Markdown processing and offline diagram engine for MDVu"
 license = "MIT"
