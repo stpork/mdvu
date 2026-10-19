@@ -4,7 +4,7 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - Unreleased
+## [0.5.0] - 2026-10-19
 
 ### Repository maintenance
 - Refresh installation, CLI, architecture and verification documentation against the merged macOS/Windows codebase.
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TOC Anchor Deduplication**:
   - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
 
-### Current 0.5.0 work
+### Fixed and improved
 - Recognize fenced diagram/math languages independently of trailing titles and attributes, preserving renderer selection and cache identity.
 - Keep macOS `--dialect auto`/`automatic` in automatic mode, including after an explicit dialect selection.
 - Reject obsolete Windows folder scans and queued automatic file selections by navigation generation, including repeated visits to the same root.
