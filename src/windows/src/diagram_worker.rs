@@ -75,7 +75,7 @@ impl DiagramWorker {
             .with_visible(false)
             .with_inner_size(tao::dpi::LogicalSize::new(920., 800.))
             .build(target)?;
-        let view = WebViewBuilder::with_web_context(context)
+        let view = WebViewBuilder::new_with_web_context(context)
             .with_custom_protocol("mdvu-diagram".into(), move |_, _| {
                 wry::http::Response::builder()
                     .header("Content-Type", "text/html; charset=utf-8")

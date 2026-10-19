@@ -261,6 +261,36 @@ import WebKit
         #expect((reply?["svg"] as? String)?.contains("<svg") == true)
     }
 
+    @Test func upgradedElkRendersCompoundGraphsWithFiniteGeometry() async throws {
+        let service = DiagramRenderingService(idleDelay: 0.05), owner = UUID()
+        var reply: [String: Any]?
+        let source = """
+            ---
+            config:
+              layout: elk
+            ---
+            flowchart LR
+              subgraph Reader
+                Open --> Parse
+              end
+              subgraph Worker
+                Queue --> SVG
+              end
+              Parse --> Queue
+              SVG --> Open
+            """
+        service.submit(owner: owner, request: ["id": "elk-upgrade", "renderer": "mermaid", "source": source]) { reply = $0 }
+        defer { service.cancel(owner: owner) }
+        for _ in 0..<600 where reply == nil { try await Task.sleep(for: .milliseconds(25)) }
+        #expect(reply?["error"] == nil)
+        let svg = try #require(reply?["svg"] as? String)
+        #expect(svg.contains("<svg"))
+        #expect(svg.contains("Reader"))
+        #expect(svg.contains("Worker"))
+        #expect(!svg.contains("NaN"))
+        #expect(!svg.contains("Infinity"))
+    }
+
     @Test func offscreenDiagramsReleaseTheirDOMAndRemainSearchable() async throws {
         let configuration = WKWebViewConfiguration()
         configuration.userContentController.addUserScript(WKUserScript(source: "window.requestAnimationFrame=callback=>setTimeout(callback,0)", injectionTime: .atDocumentStart, forMainFrameOnly: true))

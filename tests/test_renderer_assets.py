@@ -28,6 +28,14 @@ class RendererAssetsTests(unittest.TestCase):
         self.assertEqual(set(stdlib), {'c4', 'archimate'})
         for name, version in packages.items():
             self.assertEqual(lock['node_modules/' + name]['version'], version)
+        # These major-version overrides must reach every transitive copy, not just
+        # the root package used to populate the manifest.
+        for path, package in lock.items():
+            name = path.split('node_modules/')[-1]
+            if name in {'@zenuml/core', 'elkjs', 'katex'}:
+                self.assertEqual(package['version'], packages[name], path)
+            if name == 'marked':
+                self.assertEqual(package['version'], '18.1.1', path)
         for name, expected in manifest['assets'].items():
             with self.subTest(asset=name):
                 compressed = (ROOT / 'assets' / (name + '.lzma')).read_bytes()

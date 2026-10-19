@@ -34,7 +34,7 @@ Read Markdown, diagrams and math in a compact native app for Mac and Windows. Th
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with CommonMark parsing, GFM extensions and security tagfiltering.
 * **Rich Markdown Dialects & Extensions**: Native support for **GitHub GFM**, **Obsidian** (callouts `[!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!DANGER]`, wiki-links `[[target|label]]`, and embeds `![[image.png]]`), **MkDocs** (`!!!`, `???`, `???+`), **Docusaurus / VuePress** (`:::note` containers), **CriticMarkup** (`{++add++}`, `{--del--}`, `{~~old~>new~~}`, `{==mark==}`, `{>>comment<<}`), **Subscript & Superscript** (`~sub~`, `^sup^`, `^^underline^^`), and **GitLab TOC** (`[[_TOC_]]`).
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
-* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 12.2.0**, **ZenUML 1.0.1**, and **PlantUML Core 1.2026.9** + **Viz.js 3.31.0** (Graphviz 16.1.0) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and runtime-aware disk caching.
+* **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 12.2.0**, **ZenUML Core 4.7.2** (plugin 1.0.1), **ELK 0.12.0**, and **PlantUML Core 1.2026.9** + **Viz.js 3.31.0** (Graphviz 16.1.0) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and runtime-aware disk caching.
 * **Native Zoom & Window Management**:
   * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, native titlebar behavior, and 3-pane split view with Vault Navigator (`⌥⌘D`).
   * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, a WebView2 reader toolbar and sidebars, and a live atomic-save file watcher (`notify`).
@@ -317,7 +317,7 @@ mdvu --snapshot output.png README.md
 * **Mermaid 12.2.0**:
   * **Core Grammars**: `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram-v2`, `erDiagram`, `gitGraph`, `gantt`, `pie`, `mindmap`, `quadrantChart`, `requirementDiagram`, `C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`.
   * **Extended Types**: `ishikawa-beta` (fishbone diagrams), `swimlane-beta` (workflow swimlanes), `packet-beta` (binary packet protocols), `kanban`, `block-beta`, `architecture-beta`, `radar-beta`, `sankey-beta`, and `xychart-beta`.
-  * **ZenUML 1.0.1 Plugin**: Support for concise ZenUML sequence diagrams within ````mermaid`` and standalone ````zenuml`` code blocks, sharing the same renderer and SVG cache.
+  * **ZenUML Core 4.7.2 / Mermaid Plugin 1.0.1**: Support for concise ZenUML sequence diagrams within ````mermaid`` and standalone ````zenuml`` code blocks, sharing the same renderer and SVG cache.
   * **Auto-Quoting Resilience**: Grammar preprocessor automatically quotes unquoted labels containing hyphens in `requirementDiagram` and complex models.
 * **PlantUML 1.2026.9 (`@plantuml/core`) + Graphviz (`Viz.js 3.31.0` / Graphviz 16.1.0)**:
   * **Offline JavaScript/WebAssembly**: Executes locally through TeaVM and Viz.js in WebKit on macOS or WebView2 on Windows. **No Java runtime (JRE/JVM) or external binaries required.**
