@@ -36,7 +36,7 @@ Read Markdown, diagrams and math in a compact native app for Mac and Windows. Th
 * **Native Math Formulas (LaTeX / KaTeX)**: Full offline rendering for inline (`$...$`) and display (`$$...$$` or ````math```` blocks) mathematical formulas via an LZMA-compressed KaTeX engine (~64 KB) and native MathML Core rendering with dark/light mode integration and zero font downloads.
 * **Offline Diagrams (Mermaid, ZenUML & PlantUML)**: Bundled **Mermaid 12.2.0**, **ZenUML 1.0.1**, and **PlantUML Core 1.2026.9** + **Viz.js 3.31.0** (Graphviz 16.1.0) with **LZMA Ultra** compression. Renders 100% offline with zero Java requirement, independent lazy loading, isolated native diagram execution, and runtime-aware disk caching.
 * **Native Zoom & Window Management**:
-  * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, titlebar quick-open, and 3-pane split view with Vault Navigator (`⌥⌘D`).
+  * macOS: Trackpad pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), compound toolbar control (`[-][ 100% ][+]`), magnetic $\pm 2.5\%$ snapping, native titlebar behavior, and 3-pane split view with Vault Navigator (`⌥⌘D`).
   * Windows: DWM Windows 11 immersive dark mode titlebars, native menus, a WebView2 reader toolbar and sidebars, and a live atomic-save file watcher (`notify`).
 * **Resource Hygiene**: Strict memory management, collision-resistant diagram caching, and zero background telemetry.
 
@@ -352,9 +352,9 @@ mdvu --snapshot output.png README.md
 
 ---
 
-### 📑 macOS Document Titlebar Quick-Open
-* Click the file name in the window titlebar to open the native `NSOpenPanel` sheet modal and switch files or folders in the current window.
-* Full compatibility with macOS native window features: dragging the title moves the window, `⌘-click` reveals the Finder directory hierarchy, and the proxy icon can be dragged into Terminal or Mail.
+### 📑 Native Window Controls
+* **macOS**: Single-click the file name to open a file or folder; the dialog waits for the system double-click interval. Double-click the name to toggle the window's native Zoom size. Outside the name, double-click follows Desktop & Dock settings; dragging moves the window, and `⌘-click` reveals the document path. **File → Open…** (`⌘O`), **Window → Minimize / Zoom** and **View → Enter Full Screen** remain available.
+* **Windows**: The native caption supports double-click to maximize/restore, drag to move, and right-click or `Alt+Space` for the system window menu. Caption buttons, Snap, `Alt+F4` and `F11` retain Windows behavior.
 
 ---
 
@@ -384,30 +384,6 @@ mdvu --snapshot output.png README.md
 
 ---
 
-## Performance & Sizing Benchmark
-
-See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. The 19 October release recheck includes eight macOS applications, separate application-cache-cold and warm starts, physical memory including app-owned system services, and Complete/Heavy diagnostics for MDVu and MacDown. The separate 73-example format catalogue and incomplete historical 192-cell study retain their original scope. Windows native checks are reported separately; there is no Windows competitor ranking.
-
-Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
-
-Both native `--benchmark` commands use the normal dialect/theme options and require a readable input file. Defaults are one warmup and five measured iterations with diagrams disabled. `MDVU_BENCHMARK_RUNS` sets the iteration count, `MDVU_BENCHMARK_WARMUP=0` skips warmup, and `MDVU_BENCHMARK_MERMAID=1` includes diagram-placeholder preprocessing; `--no-mermaid` still disables it. No browser or SVG generation is timed.
-
-| Property | Configuration / measurement |
-| :--- | :--- |
-| Application size | Depends on architecture and packaging; CI publishes release archives for each build |
-| Compiler | `-O`, cross-module optimization, linker dead stripping, stripped Mach-O |
-| Resources | Lazy LZMA decompression off the UI queue; reused for later documents |
-| Cache | Shared Rust SVG cache: at most 128 entries / 16 MiB; persistent disk cache |
-| Zoom | 10%–500%; native WebKit page zoom on macOS, document zoom on Windows; trackpad magnification follows macOS conventions |
-
-For the previous measured build, `-Osize` saved less than 1% of the entire app while reducing parser throughput in that run, so the speed-oriented flags are retained. No formatting or parser capabilities have been removed to reduce size.
-
-### TOC navigation and installed copies
-
-Click a heading in the Contents pane to scroll to it, including clicking the same selected row again after scrolling away. Local `file://` navigation tolerates WebKit history API restrictions and uses native Back/Forward history. If a fix appears absent, verify the version in **About mdvu**: `/Applications/mdvu.app` and `~/Applications/mdvu.app` can contain different builds. Launch the newly installed copy explicitly.
-
----
-
 ## Keyboard Shortcuts
 
 | Action | macOS | Windows |
@@ -430,46 +406,6 @@ Click a heading in the Contents pane to scroll to it, including clicking the sam
 
 ---
 
-## Architecture
-
-`mdvu` uses a unified cross-platform hybrid architecture:
-* **Core (`src/core`)**: Markdown parser (`pulldown-cmark`), dialect pipeline, runtime loading/cache and C-ABI FFI. Windows embeds the LZMA engines; packaged macOS builds share one resource copy between CPU architectures.
-* **Shared GUI / CLI Entry Point**: The same frontend executable opens the GUI or exports HTML/TOC through CLI flags (`-o`, `--stdout`, `--toc`) and stdin. The macOS app also ships the Rust shared library and resources; Windows links the core into `mdvu.exe`.
-* **macOS (`src/macos`)**: Hand-crafted native AppKit host with WebKit hardware-accelerated viewport, multi-pane split coordinator, trackpad gesture engine, and static FFI bridge.
-* **Windows (`src/windows`)**: Lightweight standalone Win32 binary powered by Microsoft Edge WebView2, DWM dark mode, atomic-save file watching, and `AttachConsole` terminal integration.
-
-The repository has one source root and one test root:
-
-```text
-src/core/          Shared Rust renderer and C ABI
-src/macos/         Swift, AppKit and WebKit host
-src/windows/       Rust, Win32 and WebView2 host
-assets/            Shared CSS, JavaScript and compressed runtimes
-tests/fixtures/   Shared Markdown fixtures and local assets
-tests/macos/      Swift and WebKit regression tests
-tests/ui/         Browser checks used on both platforms
-tests/snapshots/  Reference images
-packaging/macos/   macOS metadata and icon
-packaging/windows/ MSI metadata and Windows branding
-scripts/           Reproducible build, release and regression checks
-```
-
-Git contains application sources, locked renderer assets, packaging, documentation, regression tests, shared fixtures and approved reference images. Downloaded competitor applications, comparison tools, raw measurements, recordings and profiles stay locally under ignored `test-results/`; they are not source or release inputs. `COMPARISON.md` retains the readable results and methodology.
-
-Build output belongs in `.build/`, `target/` and `dist/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
-
-`make clean` removes Swift, Rust and distribution build products. It preserves local evidence in `test-results/`. Regression and release tools require Python 3.11+; optional visual reference and installer-branding tools also require Pillow. Application builds and the standard repository checks do not need Pillow.
-
-Run `python3 -m unittest discover -s tests -p 'test_*.py'` for repository, release, installer-authoring and runtime-integrity checks. Run `make check` and `make coverage` on macOS. `./build.sh check` also runs the visual reference checks (Pillow and an active desktop required). After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. For a clean Windows test machine, run `./scripts/test-windows-installer.ps1 -Msi <path>` from an elevated interactive PowerShell. It tests the full MSI UI in both scopes, using a disposable standard Windows account and a verified non-elevated token for the user installation; checks Finish, shortcut targets/launch, associations and installed rendering; then uninstalls each test installation. It refuses to overwrite an existing installation and removes the temporary account, profile and staged test files afterward. Logs stay under `test-results/installer-windows/`. The system runner's `-Msi <path> -Install` option only performs a silent machine installation and is not the two-scope regression test. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
-
-The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
-
-Interactive regression ceilings are 250 ms for cold scrolling and 500 ms for a cold frame, zoom or pane reflow. Control timings include acknowledgement and two animation frames. Render-frame p95 remains a diagnostic distribution: the cold stress scenario repeatedly changes zoom while diagrams are being generated. Fullscreen transition durations are reported separately because they include the operating system's animation. These ceilings do not imply a constant frame rate or a globally optimal implementation.
-
-For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
----
-
 ## License & Credits
 
 * **Author**: Finn de Bear ([finndebear@gmail.com](mailto:finndebear@gmail.com))
@@ -484,18 +420,3 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 * [PlantUML Core 1.2026.9](https://github.com/plantuml/plantuml) — MIT (c) PlantUML Team.
 * [Viz.js 3.31.0 (Graphviz 16.1.0)](https://github.com/mdaines/viz.js) — MIT (c) Michael Daines, Graphviz Contributors.
 * [KaTeX 0.19.0](https://github.com/KaTeX/KaTeX) — MIT (c) Emily Eisenberg, Sophie Alpert, and KaTeX Contributors.
-
-## Publishing a release
-
-Use a clean `develop` branch with a successful CI run for its exact commit.
-
-Before publishing, fetch the remote branches and fast-forward local `main` to `origin/main`. The helper refuses a divergent or outdated local `main`; merge any new mainline changes into `develop` and rerun CI before releasing.
-
-```sh
-./build.sh publish         # Download and validate all six CI packages; preview only
-./build.sh publish --yes   # Merge, tag, wait for tested publication; update Homebrew/site
-```
-
-Use `python3 scripts/set-version.py X.Y.Z` to update `version.txt`, `Info.plist`, both Rust package versions and `Cargo.lock` together, then update the matching `CHANGELOG.md` section before pushing the release candidate. CI checks that these versions agree. The release helper never replaces an existing tag or public release. Tag CI tests Linux, macOS and Windows, builds all six packages, verifies SHA-256, uploads to a draft, checks the uploaded set, then makes it public. A failed or incomplete upload stays a draft. `release-manifest.json` records the exact source commit, package sizes and hashes.
-
-The helper then updates Homebrew from the published cask, refreshes the website download links, and increments the development minor version. If tagging manually, dispatch **Deploy MDVu website** after successful publication and update Homebrew using the published `mdvu.rb`. Website measurements name their own tested revision; they are not silently relabelled as measurements of a new release.

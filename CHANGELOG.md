@@ -4,6 +4,23 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-10-19
+
+### Fixed
+- Delay macOS filename quick-open until the system double-click interval expires; a second click cancels the dialog and toggles native window Zoom. Preserve titlebar dragging, toolbar controls and the document path menu.
+- Restore the normal window frame as AppKit's zoom user state after first presentation, so an expanded window can shrink again after relaunch. Route unhandled unified-toolbar double-clicks to the native Zoom/Minimize action once.
+- Restore standard macOS Services, Hide, Window → Minimize / Zoom, and View → Full Screen commands; preserve saved and existing window positions and enforce a usable minimum window size.
+- Extend Windows native frame regression checks to cover caption hit testing, double-click maximize/restore with original bounds, system menu commands and minimize/restore.
+- Respect the macOS automatic window tabbing preference instead of forcing new documents into tabs.
+
+### Changed
+- Shorten README by removing the performance benchmark, architecture and release-publishing sections; consolidate architecture, verification and publishing instructions in ARCHITECTURE.md.
+
+### Validation
+- 100 Swift/AppKit/WebKit tests and 18 repository checks pass locally.
+- Repeated filename and blank-titlebar double-clicks expand and restore the window; single-click opens the file dialog after the system double-click interval.
+- Native Windows caption, maximize/restore, system menu and minimize/restore checks pass in system, light and dark themes.
+
 ## [0.5.0] - 2026-10-19
 
 ### Repository maintenance

@@ -26,6 +26,11 @@ public static class MdvuStartupFrame {
  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
  [DllImport("user32.dll")] public static extern bool PostMessageW(IntPtr window, uint message, IntPtr wparam, IntPtr lparam);
+ [DllImport("user32.dll")] public static extern IntPtr SendMessageW(IntPtr window, uint message, IntPtr wparam, IntPtr lparam);
+ [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr window);
+ [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr window);
+ [DllImport("user32.dll")] public static extern IntPtr GetSystemMenu(IntPtr window, bool revert);
+ [DllImport("user32.dll")] public static extern uint GetMenuState(IntPtr menu, uint item, uint flags);
  public static IntPtr FindCaptionWindow(int process) {
   IntPtr found = IntPtr.Zero;
   EnumWindows((window, data) => {
@@ -81,6 +86,34 @@ try {
     # STATE_SYSTEM_INVISIBLE | STATE_SYSTEM_OFFSCREEN | STATE_SYSTEM_UNAVAILABLE.
     if (($Frame.states[$Index] -band 0x18001) -ne 0) { throw "Caption button $Index unavailable: $Theme" }
    }
+   # Exercise the real subclass chain, not just the presence of caption styles.
+   # WM_NCLBUTTONDBLCLK / HTCAPTION must reach DefWindowProc via Tao.
+   $OriginalRect = [MdvuStartupFrame+RECT]::new()
+   if (-not [MdvuStartupFrame]::GetWindowRect($Window,[ref]$OriginalRect)) { throw 'GetWindowRect failed' }
+   $CaptionX = [int](($Frame.rect.Left + $Frame.rect.Right) / 2)
+   $CaptionY = [int](($Frame.rect.Top + $Frame.rect.Bottom) / 2)
+   $CaptionPoint = [IntPtr](($CaptionX -band 0xFFFF) -bor (($CaptionY -band 0xFFFF) -shl 16))
+   $Hit = [MdvuStartupFrame]::SendMessageW($Window,0x84,[IntPtr]::Zero,$CaptionPoint)
+   if ($Hit.ToInt64() -ne 2) { throw "Title bar is not a native drag region: $Theme" }
+   [void][MdvuStartupFrame]::SendMessageW($Window,0xA3,[IntPtr]2,$CaptionPoint)
+   if (-not [MdvuStartupFrame]::IsZoomed($Window)) { throw "Title bar double-click did not maximize: $Theme" }
+   [void][MdvuStartupFrame]::SendMessageW($Window,0xA3,[IntPtr]2,$CaptionPoint)
+   if ([MdvuStartupFrame]::IsZoomed($Window)) { throw "Title bar double-click did not restore: $Theme" }
+   $RestoredRect = [MdvuStartupFrame+RECT]::new()
+   if (-not [MdvuStartupFrame]::GetWindowRect($Window,[ref]$RestoredRect)) { throw 'GetWindowRect failed after restore' }
+   if ($OriginalRect.Left -ne $RestoredRect.Left -or $OriginalRect.Top -ne $RestoredRect.Top -or
+       $OriginalRect.Right -ne $RestoredRect.Right -or $OriginalRect.Bottom -ne $RestoredRect.Bottom) {
+    throw "Maximize/restore changed the normal window bounds: $Theme"
+   }
+   $SystemMenu = [MdvuStartupFrame]::GetSystemMenu($Window,$false)
+   foreach ($Command in @(0xF010,0xF000,0xF020,0xF030,0xF060)) { # Move, Size, Minimize, Maximize, Close
+    $MenuState = [MdvuStartupFrame]::GetMenuState($SystemMenu,$Command,0)
+    if ($MenuState -eq [uint32]::MaxValue -or ($MenuState -band 3) -ne 0) { throw "System window command unavailable: $Theme ($Command)" }
+   }
+   [void][MdvuStartupFrame]::SendMessageW($Window,0x112,[IntPtr]0xF020,[IntPtr]::Zero)
+   if (-not [MdvuStartupFrame]::IsIconic($Window)) { throw "System minimize failed: $Theme" }
+   [void][MdvuStartupFrame]::SendMessageW($Window,0x112,[IntPtr]0xF120,[IntPtr]::Zero)
+   if ([MdvuStartupFrame]::IsIconic($Window)) { throw "System restore failed: $Theme" }
    $Dark = 0
    $DwmResult = [MdvuStartupFrame]::DwmGetWindowAttribute($Window,20,[ref]$Dark,4)
    $ExpectedDark = switch ($Theme) {
@@ -101,7 +134,7 @@ try {
      finally { $Graphics.Dispose(); $Image.Dispose() }
     }
    }
-   $Report += @{theme=$Theme;darkCaption=$Dark;dwmResult=$DwmResult;styles=$Style;buttonStates=$Frame.states;passed=$true}
+   $Report += @{theme=$Theme;darkCaption=$Dark;dwmResult=$DwmResult;styles=$Style;buttonStates=$Frame.states;nativeCaptionHitTest=$true;doubleClickMaximizeRestore=$true;systemMenuCommands=$true;minimizeRestore=$true;passed=$true}
   } finally {
    $Process.Refresh()
    if (-not $Process.HasExited) {

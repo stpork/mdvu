@@ -98,11 +98,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 enum AppMenu {
     static func make(target: AppDelegate) -> NSMenu {
+        let application = NSApplication.shared
         let main = NSMenu()
         let app = NSMenuItem(); main.addItem(app)
         let appMenu = NSMenu(); app.submenu = appMenu
         let about = appMenu.addItem(withTitle: "About mdvu", action: #selector(AppDelegate.showAboutPanel(_:)), keyEquivalent: "")
         about.target = target
+        appMenu.addItem(.separator())
+        let servicesItem = appMenu.addItem(withTitle: "Services", action: nil, keyEquivalent: "")
+        let services = NSMenu(title: "Services")
+        servicesItem.submenu = services
+        application.servicesMenu = services
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Hide mdvu", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hideOthers = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthers.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit mdvu", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
@@ -152,11 +163,22 @@ enum AppMenu {
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(DocumentWindowController.zoomIn(_:)), keyEquivalent: "+")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(DocumentWindowController.zoomOut(_:)), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Actual Size", action: #selector(DocumentWindowController.resetZoom(_:)), keyEquivalent: "0")
+        viewMenu.addItem(.separator())
+        let fullScreen = viewMenu.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        fullScreen.keyEquivalentModifierMask = [.command, .control]
 
         let go = NSMenuItem(); main.addItem(go)
         let goMenu = NSMenu(title: "Go"); go.submenu = goMenu
         goMenu.addItem(withTitle: "Back", action: #selector(DocumentWindowController.goBack(_:)), keyEquivalent: "[")
         goMenu.addItem(withTitle: "Forward", action: #selector(DocumentWindowController.goForward(_:)), keyEquivalent: "]")
+
+        let windowItem = NSMenuItem(); main.addItem(windowItem)
+        let windowMenu = NSMenu(title: "Window"); windowItem.submenu = windowMenu
+        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(.separator())
+        windowMenu.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        application.windowsMenu = windowMenu
         return main
     }
 }
