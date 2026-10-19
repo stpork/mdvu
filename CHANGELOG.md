@@ -4,6 +4,19 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-10-19
+
+### Changed
+- Update all direct Rust dependencies to their latest stable releases, including pulldown-cmark 0.13.4, linkify 0.11.0, getrandom 0.4.3, Tao 0.37.1, Wry 0.57.0, notify 8.2.0, rfd 0.17.2 and current Windows/WebView2 bindings. Migrate OS randomness and WebView construction to the new APIs.
+- Upgrade the offline ZenUML core to 4.7.2 and ELK to 0.12.0. Override the Mermaid/plugin dependency constraints, share KaTeX 0.19.0 and use Marked 18.1.1; regenerate the locked, compressed renderer bundle and invalidate older diagram caches.
+- Enable pulldown-cmark's runtime-detected x86-64 SIMD paths and the optimized ARM64/x86-64 LZMA decoder. Retain portable CPU baselines and the existing automatic NEON/AVX2 byte scanning.
+
+### Validation
+- Pass 101 Swift/AppKit/WebKit tests, 45 shared Rust tests and 20 repository checks on macOS ARM64; build both ARM64 and Intel macOS slices.
+- Pass 54 Rust workspace tests and 126 system checks on native Windows x64, including all 40 Markdown fixtures, caption controls and light/dark/system themes.
+- Verify the 73-example diagram catalogue, compound ELK graphs, nested ZenUML calls, math, and forward/backward diagram visibility in large documents on both platforms.
+- Add regression checks for UTF-8 and HTML escaping at SIMD vector boundaries and for engine overrides reaching every locked dependency copy.
+
 ## [0.5.1] - 2026-10-19
 
 ### Fixed

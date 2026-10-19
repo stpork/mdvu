@@ -13,7 +13,7 @@ pub fn make_html_selective(
     embed_plantuml: bool,
 ) -> String {
     let mut random = [0u8; 16];
-    getrandom::getrandom(&mut random).expect("OS randomness is required for document isolation");
+    getrandom::fill(&mut random).expect("OS randomness is required for document isolation");
     let nonce: String = random.iter().map(|b| format!("{b:02x}")).collect();
     let base_tag = match base_url {
         Some(url) => format!("<base href=\"{}\">", escape_html(url)),

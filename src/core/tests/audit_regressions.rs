@@ -16,6 +16,25 @@ fn fast_scans_preserve_unicode_and_literal_tokens() {
 }
 
 #[test]
+fn parser_and_html_escaping_preserve_utf8_at_vector_boundaries() {
+    let parser = MarkdownParser::new("light");
+    for offset in 0..65 {
+        let prefix = "x".repeat(offset);
+        let text = format!("{prefix}Å中文😀 & < >");
+        let document = parser.render(&format!("`{text}`"));
+        assert_eq!(
+            document.body,
+            format!("<p><code>{prefix}Å中文😀 &amp; &lt; &gt;</code></p>\n"),
+            "offset {offset}"
+        );
+        let link = parser.render(&format!(
+            "[label](https://example.test/{prefix}a\"b?c=d&e=f)"
+        ));
+        assert!(link.body.contains("a%22b?c=d&amp;e=f"), "offset {offset}");
+    }
+}
+
+#[test]
 fn combined_inline_pass_preserves_math_code_links_and_attributes() {
     let rendered =
         body("{++H~2~O++} {>>t^2^<<} $x^{++y++}$ `H~2~O` [H~2~O](https://example.com/~user)");

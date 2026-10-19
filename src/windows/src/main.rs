@@ -1099,7 +1099,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
             let _ = proxy_ipc.send_event(UserEvent::Exit);
         }
     };
-    let builder = WebViewBuilder::with_web_context(web_context)
+    let builder = WebViewBuilder::new_with_web_context(web_context)
         .with_hotkeys_zoom(false)
         .with_url(&shell_url)
         .with_navigation_handler(move |uri: String| {

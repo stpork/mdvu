@@ -4,6 +4,8 @@
     "@mermaid-js/mermaid-zenuml": "1.0.1",
     "@plantuml/core": "1.2026.9",
     "@viz-js/viz": "3.31.0",
+    "@zenuml/core": "4.7.2",
+    "elkjs": "0.12.0",
     "esbuild": "0.28.2",
     "katex": "0.19.0",
     "mermaid": "12.2.0"
@@ -24,9 +26,9 @@
   },
   "assets": {
     "mermaid": {
-      "sourceBytes": 8527159,
-      "compressedBytes": 1715935,
-      "sha256": "f9fc03eaed40c96b594a816d00236c54c6f194958c36f3986a1f46e61ed22206"
+      "sourceBytes": 6882940,
+      "compressedBytes": 1341143,
+      "sha256": "943679d8767e5a5f6fd404e8f8e09657b2ded400c19e364941b87ad6f6609cf9"
     },
     "plantuml": {
       "sourceBytes": 4958867,
