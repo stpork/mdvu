@@ -320,16 +320,24 @@ extension SharedRegressionTests {
             const pause=()=>new Promise(r=>setTimeout(r,50));
             const settle=async token=>{for(let n=0;n<100&&window.__mdvuReadingAnchorSettled!==token;n++)await pause()};
             const key=(target,name)=>target.dispatchEvent(new KeyboardEvent('keydown',{key:name,bubbles:true,cancelable:true}));
+            // End follows deferred layout over several frames. A fixed timer can
+            // expire before those frames run on a busy/background CI WebView.
+            const reachEnd=async change=>{
+                const previous=window.__mdvuReadingEdgeSettled;
+                key(window,'End');if(change)requestAnimationFrame(change);
+                for(let n=0;n<100&&window.__mdvuReadingEdgeSettled===previous;n++)await pause();
+                if(window.__mdvuReadingEdgeSettled===previous)throw new Error('End did not finish following layout');
+            };
             const result={};
-            key(window,'End');await pause();
+            await reachEnd();
             result.documentEnd=document.scrollingElement.scrollHeight-innerHeight-scrollY<3;
             key(window,'Home');await pause();result.documentHome=scrollY<2;
-            key(window,'End');requestAnimationFrame(()=>document.querySelector('article>p').style.height='5500px');await pause();
+            await reachEnd(()=>document.querySelector('article>p').style.height='5500px');
             result.endFollowsLayout=document.scrollingElement.scrollHeight-innerHeight-scrollY<3;
             key(window,'Home');await pause();
             const scroller=document.createElement('div');scroller.id='mdvu-main-content';scroller.style.cssText='height:500px;overflow:auto';
             const article=document.querySelector('article');article.replaceWith(scroller);scroller.append(article);
-            key(window,'End');await pause();result.nestedEnd=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
+            await reachEnd();result.nestedEnd=scroller.scrollHeight-scroller.clientHeight-scroller.scrollTop<3;
             key(document.getElementById('editor'),'Home');await pause();result.editorUnaffected=scroller.scrollTop>3000;
             key(window,'Home');await pause();result.nestedHome=scroller.scrollTop<2;
             scroller.scrollTop=250;
