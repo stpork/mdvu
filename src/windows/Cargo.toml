@@ -1,6 +1,6 @@
 [package]
 name = "mdvu-windows"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 description = "Superfast, lightweight native Markdown viewer for Windows (powered by WebView2 & mdvu-core)"
 license = "MIT"
