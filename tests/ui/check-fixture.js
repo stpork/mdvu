@@ -175,13 +175,23 @@
       await pause(50);checks.wheelZoomCoalesced=zoom.value==='110%';
       document.getElementById('btn-zoom-out').click();await pause(100);
       const toc = document.getElementById('mdvu-toc-sidebar'), hidden = toc.classList.contains('hidden');
-      document.getElementById('btn-toc').click(); await pause(150);
-      checks.tocToggle = toc.classList.contains('hidden') !== hidden;
-      document.getElementById('btn-toc').click(); await pause(150);
+      const settleTOC = async expected => {
+        const deadline = performance.now()+5000;
+        while(toc.classList.contains('hidden')!==expected && performance.now()<deadline) await nextFrame();
+        const settled = toc.classList.contains('hidden')===expected;
+        // Match the native toggle guard after its acknowledgement, as pane() does.
+        await pause(65);
+        return settled;
+      };
+      document.getElementById('btn-toc').click();
+      checks.tocToggle = await settleTOC(!hidden);
+      document.getElementById('btn-toc').click();
+      checks.tocToggle = await settleTOC(hidden) && checks.tocToggle;
       const contentsKey=new KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true});
-      window.dispatchEvent(contentsKey);await pause(150);
-      checks.contentsShortcut=contentsKey.defaultPrevented&&toc.classList.contains('hidden')!==hidden;
-      window.dispatchEvent(new KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true}));await pause(150);
+      window.dispatchEvent(contentsKey);
+      checks.contentsShortcut=await settleTOC(!hidden)&&contentsKey.defaultPrevented;
+      window.dispatchEvent(new KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true}));
+      checks.contentsShortcut=await settleTOC(hidden)&&checks.contentsShortcut;
       const windowsKey=new KeyboardEvent('keydown',{key:'b',metaKey:true,bubbles:true,cancelable:true});
       const saveAs=new KeyboardEvent('keydown',{key:'S',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true});
       window.dispatchEvent(windowsKey);window.dispatchEvent(saveAs);await pause(150);
