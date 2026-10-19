@@ -1017,6 +1017,10 @@ pub fn build_gui_html(
   const findInput = document.getElementById('mdvu-find-input');
   const findCount = document.getElementById('mdvu-find-count');
   let findDebounceTimer = null;
+  const cancelFindDebounce = () => {{
+    if (findDebounceTimer !== null) clearTimeout(findDebounceTimer);
+    findDebounceTimer = null;
+  }};
 
   function updateFindCount(res) {{
     if (!findCount) return;
@@ -1047,7 +1051,7 @@ pub fn build_gui_html(
   }};
 
   findInput?.addEventListener('input', () => {{
-    if (findDebounceTimer) clearTimeout(findDebounceTimer);
+    cancelFindDebounce();
     const val = findInput.value;
     if (!val || !val.trim()) {{
       if (window.__mdvuFind) window.__mdvuFind.clear();
@@ -1055,6 +1059,7 @@ pub fn build_gui_html(
       return;
     }}
     findDebounceTimer = setTimeout(() => {{
+      findDebounceTimer = null;
       if (window.__mdvuFind) {{
         updateFindCount(window.__mdvuFind.search(val));
       }}
@@ -1064,9 +1069,8 @@ pub fn build_gui_html(
   findInput?.addEventListener('keydown', (e) => {{
     if (e.key === 'Enter') {{
       e.preventDefault();
-      if (findDebounceTimer) {{
-        clearTimeout(findDebounceTimer);
-        findDebounceTimer = null;
+      if (findDebounceTimer !== null) {{
+        cancelFindDebounce();
         if (window.__mdvuFind) updateFindCount(window.__mdvuFind.search(findInput.value));
         return;
       }}
@@ -1076,7 +1080,7 @@ pub fn build_gui_html(
       }}
     }} else if (e.key === 'Escape') {{
       e.preventDefault();
-      if (findDebounceTimer) clearTimeout(findDebounceTimer);
+      cancelFindDebounce();
       if (window.__mdvuFind) window.__mdvuFind.clear();
       if (findInput) {{ findInput.value = ''; findInput.blur(); }}
       updateFindCount(null);
@@ -1086,7 +1090,7 @@ pub fn build_gui_html(
   document.getElementById('btn-find-next')?.addEventListener('click', () => window.__mdvuFindNext());
   document.getElementById('btn-find-prev')?.addEventListener('click', () => window.__mdvuFindPrev());
   document.getElementById('btn-find-close')?.addEventListener('click', () => {{
-    if (findDebounceTimer) clearTimeout(findDebounceTimer);
+    cancelFindDebounce();
     if (window.__mdvuFind) window.__mdvuFind.clear();
     if (findInput) findInput.value = '';
     updateFindCount(null);
@@ -1153,7 +1157,7 @@ pub fn build_gui_html(
       window.ipc?.postMessage('toggle_fullscreen');
     }} else if (e.key === 'Escape') {{
       if (document.activeElement === findInput) {{
-        if (findDebounceTimer) clearTimeout(findDebounceTimer);
+        cancelFindDebounce();
         if (window.__mdvuFind) window.__mdvuFind.clear();
         findInput.value = '';
         updateFindCount(null);

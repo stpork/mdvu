@@ -13,6 +13,7 @@ class RendererAssetsTests(unittest.TestCase):
     def test_svg_diagnostics_and_shared_dot_adapter(self):
         result = subprocess.run(['node', '--test', 'tests/ui/diagram-output.test.cjs',
                                  'tests/ui/plantuml-adapter.test.mjs',
+                                 'tests/ui/windows-find.test.cjs',
                                  'tests/ui/windows-links.test.cjs'], cwd=ROOT,
                                 capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

@@ -416,6 +416,20 @@ struct MarkdownParserTests {
         #expect(!MarkdownDocument.isMarkdown(url: URL(fileURLWithPath: "/path/doc.png")))
     }
 
+    @Test func automaticDialectSelectionCanResetAnExplicitChoice() {
+        let source = "---\ndialect: obsidian\n---\n[[Target]]"
+        for value in ["auto", "automatic", " AUTO ", "`automatic`"] {
+            let options = CLIOptions.parse(["--dialect", "generic", "--dialect", value])
+            #expect(!options.isDialectExplicit)
+            let rendered = MarkdownPipeline(dialect: options.dialect, mermaid: false,
+                                            isDialectExplicit: options.isDialectExplicit).render(source)
+            #expect(rendered.dialect == .obsidian)
+            #expect(rendered.body.contains("Target.md"))
+        }
+        let generic = CLIOptions.parse(["--dialect", "auto", "--dialect", "generic"])
+        #expect(generic.isDialectExplicit)
+    }
+
     @Test func frontMatterExtensionWithCRLF() {
         let crlfSource = "---\r\nTitle: Windows Document\r\nAuthor: Developer\r\n---\r\n# Hello World"
         let rendered = MarkdownPipeline(dialect: .github, mermaid: false).render(crlfSource)

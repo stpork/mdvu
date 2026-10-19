@@ -287,7 +287,7 @@ pub enum UserEvent {
     DiagramRuntimeReady(String, String, Result<&'static str, &'static str>),
     FileChanged,
     OpenFile(PathBuf),
-    OpenFileWithFragment(PathBuf, Option<String>),
+    OpenFileWithFragment(PathBuf, Option<String>, Option<u64>),
     OpenRelativePath(PathBuf, Option<String>),
     OpenFolder(PathBuf),
     OpenExternal(String),
@@ -319,7 +319,7 @@ pub enum UserEvent {
     OpenRepo,
     Exit,
     DocumentReady(Box<PreparedDocument>),
-    FolderReady(PathBuf, Vec<navigator::VaultItem>, Option<PathBuf>),
+    FolderReady(u64, PathBuf, Vec<navigator::VaultItem>, Option<PathBuf>),
     NavigatorReady(PathBuf, Vec<navigator::VaultItem>),
     SmokeResult(String),
     ArticleReady(String),
@@ -402,6 +402,20 @@ struct AppState {
     katex_injected: bool,
     mermaid_injected: bool,
     plantuml_injected: bool,
+}
+
+impl AppState {
+    fn accepts_generation(&self, expected: Option<u64>) -> bool {
+        expected.is_none_or(|generation| generation == self.generation)
+    }
+
+    fn apply_folder_scan(&mut self, generation: u64, root: &Path, items: Vec<navigator::VaultItem>) -> bool {
+        if !self.accepts_generation(Some(generation)) || self.vault_root.as_deref() != Some(root) {
+            return false;
+        }
+        self.vault_items = items;
+        true
+    }
 }
 
 fn watch_target(watcher: &mut RecommendedWatcher, target: &Path) {
@@ -1101,6 +1115,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             let _ = proxy_nav.send_event(UserEvent::OpenFileWithFragment(
                                 p,
                                 url.fragment().map(|s| s.to_string()),
+                                None,
                             ));
                         }
                     }
@@ -1314,12 +1329,12 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                         let _ = webview.evaluate_script(&format!("window.__mdvuUpdateNavigator?.({json});"));
                     }
                 }
-                UserEvent::FolderReady(root, items, first) => {
+                UserEvent::FolderReady(generation, root, items, first) => {
                     let mut st = state.lock().unwrap();
-                    if st.vault_root.as_ref() != Some(&root) { return; }
-                    st.vault_items = items;
+                    if !st.apply_folder_scan(generation, &root, items) { return; }
                     drop(st);
-                    if let Some(path) = first { let _ = proxy.send_event(UserEvent::OpenFile(path)); }
+                    // Keep the generation through the queued auto-selection too.
+                    if let Some(path) = first { let _ = proxy.send_event(UserEvent::OpenFileWithFragment(path, None, Some(generation))); }
                     else {
                         let items = serde_json::to_string(&state.lock().unwrap().vault_items).unwrap_or_default();
                         let _ = webview.evaluate_script(&format!("window.__mdvuUpdateDocument?.({{bodyHtml:'<p>No Markdown files found</p>',toc:[],vaultItems:{items}}});"));
@@ -1350,7 +1365,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                             .or_else(|| st.vault_root.as_ref().map(|root| root.join(&rel_path)))
                     };
                     if let Some(p) = resolved {
-                        let _ = proxy.send_event(UserEvent::OpenFileWithFragment(p, fragment));
+                        let _ = proxy.send_event(UserEvent::OpenFileWithFragment(p, fragment, None));
                     }
                 }
                 UserEvent::OpenFolder(folder) => {
@@ -1358,6 +1373,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     let canonical = dunce::canonicalize(&folder).unwrap_or(folder);
                     if let Some(ref mut w) = watcher { if let Some(old) = &st.current_file { unwatch_target(w, old); } }
                     st.generation += 1;
+                    let generation = st.generation;
                     st.current_file = None;
                     st.vault_items.clear();
                     st.vault_root = Some(canonical.clone());
@@ -1367,7 +1383,7 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     std::thread::spawn(move || {
                         let items = navigator::scan_directory_tree(&canonical, 6);
                         let first = navigator::find_first_markdown(&canonical);
-                        let _ = proxy.send_event(UserEvent::FolderReady(canonical, items, first));
+                        let _ = proxy.send_event(UserEvent::FolderReady(generation, canonical, items, first));
                     });
                 }
 
@@ -1380,10 +1396,11 @@ fn run_gui(args: Args) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 UserEvent::OpenFile(new_path) => {
-                    let _ = proxy.send_event(UserEvent::OpenFileWithFragment(new_path, None));
+                    let _ = proxy.send_event(UserEvent::OpenFileWithFragment(new_path, None, None));
                 }
-                UserEvent::OpenFileWithFragment(new_path, fragment) => {
+                UserEvent::OpenFileWithFragment(new_path, fragment, generation) => {
                     let mut st = state.lock().unwrap();
+                    if !st.accepts_generation(generation) { return; }
                     let canonical = dunce::canonicalize(&new_path).unwrap_or(new_path);
 
                     if let Some(ref mut w) = watcher {
@@ -1791,6 +1808,55 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use mdvu_core::{TocEntry, VaultItem};
+
+    fn folder_state() -> AppState {
+        AppState {
+            render_sender: None, generation: 1, system_dark: false,
+            current_file: None, pending_fragment: None,
+            vault_root: Some(PathBuf::from("vault")), vault_items: Vec::new(),
+            navigator_loading: false, current_title: String::new(),
+            zoom_level: 1.0, last_toggle: Instant::now(), last_rendered: None,
+            dialect: MarkdownDialect::Generic, effective_dialect: MarkdownDialect::Generic,
+            is_dialect_explicit: false, enable_diagrams: true, theme: "light".into(),
+            full_width: false, is_toc_visible: false, is_nav_visible: true,
+            history: NavigationHistory::new(), katex_injected: false,
+            mermaid_injected: false, plantuml_injected: false,
+        }
+    }
+
+    #[test]
+    fn folder_results_cannot_replace_later_file_or_folder_choices() {
+        let mut state = folder_state();
+        let root = PathBuf::from("vault");
+        let items = vec![VaultItem {name: "first.md".into(), path: "vault/first.md".into(),
+            is_dir: false, rel_path: None, children: None}];
+        assert!(state.apply_folder_scan(1, &root, items.clone()));
+        let automatic = UserEvent::OpenFileWithFragment(PathBuf::from("vault/first.md"), None, Some(1));
+
+        // A file in the same root is selected before the scan/auto-open finishes.
+        state.generation += 1;
+        state.current_file = Some(PathBuf::from("vault/chosen.md"));
+        assert!(!state.apply_folder_scan(1, &root, Vec::new()));
+        assert_eq!(state.vault_items, items);
+        if let UserEvent::OpenFileWithFragment(_, _, generation) = automatic {
+            assert!(!state.accepts_generation(generation));
+        } else { panic!("Expected a generation-bound auto-open"); }
+        assert_eq!(state.current_file.as_deref(), Some(Path::new("vault/chosen.md")));
+
+        // A -> B -> A must not accept the first A scan just because roots match.
+        state.generation += 1;
+        state.vault_root = Some(PathBuf::from("other-vault"));
+        assert!(!state.apply_folder_scan(1, &root, Vec::new()));
+        state.generation += 1;
+        state.vault_root = Some(root.clone());
+        state.current_file = None;
+        assert!(!state.apply_folder_scan(1, &root, Vec::new()));
+        assert!(!state.apply_folder_scan(4, Path::new("other-vault"), Vec::new()));
+        assert!(state.apply_folder_scan(4, &root, Vec::new()));
+        assert!(state.vault_items.is_empty());
+        assert!(state.accepts_generation(Some(4)));
+        assert!(state.accepts_generation(None)); // Explicit user choices remain valid.
+    }
 
     #[test]
     fn relative_links_keep_decoded_path_separate_from_fragment() {

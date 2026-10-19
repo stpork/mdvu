@@ -143,6 +143,17 @@
       const next = window.__mdvuFind.next(), previous = window.__mdvuFind.previous();
       checks.findNavigation = next.count === found.count && previous.current === 1;
       window.__mdvuFind.clear();
+      const field = document.getElementById('mdvu-find-input');
+      if (field && found.count > 1) {
+        field.value = word; field.dispatchEvent(new Event('input'));
+        await pause(120);
+        const count = document.getElementById('mdvu-find-count');
+        field.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter',bubbles:true,cancelable:true}));
+        checks.findEnterNavigation = count.textContent === '2/'+found.count;
+        field.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter',shiftKey:true,bubbles:true,cancelable:true}));
+        checks.findShiftEnterNavigation = count.textContent === '1/'+found.count;
+        document.getElementById('btn-find-close').click();
+      }
       checks.findClear = roots().every(root=>!root.querySelector('.find-match'));
     }
     if (fullControls && document.getElementById('btn-zoom-in')) {

@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
 
 ### Current 0.5.0 work
+- Recognize fenced diagram/math languages independently of trailing titles and attributes, preserving renderer selection and cache identity.
+- Keep macOS `--dialect auto`/`automatic` in automatic mode, including after an explicit dialect selection.
+- Reject obsolete Windows folder scans and queued automatic file selections by navigation generation, including repeated visits to the same root.
+- Clear Windows find debounce state after execution or cancellation so Enter/Shift+Enter navigate immediately after a completed search.
 - Ignore completed navigator scans whose results arrive after a different root is selected; cancellation alone does not identify the current scan.
 - Fix Windows MSI scope/directory resolution and Start Menu/association paths; wire Finish to close the successful installation dialog. Add native UI installation, launch and uninstall regression tests for admin and non-admin tokens.
 - Keep competitor applications, ad hoc comparison tools and raw research results out of Git while preserving local evidence; derive native catalogue checks from the fixture itself.

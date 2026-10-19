@@ -181,7 +181,7 @@ impl MarkdownParser {
             }
             Event::End(TagEnd::CodeBlock) => {
                 let lang = inside_code_block.take()?;
-                let clean_lang = lang.trim().to_ascii_lowercase();
+                let clean_lang = lang.split_whitespace().next().unwrap_or("").to_ascii_lowercase();
                 let trimmed_code = code_buffer.trim_matches(|c| c == '\n' || c == '\r');
 
                 if enable_diagrams && (clean_lang == "mermaid" || clean_lang == "zenuml") {

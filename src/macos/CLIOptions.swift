@@ -15,10 +15,14 @@ enum MarkdownDialect: String, CaseIterable {
         }
     }
 
-    static func from(string: String) -> MarkdownDialect? {
-        let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
+    fileprivate static func normalized(_ string: String) -> String {
+        string.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"'`"))
             .lowercased()
+    }
+
+    static func from(string: String) -> MarkdownDialect? {
+        let clean = normalized(string)
         switch clean {
         case "obsidian": return .obsidian
         case "github", "gfm": return .github
@@ -105,7 +109,7 @@ struct CLIOptions {
             case "-d", "--dialect":
                 if let value = iterator.next(), let dialect = MarkdownDialect.from(string: value) {
                     result.dialect = dialect
-                    result.isDialectExplicit = true
+                    result.isDialectExplicit = !["auto", "automatic"].contains(MarkdownDialect.normalized(value))
                 }
             case "-t", "--theme":
                 if let value = iterator.next(), let theme = ThemeChoice(rawValue: value) {

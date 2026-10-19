@@ -64,6 +64,28 @@ fn fence_language_cannot_create_an_attribute() {
     assert!(d.body.contains("&quot;"));
 }
 #[test]
+fn fence_metadata_does_not_disable_diagrams_or_math() {
+    for (language, source) in [
+        ("mermaid", "graph TD; A-->B"),
+        ("plantuml", "Alice -> Bob"),
+        ("puml", "Alice -> Bob"),
+        ("zenuml", "A->B: Hello"),
+        ("math", "x^2"),
+        ("latex", "x^2"),
+        ("katex", "x^2"),
+        ("rust", "let x = 1;"),
+    ] {
+        let plain = body(&format!("```{language}\n{source}\n```"));
+        for info in [format!("{language} title=\"Demo\""), format!("{}\t{{#example}}", language.to_uppercase())] {
+            let annotated = body(&format!("```{info}\n{source}\n```"));
+            assert_eq!(annotated.body, plain.body, "{info}");
+            assert_eq!(annotated.has_mermaid, plain.has_mermaid);
+            assert_eq!(annotated.has_plantuml, plain.has_plantuml);
+            assert_eq!(annotated.has_math, plain.has_math);
+        }
+    }
+}
+#[test]
 fn extension_transforms_preserve_all_code_and_destinations() {
     for input in [
         "`[[Target]]`",
