@@ -235,6 +235,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     private var userSelectedDialect: MarkdownDialect?
     private(set) var currentDialect: MarkdownDialect
     private var hasShown = false
+    private let frameAutosaveName: String
     private var auditFullScreenTransitioning = false
     private var snapshotWritten = false
     private(set) var isFullWidth: Bool
@@ -323,8 +324,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         return literal
     }
 
-    init(url: URL, directoryMode: Bool, options: CLIOptions, profiler: StartupProfiler) {
+    init(url: URL, directoryMode: Bool, options: CLIOptions, profiler: StartupProfiler, frameAutosaveName: String = "mdvu.mainWindow") {
         self.options = options; self.profiler = profiler
+        self.frameAutosaveName = frameAutosaveName
         self.pipeline = MarkdownPipeline(dialect: options.dialect, mermaid: options.mermaid, isDialectExplicit: options.isDialectExplicit)
         self.currentDialect = options.dialect
         self.isFullWidth = options.fullWidth ?? (options.snapshotPath != nil ? false : UserDefaults.standard.bool(forKey: "layout.fullWidth"))
@@ -350,10 +352,10 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         }
         window.controller = self
-        window.delegate = self; window.titlebarAppearsTransparent = false; window.titleVisibility = .visible; window.tabbingMode = .preferred
+        window.delegate = self; window.titlebarAppearsTransparent = false; window.titleVisibility = .visible; window.tabbingMode = .automatic
         systemAppearanceIsDark = effectiveAppearanceIsDark
         if isFileNavigatorVisible { createFileNavigator() }
-        if options.snapshotPath == nil { window.setFrameAutosaveName("mdvu.mainWindow") }
+        window.contentMinSize = NSSize(width: 460, height: 360)
         configureToolbar()
         magnificationObservation = webView.observe(\.magnification, options: [.new]) { [weak self] _, _ in
             guard let self else { return }
@@ -363,6 +365,9 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         webView.navigationDelegate = self
         Self.scriptHandlerNames.forEach { webView.configuration.userContentController.add(WeakScriptMessageHandler(self), name: $0) }
         configureLayout()
+        if options.snapshotPath == nil {
+            window.setFrameAutosaveName(frameAutosaveName)
+        }
         if directoryMode { loadDirectory(url) } else { openDocument(url) }
         profiler.mark("window.created")
     }
@@ -415,7 +420,11 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
             let bounds = screen.visibleFrame
             window.setFrameOrigin(NSPoint(x: bounds.midX - window.frame.width / 2,
                                           y: bounds.midY - window.frame.height / 2))
-        } else { window?.center() }
+        } else if !hasShown, let window {
+            // First presentation applies AppKit's autosaved geometry. Rebuild
+            // the native zoom user state only after that restoration finishes.
+            if !WindowFramePersistence.restore(window, usingName: frameAutosaveName) { window.center() }
+        }
         window?.makeKeyAndOrderFront(sender)
         if !hasShown { hasShown = true; profiler.mark("window.visible") }
     }
@@ -425,6 +434,12 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
     func windowDidEnterFullScreen(_ notification: Notification) { auditFullScreenTransitioning = false }
     func windowDidExitFullScreen(_ notification: Notification) { auditFullScreenTransitioning = false }
+    func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool {
+        if options.snapshotPath == nil {
+            WindowFramePersistence.saveUserFrameBeforeZoom(window, usingName: frameAutosaveName)
+        }
+        return true
+    }
 
     private func configureLayout() {
         split.isVertical = true; split.dividerStyle = .thin; split.delegate = self
@@ -712,7 +727,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
         if changedDocument {
             tocRoots = []; tocOutline.reloadData()
             onDocumentChange?(documentURL)
-            (window as? DocumentWindow)?.updateTitleToolTip()
             if !options.isDialectExplicit {
                 userSelectedDialect = nil
             }
@@ -1635,20 +1649,17 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate, WKNa
     }
 
     @objc func openFileDialog(_ sender: Any? = nil) {
+        guard let window, window.attachedSheet == nil else { return }
         let panel = NSOpenPanel()
         panel.title = "Open Markdown File or Folder"
         panel.prompt = "Open"
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.folder] + MarkdownDocument.supportedExtensions.compactMap { UTType(filenameExtension: $0) }
-        if let currentURL {
-            panel.directoryURL = currentURL.deletingLastPathComponent()
-        }
-        guard let window, window.attachedSheet == nil else { return }
+        panel.directoryURL = currentURL?.deletingLastPathComponent()
         panel.beginSheetModal(for: window) { [weak self] response in
-            guard let self, response == .OK, let selectedURL = panel.url else { return }
-            self.loadTargetURL(selectedURL)
+            guard response == .OK, let url = panel.url else { return }
+            self?.loadTargetURL(url)
         }
     }
 
@@ -1750,17 +1761,128 @@ final class DropView: NSView {
     }
 }
 
+enum WindowFramePersistence {
+    static func saveUserFrameBeforeZoom(_ window: NSWindow, usingName name: String) {
+        if !window.isZoomed { window.saveFrame(usingName: name + ".unzoomed") }
+    }
+
+    @discardableResult
+    static func restore(_ window: NSWindow, usingName name: String) -> Bool {
+        let initialSize = window.frameRect(forContentRect: NSRect(x: 0, y: 0, width: 1080, height: 760)).size
+        guard window.setFrameUsingName(name) else { return false }
+        guard window.isZoomed else { return true }
+
+        // AppKit's frame autosave does not preserve the user state of zoom().
+        // Restoring the expanded rectangle alone leaves nothing to zoom back to.
+        // Re-enter zoom from the saved normal frame so AppKit owns both states.
+        let screen = window.screen ?? NSScreen.main
+        if !window.setFrameUsingName(name + ".unzoomed") || window.isZoomed {
+            let visible = screen?.visibleFrame ?? window.frame
+            let size = NSSize(width: min(initialSize.width, visible.width * 0.8),
+                              height: min(initialSize.height, visible.height * 0.8))
+            window.setFrame(NSRect(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2,
+                                   width: size.width, height: size.height), display: false)
+        }
+        window.zoom(nil)
+        return true
+    }
+}
+
 final class DocumentWindow: NSWindow {
     weak var controller: DocumentWindowController?
     private var isZoomingWithScroll = false
-    private var titleClickStartPoint: NSPoint?
-    private weak var cachedTitleField: NSTextField?
+    private let delayedTitlebarOpen = DelayedTitlebarOpen(interval: NSEvent.doubleClickInterval)
+    private var titleClick: (screenPoint: NSPoint, filename: Bool)?
+    private var nativeTitlebarActionHandled = false
 
     override func close() {
+        delayedTitlebarOpen.cancel()
         if !isVisible {
             controller?.tearDown()
         }
         super.close()
+    }
+
+    override func resignKey() {
+        delayedTitlebarOpen.cancel()
+        titleClick = nil
+        super.resignKey()
+    }
+
+    private func filenameField(in view: NSView) -> NSTextField? {
+        guard view !== contentView else { return nil }
+        if let field = view as? NSTextField, !title.isEmpty, field.stringValue == title { return field }
+        for child in view.subviews {
+            if let field = filenameField(in: child) { return field }
+        }
+        return nil
+    }
+
+    private func titlebarTarget(at point: NSPoint) -> Bool? {
+        guard !styleMask.contains(.fullScreen), point.y >= contentLayoutRect.maxY,
+              let frameView = contentView?.superview else { return nil }
+        if let field = filenameField(in: frameView), field.convert(field.bounds, to: nil).contains(point) {
+            return true
+        }
+        // Toolbar controls and their custom views keep their own click behavior.
+        for item in toolbar?.items ?? [] {
+            if let view = item.view, view.convert(view.bounds, to: nil).contains(point) { return nil }
+        }
+        var hit = frameView.hitTest(point)
+        while let view = hit, view !== frameView {
+            if view is NSControl || view is NSImageView { return nil }
+            hit = view.superview
+        }
+        return false
+    }
+
+    private func handleTitlebarEvent(_ event: NSEvent) -> Bool {
+        let hasModifier = !event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+        if event.type == .leftMouseDown {
+            delayedTitlebarOpen.cancel()
+            titleClick = nil
+            guard !hasModifier, attachedSheet == nil, let target = titlebarTarget(at: event.locationInWindow) else { return false }
+            titleClick = (convertPoint(toScreen: event.locationInWindow), target)
+            nativeTitlebarActionHandled = false
+            if event.clickCount > 1 && event.clickCount.isMultiple(of: 2) {
+                let before = frame
+                super.sendEvent(event)
+                nativeTitlebarActionHandled = frame != before || isMiniaturized
+                return true
+            }
+        } else if event.type == .leftMouseDragged, let start = titleClick {
+            let point = convertPoint(toScreen: event.locationInWindow)
+            if hypot(point.x - start.screenPoint.x, point.y - start.screenPoint.y) > 4 {
+                titleClick = nil
+                delayedTitlebarOpen.cancel()
+            }
+        } else if event.type == .leftMouseUp {
+            defer { titleClick = nil }
+            guard !hasModifier, let start = titleClick, let target = titlebarTarget(at: event.locationInWindow) else { return false }
+            let point = convertPoint(toScreen: event.locationInWindow)
+            guard hypot(point.x - start.screenPoint.x, point.y - start.screenPoint.y) <= 4 else { return false }
+            if event.clickCount > 1 && event.clickCount.isMultiple(of: 2) {
+                let before = frame
+                super.sendEvent(event)
+                // Unified toolbars can consume the double-click without invoking
+                // an action. Route it to AppKit once, avoiding a second toggle
+                // on systems where AppKit already handled mouse-down or mouse-up.
+                if !nativeTitlebarActionHandled, frame == before, !isMiniaturized {
+                    let action = UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") ?? "Maximize"
+                    if start.filename || action == "Maximize" { performZoom(nil) }
+                    else if action == "Minimize" { performMiniaturize(nil) }
+                }
+                return true
+            }
+            if event.clickCount == 1, start.filename, target {
+                let clickedTitle = title
+                delayedTitlebarOpen.schedule { [weak self] in
+                    guard let self, self.isVisible, self.isKeyWindow, self.title == clickedTitle else { return }
+                    self.controller?.openFileDialog()
+                }
+            }
+        }
+        return false
     }
 
     private enum SwipeState {
@@ -1779,34 +1901,7 @@ final class DocumentWindow: NSWindow {
     private static let activationThreshold: CGFloat = 15.0
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .leftMouseDown {
-            if isKeyWindow && isPointInTitle(event.locationInWindow) {
-                titleClickStartPoint = event.locationInWindow
-            } else {
-                titleClickStartPoint = nil
-            }
-        } else if event.type == .leftMouseDragged {
-            if let start = titleClickStartPoint {
-                let dx = event.locationInWindow.x - start.x
-                let dy = event.locationInWindow.y - start.y
-                if hypot(dx, dy) > 4.0 {
-                    titleClickStartPoint = nil
-                }
-            }
-        } else if event.type == .leftMouseUp {
-            if let start = titleClickStartPoint {
-                titleClickStartPoint = nil
-                let dx = event.locationInWindow.x - start.x
-                let dy = event.locationInWindow.y - start.y
-                let isNormalClick = !event.modifierFlags.contains(.command) &&
-                                    !event.modifierFlags.contains(.control) &&
-                                    !event.modifierFlags.contains(.option)
-                if hypot(dx, dy) <= 4.0 && event.clickCount == 1 && isNormalClick && isPointInTitle(event.locationInWindow) {
-                    controller?.openFileDialog()
-                    return
-                }
-            }
-        }
+        if handleTitlebarEvent(event) { return }
         if event.type == .otherMouseDown || event.type == .otherMouseUp {
             if event.buttonNumber == 3 {
                 if event.type == .otherMouseUp { controller?.goBack() }
@@ -1874,46 +1969,6 @@ final class DocumentWindow: NSWindow {
             return
         }
         super.sendEvent(event)
-    }
-
-    func updateTitleToolTip() {
-        if let tf = findTitleField() {
-            tf.toolTip = "Click to open another file (⌘O)"
-            tf.superview?.toolTip = "Click to open another file (⌘O)"
-        }
-    }
-
-    func isPointInTitle(_ point: NSPoint) -> Bool {
-        guard !title.isEmpty, let titleField = findTitleField() else { return false }
-        let rectInWindow = titleField.convert(titleField.bounds, to: nil).insetBy(dx: -4, dy: -4)
-        return rectInWindow.contains(point)
-    }
-
-    private func findTitleField() -> NSTextField? {
-        if let cached = cachedTitleField, cached.window === self, cached.stringValue == title {
-            return cached
-        }
-        guard let themeFrame = contentView?.superview else { return nil }
-        let found = findTitleField(in: themeFrame, title: title)
-        cachedTitleField = found
-        if let found {
-            found.toolTip = "Click to open another file (⌘O)"
-            found.superview?.toolTip = "Click to open another file (⌘O)"
-        }
-        return found
-    }
-
-    private func findTitleField(in view: NSView, title: String) -> NSTextField? {
-        if view === contentView { return nil }
-        if let tf = view as? NSTextField, !tf.stringValue.isEmpty, tf.stringValue == title {
-            return tf
-        }
-        for sub in view.subviews {
-            if let found = findTitleField(in: sub, title: title) {
-                return found
-            }
-        }
-        return nil
     }
 
     private func handleScrollWheelSwipe(_ event: NSEvent) {

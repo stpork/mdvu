@@ -24,7 +24,7 @@ The application shares parsing, dialect handling, reader JavaScript/CSS and offl
         │ • Pure AppKit & WebKit      │ │ • Native Win32 & WebView2   │
         │ • 3-Pane Split & OutlineView│ │ • Evergreen Edge Runtime    │
         │ • macOS Trackpad Gestures   │ │ • DWM Dark Window Frames    │
-        │ • Proxy Icon & Titlebar Open│ │ • Live File Watcher (Notify)│
+        │ • Native Titlebar & Proxy   │ │ • Live File Watcher (Notify)│
         │ • App bundle + shared core  │ │ • Standalone executable    │
         │ • Lazy diagram renderer     │ │ • Lazy diagram renderer    │
         └─────────────────────────────┘ └─────────────────────────────┘
@@ -90,9 +90,9 @@ The macOS frontend preserves 100% of the hand-crafted AppKit user experience:
 * **Native Trackpad & Zoom Engine**:
   * Fluid pinch-to-zoom (`.magnify`), smart magnify (`.smartMagnify`), horizontal pan vs. swipe navigation conflict resolution, and magnetic $\pm 2.5\%$ snapping.
   * Compound toolbar control `[-][ 100% ][+]` with persistent `targetPageZoom` surviving document navigation.
-* **Titlebar Quick-Open & Proxy Icon**:
-  * Click window title to open documents or folders via sheet modal.
-  * Native window dragging, document proxy icon dragging, and `⌘-click` path hierarchy menu.
+* **Native Titlebar & Proxy Icon**:
+  * Filename quick-open waits for `NSEvent.doubleClickInterval` and is cancelled by another click, dragging or loss of focus. A filename double-click invokes native window Zoom. Toolbar controls and the `⌘-click` path menu keep their own mouse handling; blank titlebar double-clicks follow the system preference, with native Zoom/Minimize fallback when the unified toolbar consumes the event.
+  * Standard Services, Hide, Window → Minimize / Zoom, and View → Full Screen commands use AppKit actions. Saved normal and expanded frames rebuild AppKit's zoom user state after first presentation; restoring only an expanded rectangle would leave Zoom unable to shrink the window. Showing an existing document preserves its current position.
 * **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
   * Dynamically loads `libmdvu_core.dylib` using safe scoped C-string closures (`withOptionalCString`), completely eliminating dangling pointers.
   * Successful documents and error pages share the in-place reader loader. Reusing the reader retains its math runtime; a full WebView navigation clears runtime state before loading a replacement.
@@ -172,6 +172,21 @@ mdvu document.md --toc
 
 * **Release publication**: A version tag must match `version.txt`. After all three CI jobs pass, a dedicated job downloads that run's macOS and Windows artifacts. `scripts/release-assets.py` requires six packages and valid SHA-256 sidecars, uploads them to a draft, verifies the remote asset set and only then publishes it. Public releases are immutable; the manifest identifies the tested source commit. `scripts/publish-release.sh` orchestrates tagging from clean, green `develop`, Homebrew and the website refresh.
 
+### Publishing a release
+
+Use a clean `develop` branch with a successful CI run for its exact commit.
+
+Before publishing, fetch the remote branches and fast-forward local `main` to `origin/main`. The helper refuses a divergent or outdated local `main`; merge any new mainline changes into `develop` and rerun CI before releasing.
+
+```sh
+./build.sh publish         # Download and validate all six CI packages; preview only
+./build.sh publish --yes   # Merge, tag, wait for tested publication; update Homebrew/site
+```
+
+Use `python3 scripts/set-version.py X.Y.Z` to update `version.txt`, `Info.plist`, both Rust package versions and `Cargo.lock` together, then update the matching `CHANGELOG.md` section before pushing the release candidate. CI checks that these versions agree. The release helper never replaces an existing tag or public release. Tag CI tests Linux, macOS and Windows, builds all six packages, verifies SHA-256, uploads to a draft, checks the uploaded set, then makes it public. A failed or incomplete upload stays a draft. `release-manifest.json` records the exact source commit, package sizes and hashes.
+
+The helper then updates Homebrew from the published cask, refreshes the website download links, and increments the development minor version. If tagging manually, dispatch **Deploy MDVu website** after successful publication and update Homebrew using the published `mdvu.rb`. Website measurements name their own tested revision; they are not silently relabelled as measurements of a new release.
+
 ### Updating embedded renderers
 
 Run `python3 scripts/update-renderer-assets.py` with Node 22+ and Python 3.11+. Exact dependencies and transitive integrity hashes are locked in `scripts/runtime-assets/package-lock.json`. The script bundles browser-only IIFEs, preserves upstream license comments, and writes LZMA1 preset 9 extreme archives shared by both native platforms. `manifest.json` records versions, sizes and SHA-256 hashes; normal application builds need no npm installation or network. Run native rendering tests and all fixture/control benchmarks after an update.
@@ -180,8 +195,33 @@ The JavaScript PlantUML build registers fewer diagram factories than the Java en
 
 ### Source checkout and generated data
 
+The repository has one source root and one test root:
+
+```text
+src/core/          Shared Rust renderer and C ABI
+src/macos/         Swift, AppKit and WebKit host
+src/windows/       Rust, Win32 and WebView2 host
+assets/            Shared CSS, JavaScript and compressed runtimes
+tests/fixtures/    Shared Markdown fixtures and local assets
+tests/macos/       Swift and WebKit regression tests
+tests/ui/          Browser checks used on both platforms
+tests/snapshots/   Reference images
+packaging/macos/   macOS metadata and icon
+packaging/windows/ MSI metadata and Windows branding
+scripts/           Reproducible build, release and regression checks
+```
+
 Only application/build sources, locked runtimes, regression tests, fixtures, approved snapshots and human-readable documentation belong in Git. Build output is ignored under `.build/`, `target/` and `dist/`. Competitor apps, ad hoc comparison tools, raw JSON/video/screenshots and browser profiles remain local under `test-results/`. Native correctness runners derive catalogue cases directly from `tests/fixtures/test-diagrams.md`; a fresh checkout never needs local benchmark registries or results. Repository tests reject tracked downloads and generated diagnostics.
 
 Rust sources use `cargo fmt` and pass Clippy with warnings denied, including the Windows-specific configuration. Shared reader behavior lives in `assets/`; host code owns platform integration. `make clean` removes Swift and Rust build products and `dist/`, while retaining local evidence.
 
 `packaging/assets/` contains the README screenshot and source icons; `packaging/macos/` and `packaging/windows/` contain platform metadata and generated branding. To regenerate the Windows installer images, install Pillow and run `python3 scripts/generate-wix-bitmaps.py`. `--output <directory>` previews the two RGB bitmaps elsewhere. The same optional image library is used by the visual reference comparison; no image-processing library ships with the app.
+### Native and repository verification
+
+Regression and release tools require Python 3.11+. Visual reference checks and installer branding also require Pillow. Application builds and standard repository checks do not need Pillow. A checkout can live anywhere, including `C:\Sources\mdvu`; no nested checkout is required.
+
+Run `python3 -m unittest discover -s tests -p 'test_*.py'` for repository, release, installer-authoring and runtime-integrity checks. Run `make check` and `make coverage` on macOS. `./build.sh check` also runs the visual reference checks (Pillow and an active desktop required). After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. For a clean Windows test machine, run `./scripts/test-windows-installer.ps1 -Msi <path>` from an elevated interactive PowerShell. It tests the full MSI UI in both scopes, using a disposable standard Windows account and a verified non-elevated token for the user installation; checks Finish, shortcut targets/launch, associations and installed rendering; then uninstalls each test installation. It refuses to overwrite an existing installation and removes the temporary account, profile and staged test files afterward. Logs stay under `test-results/installer-windows/`. The system runner's `-Msi <path> -Install` option only performs a silent machine installation and is not the two-scope regression test. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
+
+The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
+
+Interactive regression ceilings are 250 ms for cold scrolling and 500 ms for a cold frame, zoom or pane reflow. Control timings include acknowledgement and two animation frames. Render-frame p95 remains a diagnostic distribution: the cold stress scenario repeatedly changes zoom while diagrams are being generated. Fullscreen transition durations are reported separately because they include the operating system's animation. These ceilings do not imply a constant frame rate or a globally optimal implementation.
