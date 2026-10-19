@@ -1,10 +1,59 @@
 # Performance and compatibility comparison
 
-**Measurements recorded 18 October 2026; verification updated 19 October 2026.** Apple M1, 8 GiB, macOS 27.0.1. Eight applications in the current series (seven in the earlier tables), the same five project fixtures, five diagram-free derivatives and the supported diagram catalogue. Marked was excluded from the earlier tables and is now part of the new protocol. These are macOS results; they are not Windows competitor measurements.
+**Release recheck recorded 19 October 2026; historical series recorded 18 October 2026.** Apple M1, 8 GiB, macOS 27.0.1. Eight applications in the current series (seven in the earlier tables), the same five project fixtures, five diagram-free derivatives and the supported diagram catalogue. Marked was excluded from the earlier tables and is now part of the new protocol. These are macOS results; they are not Windows competitor measurements.
 
 The strongest observed MDVu advantages here are its complete Universal app size and built-in diagram coverage. It is not fastest on every file or lowest in memory on every workload. Editors and knowledge bases have features beyond a dedicated viewer; the comparison concerns reading the tested documents with built-in renderers.
 
-## New complete-traversal protocol · incomplete
+## Public 0.5.0 verification · 19 October 2026
+
+The size, RAM and startup comparison below was repeated with the **published MDVu 0.5.0 Universal app**, tag revision `302c509`, and the unchanged competitor binaries. The tag [CI run](https://github.com/stpork/mdvu/actions/runs/39237625561) passed macOS, Windows and Linux tests/builds, both MSI scopes and native fixture checks. All six [release packages](https://github.com/stpork/mdvu/releases/tag/v0.5.0) and their SHA-256 sidecars were downloaded and verified; the public Windows MSI URL returns HTTP 200. The installed public Mac app is **7,297,308 bytes (6.96 MiB)**. Package download sizes are different from installed size.
+
+This recheck covers all eight apps on the unchanged 91,722-byte diagram-free Light and two-node Mermaid control, plus original Complete/Heavy RAM for MDVu and MacDown. Cold and warm are separate fresh-process observations. Application caches are cleared for cold; OS file cache is retained. Warm follows a completed cold traversal of the same file. One document/window, no renderer plugins, same Mac. Actual retained window sizes differ; identical viewports are not claimed. One observation per cell is not a statistical ranking. The 73-format matrix was not repeated in this size/RAM/startup recheck.
+
+RAM attribution is corrected: sample physical footprint every 200 ms for bundle processes, descendants and **all system/XPC services assigned to that app by the OS responsible PID**. The old temporal WebKit heuristic could include unrelated helpers and omit native services. Use this recheck for RAM comparisons; the 18 October values below are historical. Footprint is not RSS. The first eight seconds have no Accessibility polling or input. Light RAM is its median at seconds 7–8; first visible body/graph is measured from process birth using compositor frames before input, excluding automation latency. Sparse-frame intervals are retained rather than presented as precise point estimates.
+
+| Application | Installed MiB | Light cold / warm | First Mermaid cold / warm | Light RAM cold / warm, MiB |
+| --- | ---: | --- | --- | ---: |
+| MDVu | 6.96 | 1.31 s / 0.78 s | 1.20 s / 0.66 s | 146.2 / 143.0 |
+| Typora | 44.53 | 2.19 s / 1.36 s | 1.76 s / 1.39 s | 347.3 / 343.0 |
+| Obsidian | 527.28 | 1.75 s / 1.45 s | 1.32 s / 1.21 s | 476.9 / 417.9 |
+| MacDown 3000 | 16.54 | 1.37 s / 1.64 s | 1.04 s / 0.71 s | 138.4 / 149.1 |
+| MarkViewer | 58.15 | 2.15 s / 2.16 s | 1.40 s / 1.19 s | 358.6 / 356.1 |
+| MD Viewer | 410.02 | 2.49 s / 1.83 s | N/A / N/A | 428.8 / 447.8 |
+| VS Code | 1388.93 | 3.56 s / 3.13 s | 3.31 s / 2.51 s | 1245.5 / 1272.1 |
+| Marked | 145.18 | 4.03 s / 3.01 s | 3.23 s / 2.94 s | 314.6 / 309.1 |
+
+`N/A` for MD Viewer means the control was shown as source, not a rendered graph. **Render · Page on the home page means the first visible two-node Mermaid, not completion of the entire document.** Warm SVG cache hits are allowed. EOF is independently verified by overlapping viewport steps, final context and terminal scrollbar; it does not prove every optional diagram rendered. Traversal duration contains test cadence and is not a rendering-speed metric.
+
+### Empty state, Complete and Heavy RAM
+
+Without a document, sample the median in seconds 30–40. MDVu opens a system file picker; MacDown opens an empty Untitled document. These are different default states. Owned file-picker services are included.
+
+| Application | No-document median, MiB | Sampled peak, MiB |
+| --- | ---: | ---: |
+| MDVu | 100.6 | 107.5 |
+| MacDown 3000 | 103.5 | 103.5 |
+
+After EOF is the median 5–10 seconds after verified arrival at the document end, without further input. The pass peak is the largest sampled simultaneous app-tree footprint. It includes later traversal/Accessibility overhead and is a diagnostic, not a clean startup-memory ranking. MDVu releases offscreen DOM/SVGs, so memory after EOF does not mean all diagrams stay mounted simultaneously.
+
+| Application | File | Phase | At 8 s, MiB | After EOF, MiB | Sampled pass peak, MiB |
+| --- | --- | --- | ---: | ---: | ---: |
+| MDVu | `test-complete.md` | cold | 166.9 | 294.7 | 964.8 |
+| MDVu | `test-complete.md` | warm | 195.1 | 296.7 | 664.4 |
+| MDVu | `test-heavy.md` | cold | 195.1 | 710.8 | 1306.4 |
+| MDVu | `test-heavy.md` | warm | 297.7 | 752.5 | 1102.5 |
+| MacDown 3000 | `test-complete.md` | cold | 207.3 | 334.8 | 375.1 |
+| MacDown 3000 | `test-complete.md` | warm | 217.9 | 347.2 | 388.8 |
+
+**MacDown Heavy is incomplete.** After 7 min 42 s, EOF was not verified and JavaScript/WebCore work was still active. The main process's kernel `RUSAGE_INFO_V4.ri_lifetime_max_phys_footprint` reached **5670.1 MiB**. This is a main-process lifetime maximum, not the sampled concurrent app-tree peak in the table. A small first-eight-second reading must not be called fully loaded Heavy RAM. Warm Heavy was not run because cold did not complete. This is a bounded incomplete observation, not a crash claim.
+
+MDVu's full sampled peaks are higher than its startup RAM; the Complete peak is mainly the document WebContent and the separate diagram-renderer WebContent. No universal lowest-memory claim follows from these results.
+
+Machine, versions, input/binary/harness hashes, phase, actual reader frames and summaries are in the website's [verified JSON](https://stpork.github.io/mdvu/data/verification-2026-10-19.json). Raw recordings, per-process samples, cache-clear logs and excluded adapter attempts remain locally under ignored `test-results/comparison-recheck-20261019/` and `test-results/full-pass-20261018/`. Loaded MDVu RAM uses the preselected clean `k` series after correcting the helper’s unbounded OCR history and autorelease lifetime. Earlier `h`/`j` diagnostics remain local; they are not selected for the loaded-RAM table. Startup Light/control observations retain their untouched first-eight-second scope. The historical format counts remain separate.
+
+## Historical full-traversal series · 18 October · incomplete
+
+The 19 October recheck above supersedes this series for current size, startup and RAM comparisons. Historical RAM used the older helper-attribution heuristic; it must not be mixed with the corrected measurements.
 
 Eight applications: MDVu, activated Typora, Obsidian, MacDown 3000, MarkViewer, MD Viewer, VS Code and activated Marked 3.2.21. One document per fresh process. Cold clears identified regenerable application caches; macOS filesystem cache remains. Warm follows a full cold traversal of the same file. No plugins or external rendering server. [Measurement protocol](#measurement-protocol).
 
@@ -25,7 +74,7 @@ Phases without a † marker reached their actual EOF through viewport-sized scro
 
 `COMPARISON.md` keeps the results and definitions. Raw inventories, attempt logs and the original full protocol are preserved locally under ignored `test-results/benchmarks/`; recordings and installed competitor apps stay under `test-results/`. They are intentionally absent from a source checkout.
 
-### Confirmed comparison at a glance
+### Historical comparison at a glance
 
 Light is the identical 91,722-byte common-content fixture with diagram fences removed. Cold / warm are separate fresh-process observations; RAM is the median in seconds 7–8 including helpers. Diagram counts describe the separate valid-source 73-case catalogue, not the entire languages or every competitor feature.
 
@@ -147,7 +196,7 @@ Logical app files plus symlink payload counted once, excluding directory metadat
 
 All attempts, binary/source hashes, cache states, geometry, exclusions and memory windows: `test-results/benchmarks/full-pass-2026-10-18.json` (local evidence, excluded from Git). Raw videos, frames and step logs: `test-results/full-pass-20261018/`. Local recordings are not distributed.
 
-## Current MDVu verification · 19 October 2026
+## Pre-release MDVu verification · 19 October 2026
 
 The release-candidate baseline is merged `develop` revision **`fe8de20`**, whose source tree matches the reviewed `4f55734`. [Post-merge CI](https://github.com/stpork/mdvu/actions/runs/39226613456) passed on macOS, Windows and Linux: **93 Swift tests, 27 core unit + 17 integration tests, nine Windows unit tests, 18 repository/runtime/release checks and 39/39 native fixtures per platform**. The current fence-metadata, automatic-dialect, stale-folder and debounced-find regressions are present in the test logs. Hosted fixture runs use timer mode for correctness; their timings are not display-frame or competitor measurements.
 

@@ -382,7 +382,7 @@ mdvu --snapshot output.png README.md
 
 ## Performance & Sizing Benchmark
 
-See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. The current local macOS comparison includes eight applications, separate application-cache-cold and warm starts, process memory and a 73-example diagram catalogue. It remains incomplete: 136/192 startup observations and 135/192 verified full-document passes. Windows native checks are reported separately; there is no Windows competitor ranking.
+See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. The 19 October release recheck includes eight macOS applications, separate application-cache-cold and warm starts, physical memory including app-owned system services, and Complete/Heavy diagnostics for MDVu and MacDown. The separate 73-example format catalogue and incomplete historical 192-cell study retain their original scope. Windows native checks are reported separately; there is no Windows competitor ranking.
 
 Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
