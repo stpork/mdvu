@@ -185,7 +185,9 @@ Before publishing, fetch the remote branches and fast-forward local `main` to `o
 
 Use `python3 scripts/set-version.py X.Y.Z` to update `version.txt`, `Info.plist`, both Rust package versions and `Cargo.lock` together, then update the matching `CHANGELOG.md` section before pushing the release candidate. CI checks that these versions agree. The release helper never replaces an existing tag or public release. Tag CI tests Linux, macOS and Windows, builds all six packages, verifies SHA-256, uploads to a draft, checks the uploaded set, then makes it public. A failed or incomplete upload stays a draft. `release-manifest.json` records the exact source commit, package sizes and hashes.
 
-The helper then updates Homebrew from the published cask, refreshes the website download links, and increments the development minor version. If tagging manually, dispatch **Deploy MDVu website** after successful publication and update Homebrew using the published `mdvu.rb`. Website measurements name their own tested revision; they are not silently relabelled as measurements of a new release.
+Each release also includes identical package copies with stable names, such as `mdvu-macos.dmg` and `mdvu-windows-x86_64.msi`, and matching SHA-256 sidecars. Website download buttons use `/releases/latest/download/<stable-name>`; GitHub redirects them to the latest stable release. Versioned package names, tags and historical download URLs are retained. Stable copies are prepared and verified with the draft before publication.
+
+The helper then updates Homebrew from the published cask, refreshes the website release metadata, and increments the development minor version. The website needs no source edits for new releases; its build resolves current metadata and retains the permanent download URLs. If tagging manually, dispatch **Deploy MDVu website** after successful publication and update Homebrew using the published `mdvu.rb`. Website measurements name their own tested revision; they are not silently relabelled as measurements of a new release.
 
 ### Updating embedded renderers
 

@@ -99,6 +99,24 @@ class ReleaseAssetsTests(unittest.TestCase):
                 release.publish(self.root, "0.5.0", "a" * 40, "owner/repo", self.changelog)
             run.assert_not_called()
 
+    def test_latest_aliases_preserve_versioned_packages_and_match_checksums(self):
+        original = {p.name: p.read_bytes() for p in self.root.glob("mdvu-0.5.0-*")}
+        files = release.prepare_latest_aliases(self.root, "0.5.0")
+        self.assertEqual(len(files), 12)
+        for suffix in release.PACKAGES:
+            name = "mdvu-" + suffix
+            data = (self.root / name).read_bytes()
+            self.assertEqual(data, original["mdvu-0.5.0-" + suffix])
+            self.assertEqual((self.root / (name + ".sha256")).read_text(),
+                             hashlib.sha256(data).hexdigest() + "  " + name + "\n")
+        self.assertEqual(original, {name: (self.root / name).read_bytes() for name in original})
+
+    def test_corrupt_source_never_creates_latest_aliases(self):
+        (self.root / "mdvu-0.5.0-windows-x86_64.zip").write_bytes(b"corrupt")
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            release.prepare_latest_aliases(self.root, "0.5.0")
+        self.assertFalse((self.root / "mdvu-macos.dmg").exists())
+
     def test_incomplete_upload_stays_draft(self):
         with patch.object(release.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "")) as run, \
              patch.object(release.subprocess, "check_output", return_value=json.dumps({"assets": []})):
@@ -118,6 +136,9 @@ class ReleaseAssetsTests(unittest.TestCase):
             commands = [call.args[0] for call in run.call_args_list]
             upload = next(c for c in commands if c[2] == "upload")
             self.assertEqual(sum("mdvu-0.5.0-" in value for value in upload), 12)
+            for suffix in release.PACKAGES:
+                for ending in ("", ".sha256"):
+                    self.assertIn(str(self.root / ("mdvu-" + suffix + ending)), upload)
             self.assertIn("--draft=false", commands[-1])
             self.assertEqual(commands[-1][-2:], ["--repo", "owner/repo"])
             manifest = json.loads((self.root / "release-manifest.json").read_text())

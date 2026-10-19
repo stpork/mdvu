@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 PACKAGES = (
@@ -40,6 +41,20 @@ def release_notes(path, version):
     return match[1].strip()
 
 
+def prepare_latest_aliases(directory, version):
+    """Copy validated packages to stable names; preserve every versioned file."""
+    assets = validate(directory, version)
+    files = []
+    for suffix, asset in zip(PACKAGES, assets):
+        name = f"mdvu-{suffix}"
+        path = directory / name
+        shutil.copyfile(directory / asset["name"], path)
+        checksum = directory / (name + ".sha256")
+        checksum.write_text(asset["sha256"] + "  " + name + "\n")
+        files.extend((path, checksum))
+    return files
+
+
 def publish(directory, version, commit, repository, changelog):
     assets = validate(directory, version)
     notes = release_notes(changelog, version)
@@ -66,6 +81,7 @@ def publish(directory, version, commit, repository, changelog):
     else:
         subprocess.run(gh + ["edit", tag, "--notes-file", str(notes_path)] + repo_args, check=True)
     files = [directory / (a["name"] + suffix) for a in assets for suffix in ("", ".sha256")]
+    files += prepare_latest_aliases(directory, version)
     files += [manifest] + [directory / name for name in ("mdvu.rb", "mdvu.json", "stpork.mdvu.yaml")
                            if (directory / name).is_file()]
     subprocess.run(gh + ["upload", tag, "--clobber", *map(str, files)] + repo_args, check=True)

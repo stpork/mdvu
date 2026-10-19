@@ -80,7 +80,7 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-**0.5.0 is the current stable release**, with native macOS and Windows packages. Download the [macOS DMG](https://github.com/stpork/mdvu/releases/download/v0.5.0/mdvu-0.5.0-macos.dmg), [Windows MSI](https://github.com/stpork/mdvu/releases/download/v0.5.0/mdvu-0.5.0-windows-x86_64.msi), or a portable ZIP from [GitHub Releases](https://github.com/stpork/mdvu/releases/tag/v0.5.0). Each package has a published SHA-256 checksum.
+Download the **latest stable release** for native macOS and Windows: [macOS DMG](https://github.com/stpork/mdvu/releases/latest/download/mdvu-macos.dmg), [Windows MSI](https://github.com/stpork/mdvu/releases/latest/download/mdvu-windows-x86_64.msi), or a portable ZIP from [GitHub Releases](https://github.com/stpork/mdvu/releases/latest). These permanent links follow each new stable release. Every package has a published SHA-256 checksum; historical releases and versioned download URLs remain available.
 
 Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Other versions · portable ZIPs** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
 
