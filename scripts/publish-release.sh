@@ -76,9 +76,10 @@ if ! git -C "$TEMP/tap" diff --cached --quiet; then
     git -C "$TEMP/tap" commit -m "Update mdvu to $TAG"
     git -C "$TEMP/tap" push
 fi
-gh workflow run 'Deploy MDVu website' --repo stpork/stpork.github.io
+gh workflow run 'Deploy MDVu website' --repo stpork/stpork.github.io --ref main
 
 git switch develop
+git merge --ff-only main
 NEXT_VERSION=$(python3 -c 'import sys; a,b,_=map(int,sys.argv[1].split(".")); print(f"{a}.{b+1}.0")' "$VERSION")
 python3 scripts/set-version.py "$NEXT_VERSION"
 git add version.txt packaging/macos/Info.plist src/core/Cargo.toml src/windows/Cargo.toml Cargo.lock
