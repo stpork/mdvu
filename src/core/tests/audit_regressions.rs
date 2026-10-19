@@ -76,7 +76,10 @@ fn fence_metadata_does_not_disable_diagrams_or_math() {
         ("rust", "let x = 1;"),
     ] {
         let plain = body(&format!("```{language}\n{source}\n```"));
-        for info in [format!("{language} title=\"Demo\""), format!("{}\t{{#example}}", language.to_uppercase())] {
+        for info in [
+            format!("{language} title=\"Demo\""),
+            format!("{}\t{{#example}}", language.to_uppercase()),
+        ] {
             let annotated = body(&format!("```{info}\n{source}\n```"));
             assert_eq!(annotated.body, plain.body, "{info}");
             assert_eq!(annotated.has_mermaid, plain.has_mermaid);

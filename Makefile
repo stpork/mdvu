@@ -85,6 +85,7 @@ install: app
 	fi
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
+	cd "$(PROJECT_ROOT)" && cargo clean
 	rm -rf "$(PROJECT_ROOT)/dist"
 	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/tests"/*.bc
 

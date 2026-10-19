@@ -53,7 +53,7 @@ fn main() {
     let rc_path = out_dir.join("mdvu.rc");
     let res_path = out_dir.join("mdvu.res");
 
-    let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.5.0".to_string());
+    let version = env::var("CARGO_PKG_VERSION").expect("Cargo provides the package version");
     let mut parts: Vec<u16> = version
         .split('.')
         .filter_map(|s| s.parse::<u16>().ok())

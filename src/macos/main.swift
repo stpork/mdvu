@@ -7,8 +7,7 @@ if arguments.contains("--help") || arguments.contains("-h") {
     exit(EXIT_SUCCESS)
 }
 if arguments.contains("--version") || arguments.contains("-v") {
-    let version = AppBundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? MdvuCoreBridge.shared.version ?? "0.5.0"
-    print("mdvu \(version)")
+    print("mdvu \(AppBundle.version)")
     exit(EXIT_SUCCESS)
 }
 let options = CLIOptions.parse(arguments)
@@ -26,7 +25,7 @@ guard MdvuCoreBridge.shared.isAvailable else {
     }
     exit(EXIT_FAILURE)
 }
-if BenchmarkRunner.runIfRequested(arguments) { exit(EXIT_SUCCESS) }
+if let status = BenchmarkRunner.runIfRequested(arguments, options: options) { exit(status) }
 
 // Headless CLI execution (no GUI window)
 if options.isHeadless {

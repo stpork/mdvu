@@ -11,7 +11,7 @@
     <a href="https://github.com/stpork/mdvu/actions"><img src="https://github.com/stpork/mdvu/actions/workflows/ci.yml/badge.svg?branch=develop" alt="CI Status"></a>
     <a href="#installation"><img src="https://img.shields.io/badge/macOS-13.0%2B-blue?logo=apple" alt="macOS 13+"></a>
     <a href="#3-windows-installation--usage"><img src="https://img.shields.io/badge/Windows-10%20%2F%2011-0078D6?logo=windows" alt="Windows 10/11"></a>
-    <a href="#installation"><img src="https://img.shields.io/badge/version-0.5.0-emerald" alt="Version 0.5.0"></a>
+    <a href="https://github.com/stpork/mdvu/releases"><img src="https://img.shields.io/github/v/release/stpork/mdvu" alt="Latest published release"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License MIT"></a>
   </p>
 </div>
@@ -76,7 +76,7 @@ brew upgrade --cask mdvu
 
 ### 2. Pre-Built Release Downloads (GitHub Releases)
 
-This checkout documents **0.5.0 in development**. The current public release is **0.4.1 for macOS**; Windows installers and the updated engine/catalogue features described here are planned for 0.5.0. Check the release asset list before downloading.
+The Windows packages and updated engine/catalogue features documented here require **0.5.0 or later**. Check the [published release assets](https://github.com/stpork/mdvu/releases) for available versions; a development checkout can include changes that have not been released yet.
 
 Start with **DMG on macOS** or **MSI on Windows**. Portable ZIP variants are under **Other versions · portable ZIPs** on the [website](https://stpork.github.io/mdvu/#download), linking to [GitHub Releases](https://github.com/stpork/mdvu/releases). Starting with 0.5.0, a release is published only after all six packages below and their SHA-256 sidecars are present. Earlier releases are macOS-only; consult the published asset list for availability.
 
@@ -166,8 +166,10 @@ cargo build --release -p mdvu-windows --bin mdvu
 
 Requirements: macOS 13.0+, Swift 6 / Xcode Command Line Tools (`xcode-select --install`), and the stable Rust toolchain with Cargo. Universal builds also require the `aarch64-apple-darwin` and `x86_64-apple-darwin` Rust targets. Windows builds require Rust, the MSVC C++ build tools and the Windows SDK; packaging additionally uses WiX as configured by `scripts/build-windows.ps1`.
 
+The examples below build `develop`. For a published version, check out its corresponding `vX.Y.Z` tag before building.
+
 ```sh
-git clone https://github.com/stpork/mdvu.git
+git clone --branch develop https://github.com/stpork/mdvu.git
 cd mdvu
 
 # Using the unified build.sh driver:
@@ -188,7 +190,7 @@ make install         # Install locally
 
 The CLI uses the same executable, Rust library and resources as the native app. Build the complete bundle and link its executable; copying the Swift binary alone omits required files.
 ```sh
-git clone https://github.com/stpork/mdvu.git
+git clone --branch develop https://github.com/stpork/mdvu.git
 cd mdvu
 make app
 mkdir -p ~/.local/bin
@@ -222,7 +224,7 @@ mdvu --dialect obsidian note.md
 mdvu --full-width document.md
 
 # --- Headless CLI Mode (No GUI Window) ---
-# Export Markdown to self-contained HTML file
+# Export Markdown to an HTML file
 mdvu README.md -o output.html
 
 # Embed offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
@@ -248,14 +250,15 @@ mdvu --snapshot output.png README.md
 | **`-o, --output <FILE>`** | **Headless**: Write rendered HTML to file instead of opening GUI | None |
 | **`--stdout`** | **Headless**: Force render HTML to stdout instead of opening GUI | Disabled |
 | **`--toc`** | **Headless**: Print Table of Contents (JSON) to stdout and exit | Disabled |
-| **`-s, --standalone`** | **Headless**: Embed offline diagram & math engines into HTML | `false` |
-| `--title <TITLE>` | Override document title | Filename |
+| **`-s, --standalone`** | Export modifier: embed the required offline diagram & math engines | `false` |
+| `--title <TITLE>` | Override document title | Automatic |
 | `-t, --theme <system\|light\|dark>` | Color theme for document and diagrams | `system` |
 | `-d, --dialect <PROFILE>` | Dialect profile: `generic`, `github`/`gfm`, `obsidian`, `mkdocs`, `docusaurus`, `commonmark`, `hugo`; automatic selection also accepts `auto` | Automatic, falling back to `generic` |
-| `--full-width` | Open in edge-to-edge full width mode | Saved preference |
-| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | Saved preference |
+| `--full-width` | Open in edge-to-edge full width mode | macOS: saved preference; Windows: off |
+| `--navigator` | Open with the File & Vault Navigator pane visible (`⌥⌘D`) | macOS: saved preference; Windows: off |
 | `--no-mermaid` | Disable Mermaid/ZenUML and PlantUML-family diagrams | Diagram rendering enabled |
 | `--snapshot <file.png>` | Headless render to PNG image and exit (macOS) | None |
+| `--benchmark <FILE>` | Measure Markdown processing without opening the GUI | Disabled |
 | `--version` | Display version information and exit (`-v` on macOS; `-V` on Windows) | None |
 | `-h, --help` | Display command-line usage help | None |
 
@@ -368,8 +371,8 @@ mdvu --snapshot output.png README.md
 * **Matching Pane Headers**: Both panels have a leading icon, title and × button to hide the panel.
 * **One File Navigator**: The right pane switches between **Tree** (folders and files) and **List** (recursive relative file paths). The left pane shows only the current document’s table of contents.
 * **Smart Root Detection**: Automatically walks up directory ancestors looking for `.obsidian` or `.git` boundaries, anchoring the root at your true vault or repository level.
-* **Folder Opening**: Opening a folder shows List mode and opens its first sorted Markdown file. That folder stays the root while you browse its documents.
-* **Bounded Scanning**: Tree mode loads folders on demand. List mode scans in the background, preserving the existing 5,000-file limit; ignored directories, packages and directory symlinks are skipped. Switching modes releases the previous model.
+* **Folder Opening**: An explicitly opened folder stays the root while you browse its documents. macOS selects the first file in its sorted recursive list; Windows prefers a top-level README/index, then the first top-level Markdown file.
+* **Background Scanning**: macOS loads Tree folders on demand and limits its recursive List to 5,000 files. Windows scans a tree up to six levels deep in the background and derives List mode from that tree. Both skip ignored directories, application packages and directory symlinks. Windows also accepts `.txt` files in its navigator and open dialog.
 * **Active Selection**: Switching views preserves the current document without reloading it. Opening files and navigating Back/Forward highlights the active file in either view.
 * **Native Keyboard & Click Flow**: Single-click opens files; double-click expands or collapses directories; Return/Enter opens the highlighted note.
 * **Push-on/Push-off State**: Toolbar buttons for Table of Contents and File Navigator stay visually depressed when their respective panes are active.
@@ -382,6 +385,8 @@ mdvu --snapshot output.png README.md
 See **[COMPARISON.md](COMPARISON.md)** for measurement definitions, native UI checks, distribution sizing and reproducible commands. The current local macOS comparison includes eight applications, separate application-cache-cold and warm starts, process memory and a 73-example diagram catalogue. It remains incomplete: 136/192 startup observations and 135/192 verified full-document passes. Windows native checks are reported separately; there is no Windows competitor ranking.
 
 Measurements vary with architecture, OS, document, and cache state. `make benchmark` runs five parser iterations after a warmup; it does not measure DOM rendering, scrolling, or diagram execution. The 0.4.1 checks and exact artifact sizes are recorded in [CHANGELOG.md](CHANGELOG.md).
+
+Both native `--benchmark` commands use the normal dialect/theme options and require a readable input file. Defaults are one warmup and five measured iterations with diagrams disabled. `MDVU_BENCHMARK_RUNS` sets the iteration count, `MDVU_BENCHMARK_WARMUP=0` skips warmup, and `MDVU_BENCHMARK_MERMAID=1` includes diagram-placeholder preprocessing; `--no-mermaid` still disables it. No browser or SVG generation is timed.
 
 | Property | Configuration / measurement |
 | :--- | :--- |
@@ -449,6 +454,8 @@ Git contains application sources, locked renderer assets, packaging, documentati
 
 Build output belongs in `.build/`, `target/` and `dist/`. A checkout can be named `C:\Sources\mdvu` or placed anywhere else; no nested checkout is required.
 
+`make clean` removes Swift, Rust and distribution build products. It preserves local evidence in `test-results/`. Regression and release tools require Python 3.11+; optional visual reference and installer-branding tools also require Pillow. Application builds and the standard repository checks do not need Pillow.
+
 Run `python3 -m unittest discover -s tests -p 'test_*.py'` for repository, release, installer-authoring and runtime-integrity checks. Run `make check` and `make coverage` on macOS. `./build.sh check` also runs the visual reference checks (Pillow and an active desktop required). After `make app`, `python3 scripts/test-macos-system.py` opens every fixture in the native UI. On Windows, run `cargo test --workspace`, `./scripts/build-windows.ps1`, then `./scripts/test-windows-system.ps1` from an interactive user session. The UI runners save checks, timing, process samples and screenshots for every Markdown fixture, including nested runtime cases. For a clean Windows test machine, run `./scripts/test-windows-installer.ps1 -Msi <path>` from an elevated interactive PowerShell. It tests the full MSI UI in both scopes, using a disposable standard Windows account and a verified non-elevated token for the user installation; checks Finish, shortcut targets/launch, associations and installed rendering; then uninstalls each test installation. It refuses to overwrite an existing installation and removes the temporary account, profile and staged test files afterward. Logs stay under `test-results/installer-windows/`. The system runner's `-Msi <path> -Install` option only performs a silent machine installation and is not the two-scope regression test. `./scripts/coverage-windows.ps1` includes native unit tests and an instrumented GUI session; its timings are separate from release performance measurements.
 
 The shared control scenarios cover every 10% zoom step from 10% to 500% and back, endpoint clamping, manual zoom input/reset, TOC and file-panel hide/show, Tree/List, outline expansion/collapse and reading-position preservation during reflow. Fullscreen entry, interaction and exit follow the primary scenarios. Each action records its duration and reader dimensions. CI's timer mode checks controls and content without claiming frame performance or exercising desktop fullscreen transitions; run the default interactive mode for those checks.
@@ -476,7 +483,9 @@ For detailed diagrams and component design, see [ARCHITECTURE.md](ARCHITECTURE.m
 
 ## Publishing a release
 
-From a clean `develop` branch with a successful CI run for its exact commit:
+Use a clean `develop` branch with a successful CI run for its exact commit.
+
+Before publishing, fetch the remote branches and fast-forward local `main` to `origin/main`. The helper refuses a divergent or outdated local `main`; merge any new mainline changes into `develop` and rerun CI before releasing.
 
 ```sh
 ./build.sh publish         # Download and validate all six CI packages; preview only

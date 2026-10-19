@@ -195,25 +195,7 @@ final class AboutPanelController: NSObject, NSTextViewDelegate {
         stack.addArrangedSubview(iconImageView)
         stack.setCustomSpacing(16, after: iconImageView)
 
-        let version: String = {
-            if let str = AppBundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String, !str.isEmpty {
-                return str
-            }
-            let plistPath = URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .appendingPathComponent("packaging/macos/Info.plist").path
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: plistPath)),
-               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-               let str = plist["CFBundleShortVersionString"] as? String {
-                return str
-            }
-            return MdvuCoreBridge.shared.version ?? "0.5.0"
-        }()
-
-        let mas = Self.makeAttributedString(version: version)
+        let mas = Self.makeAttributedString(version: AppBundle.version)
 
         let textContainer = NSTextContainer(containerSize: NSSize(width: 312, height: CGFloat.greatestFiniteMagnitude))
         textContainer.lineFragmentPadding = 0

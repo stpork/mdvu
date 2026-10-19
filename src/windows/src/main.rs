@@ -75,7 +75,7 @@ struct Args {
     #[arg(long)]
     no_mermaid: bool,
 
-    /// Embed all offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
+    /// Embed required offline diagram & math engines (KaTeX, Mermaid, PlantUML) into the HTML
     #[arg(short, long)]
     standalone: bool,
 
@@ -84,7 +84,7 @@ struct Args {
     navigator: bool,
 
     /// Run internal rendering benchmark on target file and print throughput
-    #[arg(long)]
+    #[arg(long, requires = "input")]
     benchmark: bool,
 }
 
@@ -196,18 +196,19 @@ fn run_headless(args: Args) -> Result<(), Box<dyn std::error::Error>> {
         let size_bytes = content.len();
         let size_mb = size_bytes as f64 / 1_048_576.0;
 
-        let enable_diagrams = !args.no_mermaid
-            && std::env::var("MDVU_BENCHMARK_MERMAID")
-                .map(|v| v != "0")
-                .unwrap_or(true);
+        let enable_diagrams =
+            !args.no_mermaid && std::env::var("MDVU_BENCHMARK_MERMAID").is_ok_and(|v| v == "1");
 
         // Warmup run
-        let _ = render_markdown_body(&content, dialect, is_explicit, &args.theme, enable_diagrams);
+        if std::env::var("MDVU_BENCHMARK_WARMUP").as_deref() != Ok("0") {
+            let _ =
+                render_markdown_body(&content, dialect, is_explicit, &args.theme, enable_diagrams);
+        }
 
         let runs = std::env::var("MDVU_BENCHMARK_RUNS")
             .ok()
             .and_then(|s| s.parse::<usize>().ok())
-            .unwrap_or(10)
+            .unwrap_or(5)
             .max(1);
 
         let mut samples = Vec::with_capacity(runs);
@@ -409,7 +410,12 @@ impl AppState {
         expected.is_none_or(|generation| generation == self.generation)
     }
 
-    fn apply_folder_scan(&mut self, generation: u64, root: &Path, items: Vec<navigator::VaultItem>) -> bool {
+    fn apply_folder_scan(
+        &mut self,
+        generation: u64,
+        root: &Path,
+        items: Vec<navigator::VaultItem>,
+    ) -> bool {
         if !self.accepts_generation(Some(generation)) || self.vault_root.as_deref() != Some(root) {
             return false;
         }
@@ -1811,16 +1817,30 @@ mod tests {
 
     fn folder_state() -> AppState {
         AppState {
-            render_sender: None, generation: 1, system_dark: false,
-            current_file: None, pending_fragment: None,
-            vault_root: Some(PathBuf::from("vault")), vault_items: Vec::new(),
-            navigator_loading: false, current_title: String::new(),
-            zoom_level: 1.0, last_toggle: Instant::now(), last_rendered: None,
-            dialect: MarkdownDialect::Generic, effective_dialect: MarkdownDialect::Generic,
-            is_dialect_explicit: false, enable_diagrams: true, theme: "light".into(),
-            full_width: false, is_toc_visible: false, is_nav_visible: true,
-            history: NavigationHistory::new(), katex_injected: false,
-            mermaid_injected: false, plantuml_injected: false,
+            render_sender: None,
+            generation: 1,
+            system_dark: false,
+            current_file: None,
+            pending_fragment: None,
+            vault_root: Some(PathBuf::from("vault")),
+            vault_items: Vec::new(),
+            navigator_loading: false,
+            current_title: String::new(),
+            zoom_level: 1.0,
+            last_toggle: Instant::now(),
+            last_rendered: None,
+            dialect: MarkdownDialect::Generic,
+            effective_dialect: MarkdownDialect::Generic,
+            is_dialect_explicit: false,
+            enable_diagrams: true,
+            theme: "light".into(),
+            full_width: false,
+            is_toc_visible: false,
+            is_nav_visible: true,
+            history: NavigationHistory::new(),
+            katex_injected: false,
+            mermaid_injected: false,
+            plantuml_injected: false,
         }
     }
 
@@ -1828,10 +1848,16 @@ mod tests {
     fn folder_results_cannot_replace_later_file_or_folder_choices() {
         let mut state = folder_state();
         let root = PathBuf::from("vault");
-        let items = vec![VaultItem {name: "first.md".into(), path: "vault/first.md".into(),
-            is_dir: false, rel_path: None, children: None}];
+        let items = vec![VaultItem {
+            name: "first.md".into(),
+            path: "vault/first.md".into(),
+            is_dir: false,
+            rel_path: None,
+            children: None,
+        }];
         assert!(state.apply_folder_scan(1, &root, items.clone()));
-        let automatic = UserEvent::OpenFileWithFragment(PathBuf::from("vault/first.md"), None, Some(1));
+        let automatic =
+            UserEvent::OpenFileWithFragment(PathBuf::from("vault/first.md"), None, Some(1));
 
         // A file in the same root is selected before the scan/auto-open finishes.
         state.generation += 1;
@@ -1840,8 +1866,13 @@ mod tests {
         assert_eq!(state.vault_items, items);
         if let UserEvent::OpenFileWithFragment(_, _, generation) = automatic {
             assert!(!state.accepts_generation(generation));
-        } else { panic!("Expected a generation-bound auto-open"); }
-        assert_eq!(state.current_file.as_deref(), Some(Path::new("vault/chosen.md")));
+        } else {
+            panic!("Expected a generation-bound auto-open");
+        }
+        assert_eq!(
+            state.current_file.as_deref(),
+            Some(Path::new("vault/chosen.md"))
+        );
 
         // A -> B -> A must not accept the first A scan just because roots match.
         state.generation += 1;

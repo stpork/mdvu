@@ -63,6 +63,15 @@ class NativeCLI(unittest.TestCase):
     def test_missing_input_fails(self):
         result = subprocess.run([BINARY, str(self.root / 'missing.md'), '--stdout'], capture_output=True, timeout=30)
         self.assertNotEqual(result.returncode, 0)
+    def test_benchmark_requires_input(self):
+        result = subprocess.run([BINARY, '--benchmark'], input=b'', capture_output=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+    def test_benchmark_missing_file_fails(self):
+        result = subprocess.run([BINARY, '--benchmark', str(self.root / 'missing.md')],
+                                capture_output=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+    def test_benchmark_accepts_normal_input_position(self):
+        self.assertIn('median', self.run_cli('# Benchmark', '--benchmark'))
     def test_closed_stdout_does_not_crash(self):
         source = self.root / 'pipe.md'
         source.write_text('# Pipe\n\n' + ('A paragraph.\n\n' * 20000))
