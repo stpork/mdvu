@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product
+        Id="*"
+        Name="MDVu"
+        Language="1033"
+        Version="$(var.Version)"
+        Manufacturer="Finn de Bear"
+        UpgradeCode="A834D8F1-5E1B-4C72-9F0E-7C64112E5B10">
+
+        <!-- Single Package Authoring: supports both per-machine (all users) and per-user installs -->
+        <Package
+            InstallerVersion="500"
+            Compressed="yes"
+            Platform="x64"
+            Description="MDVu - Fast, lightweight native Markdown and Mermaid viewer"
+            Comments="Copyright (c) 2026 Finn de Bear" />
+
+        <MajorUpgrade
+            AllowSameVersionUpgrades="yes"
+            DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+            Schedule="afterInstallInitialize" />
+
+        <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+        <Icon Id="MdvuIcon.ico" SourceFile="packaging\windows\mdvu.ico" />
+        <Property Id="ARPPRODUCTICON" Value="MdvuIcon.ico" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/stpork/mdvu" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/stpork/mdvu" />
+
+        <!-- Dual-purpose package properties: ALLUSERS=2 allows per-user or per-machine selection -->
+        <Property Id="ALLUSERS" Value="2" />
+        <Property Id="ApplicationFolderName" Value="MDVu" />
+
+        <!-- Folder targets: 64-bit Program Files for per-machine, LocalAppData\Programs for per-user -->
+        <SetProperty Id="WixPerMachineFolder" Value="[ProgramFiles64Folder][ApplicationFolderName]\" Before="CostInitialize" Sequence="both">
+            <![CDATA[VersionNT64]]>
+        </SetProperty>
+        <SetProperty Id="WixPerUserFolder" Value="[LocalAppDataFolder]Programs\[ApplicationFolderName]\" Before="CostInitialize" Sequence="both" />
+
+        <!-- SetDirectory schedules the property before CostFinalize, so MSI resolves
+             files, shortcuts and working directories from the same target path. -->
+        <SetDirectory Id="APPLICATIONFOLDER" Action="SetAppFolderPerUser" Value="[WixPerUserFolder]">
+            <![CDATA[NOT Installed AND (NOT ALLUSERS OR (ALLUSERS = 2 AND MSIINSTALLPERUSER = 1))]]>
+        </SetDirectory>
+        <SetDirectory Id="APPLICATIONFOLDER" Action="SetAppFolderPerMachine" Value="[WixPerMachineFolder]">
+            <![CDATA[NOT Installed AND (ALLUSERS = 1 OR (ALLUSERS = 2 AND NOT (MSIINSTALLPERUSER = 1)))]]>
+        </SetDirectory>
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="APPLICATIONFOLDER" Name="MDVu" />
+            </Directory>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="MDVu" />
+            </Directory>
+        </Directory>
+
+        <DirectoryRef Id="APPLICATIONFOLDER">
+            <Component Id="MainExecutable" Guid="B491A77E-9A56-4D83-8C45-2C8B69262301" Win64="yes">
+                <File Id="MdvuExe" Name="mdvu.exe" Source="$(var.DistDir)\mdvu.exe" KeyPath="yes" />
+
+                <!-- Register MDVu.MarkdownDocument ProgId with Open command and icon -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\MDVu.MarkdownDocument">
+                    <RegistryValue Type="string" Value="Markdown Document" />
+                    <RegistryValue Name="FriendlyTypeName" Type="string" Value="Markdown Document" />
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell">
+                        <RegistryValue Type="string" Value="open" />
+                        <RegistryKey Key="open">
+                            <RegistryValue Type="string" Value="&amp;Open with MDVu" />
+                            <RegistryKey Key="command">
+                                <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot; &quot;%1&quot;" />
+                            </RegistryKey>
+                        </RegistryKey>
+                    </RegistryKey>
+                </RegistryKey>
+
+                <!-- File Extensions (.md, .markdown, .mdown, .mkd) -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\.md">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.markdown">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mdown">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <RegistryKey Root="HKMU" Key="Software\Classes\.mkd">
+                    <RegistryValue Type="string" Value="MDVu.MarkdownDocument" />
+                    <RegistryValue Name="Content Type" Type="string" Value="text/markdown" />
+                    <RegistryValue Name="PerceivedType" Type="string" Value="text" />
+                    <RegistryKey Key="OpenWithProgids">
+                        <RegistryValue Name="MDVu.MarkdownDocument" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="OpenWithList\mdvu.exe" />
+                </RegistryKey>
+
+                <!-- Application Registration for Windows "Default Apps" & "Open With" -->
+                <RegistryKey Root="HKMU" Key="Software\Classes\Applications\mdvu.exe">
+                    <RegistryValue Name="FriendlyAppName" Type="string" Value="MDVu" />
+                    <RegistryKey Key="DefaultIcon">
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
+                    </RegistryKey>
+                    <RegistryKey Key="SupportedTypes">
+                        <RegistryValue Name=".md" Type="string" Value="" />
+                        <RegistryValue Name=".markdown" Type="string" Value="" />
+                        <RegistryValue Name=".mdown" Type="string" Value="" />
+                        <RegistryValue Name=".mkd" Type="string" Value="" />
+                    </RegistryKey>
+                    <RegistryKey Key="shell\open\command">
+                        <RegistryValue Type="string" Value="&quot;[#MdvuExe]&quot; &quot;%1&quot;" />
+                    </RegistryKey>
+                </RegistryKey>
+
+                <!-- Windows RegisteredApplications Capabilities (Default Apps Settings integration) -->
+                <RegistryKey Root="HKMU" Key="Software\RegisteredApplications">
+                    <RegistryValue Name="MDVu" Type="string" Value="Software\MDVu\Capabilities" />
+                </RegistryKey>
+                <RegistryKey Root="HKMU" Key="Software\MDVu\Capabilities">
+                    <RegistryValue Name="ApplicationName" Type="string" Value="MDVu" />
+                    <RegistryValue Name="ApplicationDescription" Type="string" Value="Fast, lightweight native Markdown and Mermaid viewer" />
+                    <RegistryValue Name="ApplicationIcon" Type="string" Value="&quot;[#MdvuExe]&quot;,0" />
+                    <RegistryKey Key="FileAssociations">
+                        <RegistryValue Name=".md" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".markdown" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mdown" Type="string" Value="MDVu.MarkdownDocument" />
+                        <RegistryValue Name=".mkd" Type="string" Value="MDVu.MarkdownDocument" />
+                    </RegistryKey>
+                </RegistryKey>
+            </Component>
+
+            <!-- Set system-wide PATH when installed for all users -->
+            <Component Id="PathSystem" Guid="F149A87E-1234-4D83-8C45-2C8B69262305" Win64="yes">
+                <Condition>ALLUSERS = 1</Condition>
+                <CreateFolder />
+                <Environment
+                    Id="PATH_SYSTEM"
+                    Name="PATH"
+                    Value="[APPLICATIONFOLDER]"
+                    Permanent="no"
+                    Part="last"
+                    Action="set"
+                    System="yes" />
+            </Component>
+
+            <!-- Set user-specific PATH when installed just for current user (no admin rights needed) -->
+            <Component Id="PathUser" Guid="F259B98F-5678-4D83-8C45-2C8B69262306" Win64="yes">
+                <Condition>NOT (ALLUSERS = 1)</Condition>
+                <CreateFolder />
+                <Environment
+                    Id="PATH_USER"
+                    Name="PATH"
+                    Value="[APPLICATIONFOLDER]"
+                    Permanent="no"
+                    Part="last"
+                    Action="set"
+                    System="no" />
+            </Component>
+
+            <Component Id="DocumentationFiles" Guid="C192B88F-3B67-4E94-9D56-3D9C7A373402" Win64="yes">
+                <File Id="ReadmeTxt" Name="README.txt" Source="$(var.DistDir)\README.txt" KeyPath="yes" />
+                <File Id="LicenseTxt" Name="LICENSE.txt" Source="$(var.DistDir)\LICENSE.txt" />
+            </Component>
+
+            <Component Id="WebView2LoaderDll" Guid="E63B48D1-3467-463C-9C1D-89F12A675304" Win64="yes">
+                <File Id="WebView2LoaderFile" Name="WebView2Loader.dll" Source="$(var.DistDir)\WebView2Loader.dll" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+
+        <DirectoryRef Id="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcut" Guid="D2A3C990-4C78-4FA5-AE67-4EAD8B484503" Win64="yes">
+                <Shortcut
+                    Id="ApplicationStartMenuShortcut"
+                    Name="MDVu"
+                    Description="Markdown and Mermaid Viewer"
+                    Target="[#MdvuExe]"
+                    WorkingDirectory="APPLICATIONFOLDER"
+                    Icon="MdvuIcon.ico" />
+                <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+                <RegistryValue
+                    Root="HKMU"
+                    Key="Software\FinnDeBear\MDVu"
+                    Name="installed"
+                    Type="integer"
+                    Value="1"
+                    KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+
+        <Feature Id="ProductFeature" Title="MDVu" Level="1">
+            <ComponentRef Id="MainExecutable" />
+            <ComponentRef Id="PathSystem" />
+            <ComponentRef Id="PathUser" />
+            <ComponentRef Id="DocumentationFiles" />
+            <ComponentRef Id="WebView2LoaderDll" />
+            <ComponentRef Id="ApplicationShortcut" />
+        </Feature>
+
+        <WixVariable Id="WixUIDialogBmp" Value="packaging\windows\dialog.bmp" />
+        <WixVariable Id="WixUIBannerBmp" Value="packaging\windows\banner.bmp" />
+
+        <!-- Streamlined Single-Screen Setup UI with Dynamic UAC Shield Checkbox Toggle -->
+        <UI Id="WixUI_QuickInstall">
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+
+            <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+            <Property Id="WixUI_Mode" Value="InstallDir" />
+
+            <DialogRef Id="ErrorDlg" />
+            <DialogRef Id="FatalError" />
+            <DialogRef Id="FilesInUse" />
+            <DialogRef Id="MsiRMFilesInUse" />
+            <DialogRef Id="PrepareDlg" />
+            <DialogRef Id="ProgressDlg" />
+            <DialogRef Id="ResumeDlg" />
+            <DialogRef Id="UserExit" />
+            <DialogRef Id="ExitDialog" />
+            <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999">1</Publish>
+
+            <Dialog Id="QuickInstallDlg" Width="370" Height="270" Title="MDVu Setup">
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+                <Control Id="Title" Type="Text" X="15" Y="15" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Install MDVu" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Fast, lightweight native Markdown and Mermaid viewer" />
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+
+                <Control Id="LicenseText" Type="ScrollableText" X="20" Y="55" Width="330" Height="120" Sunken="yes" TabSkip="no">
+                    <Text SourceFile="packaging\windows\license.rtf" />
+                </Control>
+
+                <Control Id="LicenseAcceptedCheckBox" Type="CheckBox" X="20" Y="185" Width="330" Height="15" CheckBoxValue="1" Property="LicenseAccepted" Text="I accept the terms in the License Agreement" />
+
+                <!-- Checkbox to install for current user only -->
+                <Control Id="PerUserCheckBox" Type="CheckBox" X="20" Y="205" Width="330" Height="15" CheckBoxValue="1" Property="MSIINSTALLPERUSER" Text="Install for current user only (no administrator privileges needed)" />
+
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+                <!-- Install button WITH UAC shield (active when MSIINSTALLPERUSER is NOT 1) -->
+                <Control Id="InstallShield" Type="PushButton" ElevationShield="yes" X="222" Y="243" Width="66" Height="17" Default="yes" Text="Install">
+                    <Condition Action="enable">LicenseAccepted = "1"</Condition>
+                    <Condition Action="disable">NOT (LicenseAccepted = "1")</Condition>
+                    <Condition Action="show">NOT (MSIINSTALLPERUSER = "1")</Condition>
+                    <Condition Action="hide">MSIINSTALLPERUSER = "1"</Condition>
+                    <Publish Property="ALLUSERS" Value="1" Order="1">1</Publish>
+                    <Publish Property="APPLICATIONFOLDER" Value="[WixPerMachineFolder]" Order="2">1</Publish>
+                    <Publish Event="SetTargetPath" Value="APPLICATIONFOLDER" Order="3">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="4">1</Publish>
+                </Control>
+
+                <!-- Install button WITHOUT UAC shield (active when MSIINSTALLPERUSER IS 1) -->
+                <Control Id="InstallNoShield" Type="PushButton" X="222" Y="243" Width="66" Height="17" Default="yes" Text="Install">
+                    <Condition Action="enable">LicenseAccepted = "1"</Condition>
+                    <Condition Action="disable">NOT (LicenseAccepted = "1")</Condition>
+                    <Condition Action="show">MSIINSTALLPERUSER = "1"</Condition>
+                    <Condition Action="hide">NOT (MSIINSTALLPERUSER = "1")</Condition>
+                    <Publish Property="ALLUSERS" Value="{}" Order="1">1</Publish>
+                    <Publish Property="APPLICATIONFOLDER" Value="[WixPerUserFolder]" Order="2">1</Publish>
+                    <Publish Event="SetTargetPath" Value="APPLICATIONFOLDER" Order="3">1</Publish>
+                    <Publish Event="EndDialog" Value="Return" Order="4">1</Publish>
+                </Control>
+
+                <Control Id="Cancel" Type="PushButton" X="298" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+            </Dialog>
+
+            <InstallUISequence>
+                <Show Dialog="FatalError" OnExit="error" />
+                <Show Dialog="UserExit" OnExit="cancel" />
+                <Show Dialog="ExitDialog" OnExit="success" />
+                <Show Dialog="PrepareDlg" Before="QuickInstallDlg">1</Show>
+                <Show Dialog="QuickInstallDlg" Before="ExecuteAction">NOT Installed</Show>
+            </InstallUISequence>
+
+            <AdminUISequence>
+                <Show Dialog="FatalError" OnExit="error" />
+                <Show Dialog="UserExit" OnExit="cancel" />
+                <Show Dialog="ExitDialog" OnExit="success" />
+                <Show Dialog="PrepareDlg" Before="QuickInstallDlg">1</Show>
+                <Show Dialog="QuickInstallDlg" Before="ExecuteAction">NOT Installed</Show>
+            </AdminUISequence>
+        </UI>
+
+        <UIRef Id="WixUI_Common" />
+    </Product>
+</Wix>

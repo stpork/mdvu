@@ -1,0 +1,14 @@
+{
+  "c4": {
+    "version": "2.14.0",
+    "license": "MIT",
+    "url": "https://raw.githubusercontent.com/plantuml/plantuml/v1.2026.9/src/main/teavm/stdlib/c4.min.js",
+    "sha256": "6074a5b15fcd6dade1f0f1bd4426f2da7ff9006fb8ac762502df7351f4260b7c"
+  },
+  "archimate": {
+    "version": "3.2.2",
+    "license": "MIT",
+    "url": "https://raw.githubusercontent.com/plantuml/plantuml/v1.2026.9/src/main/teavm/stdlib/archimate.min.js",
+    "sha256": "5a06d2cc43cecff2b720cd6cbc08d60a6259211316f779c9f666c8c5988dfd85"
+  }
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>mdvu</id>
+    <version>VERSION_PLACEHOLDER</version>
+    <title>MDVu - Markdown and Mermaid Viewer</title>
+    <authors>Finn de Bear</authors>
+    <projectUrl>https://github.com/stpork/mdvu</projectUrl>
+    <licenseUrl>https://github.com/stpork/mdvu/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/stpork/mdvu</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/stpork/mdvu/issues</bugTrackerUrl>
+    <tags>markdown mermaid plantuml katex obsidian viewer cli</tags>
+    <summary>Fast, lightweight native Markdown and Mermaid viewer for Windows</summary>
+    <description>MDVu is an ultra-fast, lightweight native Markdown viewer with offline Mermaid, PlantUML, and KaTeX math rendering, multi-dialect support (GitHub, GitLab, Obsidian, CommonMark), file tree and vault navigation, live reload, and headless CLI export.</description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

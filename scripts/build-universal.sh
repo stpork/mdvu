@@ -5,11 +5,29 @@ cd "$ROOT"
 SWIFT_RELEASE_FLAGS=$(make -s print-release-flags)
 swift build -c release --arch arm64 --scratch-path "$ROOT/.build/universal-arm" $SWIFT_RELEASE_FLAGS
 swift build -c release --arch x86_64 --scratch-path "$ROOT/.build/universal-x86" $SWIFT_RELEASE_FLAGS
+ARM_BIN_DIR=$(swift build -c release --arch arm64 --scratch-path "$ROOT/.build/universal-arm" --show-bin-path)
+X86_BIN_DIR=$(swift build -c release --arch x86_64 --scratch-path "$ROOT/.build/universal-x86" --show-bin-path)
 lipo -create \
-    "$ROOT/.build/universal-arm/arm64-apple-macosx/release/mdvu" \
-    "$ROOT/.build/universal-x86/x86_64-apple-macosx/release/mdvu" \
+    "$ARM_BIN_DIR/mdvu" \
+    "$X86_BIN_DIR/mdvu" \
     -output "$ROOT/.build/mdvu-universal"
-make package \
+
+# Both core slices are mandatory: packaging must never silently fall back to a host-only dylib.
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+cargo build --release -p mdvu-core --features bundle-assets --target aarch64-apple-darwin
+cargo build --release -p mdvu-core --features bundle-assets --target x86_64-apple-darwin
+lipo -create \
+    "$ROOT/target/aarch64-apple-darwin/release/libmdvu_core.dylib" \
+    "$ROOT/target/x86_64-apple-darwin/release/libmdvu_core.dylib" \
+    -output "$ROOT/.build/libmdvu_core-universal.dylib"
+DYLIB_PATH="$ROOT/.build/libmdvu_core-universal.dylib"
+mkdir -p "$ROOT/target/swift-ir"
+for output in "$ROOT"/*.bc; do
+    if [ -f "$output" ]; then mv "$output" "$ROOT/target/swift-ir/"; fi
+done
+
+make package BUNDLE_ASSETS=1 \
     BINARY="$ROOT/.build/mdvu-universal" \
-    RESOURCE_BUNDLE="$ROOT/.build/universal-arm/arm64-apple-macosx/release/mdvu_mdvu.bundle"
+    DYLIB="$DYLIB_PATH" \
+    RESOURCE_BUNDLE="$ARM_BIN_DIR/mdvu_mdvu.bundle"
 file "$ROOT/dist/mdvu.app/Contents/MacOS/mdvu"

@@ -21,37 +21,48 @@ endif
 
 SWIFT_RELEASE_FLAGS := -Xswiftc -O -Xswiftc -cross-module-optimization -Xswiftc -Xfrontend -Xswiftc -disable-reflection-metadata -Xswiftc -Xfrontend -Xswiftc -disable-reflection-names -Xlinker -dead_strip -Xlinker -dead_strip_dylibs -Xcc -O3
 
-.PHONY: print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean
+.PHONY: prepare print-release-flags all release test app package universal archive publish install benchmark update-snapshot visual-test clean rust-all rust-release rust-test windows-build
+prepare:
+	@mkdir -p "$(PROJECT_ROOT)/dist" "$(PROJECT_ROOT)/test-results"
 print-release-flags:
 	@printf '%s\n' '$(SWIFT_RELEASE_FLAGS)'
-all:
+all: prepare rust-all
 	cd "$(PROJECT_ROOT)" && swift build
-release:
+release: prepare rust-release
 	cd "$(PROJECT_ROOT)" && swift build -c release $(SWIFT_RELEASE_FLAGS)
-	@mkdir -p "$(PROJECT_ROOT)/Tests"
+	@mkdir -p "$(PROJECT_ROOT)/target/swift-ir"
 	@for f in "$(PROJECT_ROOT)"/*.bc; do \
-		if [ -f "$$f" ]; then mv "$$f" "$(PROJECT_ROOT)/Tests/"; fi; \
+		if [ -f "$$f" ]; then mv "$$f" "$(PROJECT_ROOT)/target/swift-ir/"; fi; \
 	done
-test:
-	cd "$(PROJECT_ROOT)" && swift test $(TEST_FLAGS)
+test: prepare rust-all
+	cd "$(PROJECT_ROOT)" && MDVU_CORE_LIB="$(PROJECT_ROOT)/target/debug/libmdvu_core.dylib" swift test $(TEST_FLAGS) $(SWIFT_TEST_ARGS)
+BUNDLE_ASSETS ?= 0
+DYLIB ?= $(PROJECT_ROOT)/target/release/libmdvu_core.dylib
+
 benchmark: release
 	"$(PROJECT_ROOT)/scripts/benchmark.sh"
 update-snapshot: all
 	"$(PROJECT_ROOT)/scripts/update-snapshot.sh"
 visual-test: all
 	"$(PROJECT_ROOT)/scripts/visual-regression.sh"
-app: release package
+app: release
+	$(MAKE) package
 package:
+	test -f "$(DYLIB)"
+	@for arch in $$(lipo -archs "$(BINARY)"); do lipo "$(DYLIB)" -verify_arch "$$arch" || exit 1; done
 	rm -rf "$(APP)"
-	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle"
+	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources/mdvu_mdvu.bundle" "$(APP)/Contents/Frameworks"
 	cp "$(BINARY)" "$(APP)/Contents/MacOS/mdvu"
 	strip -u -r "$(APP)/Contents/MacOS/mdvu"
-	cp "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
-	test ! -f "$(PROJECT_ROOT)/packaging/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/mdvu.icns" "$(APP)/Contents/Resources/"
-	cp "$(PROJECT_ROOT)/packaging/Info.plist" "$(APP)/Contents/Info.plist"
+	cp -R "$(RESOURCE_BUNDLE)"/* "$(APP)/Contents/Resources/mdvu_mdvu.bundle/"
+	test ! -f "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" || cp "$(PROJECT_ROOT)/packaging/macos/mdvu.icns" "$(APP)/Contents/Resources/"
+	@if [ "$(BUNDLE_ASSETS)" = 1 ]; then cp "$(PROJECT_ROOT)"/assets/*.lzma "$(APP)/Contents/Resources/"; fi
+	cp "$(PROJECT_ROOT)/packaging/macos/Info.plist" "$(APP)/Contents/Info.plist"
+	cp "$(DYLIB)" "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
+	strip -x "$(APP)/Contents/Frameworks/libmdvu_core.dylib"
 	codesign --force --deep $(CODESIGN_OPTIONS) --sign "$(SIGN_IDENTITY)" "$(APP)"
 	@du -sh "$(APP)"
-universal:
+universal: prepare
 	"$(PROJECT_ROOT)/scripts/build-universal.sh"
 archive: universal
 	"$(PROJECT_ROOT)/scripts/package-release.sh"
@@ -75,4 +86,28 @@ install: app
 clean:
 	cd "$(PROJECT_ROOT)" && swift package clean
 	rm -rf "$(PROJECT_ROOT)/dist"
-	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/Tests"/*.bc
+	rm -f "$(PROJECT_ROOT)"/*.bc "$(PROJECT_ROOT)/tests"/*.bc
+
+rust-all:
+	cargo build -p mdvu-core
+
+rust-release:
+	cargo build --release -p mdvu-core
+
+rust-test:
+	cargo test -p mdvu-core
+
+windows-build:
+	pwsh ./scripts/build-windows.ps1
+
+.PHONY: check coverage
+check:
+	cargo test -p mdvu-core
+	$(MAKE) rust-release
+	$(MAKE) test
+
+coverage:
+	mkdir -p "$(PROJECT_ROOT)/target/coverage"
+	cargo llvm-cov -p mdvu-core --lcov --output-path "$(PROJECT_ROOT)/target/coverage/rust.lcov"
+	"$(PROJECT_ROOT)/scripts/coverage-swift.sh"
+	python3 "$(PROJECT_ROOT)/scripts/coverage-summary.py"

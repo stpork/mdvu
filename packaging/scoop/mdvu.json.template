@@ -1,0 +1,27 @@
+{
+    "version": "VERSION_PLACEHOLDER",
+    "description": "Fast, lightweight native Markdown and Mermaid viewer for Windows",
+    "homepage": "https://github.com/stpork/mdvu",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/stpork/mdvu/releases/download/vVERSION_PLACEHOLDER/mdvu-VERSION_PLACEHOLDER-windows-x86_64.zip",
+            "hash": "SHA256_PLACEHOLDER"
+        }
+    },
+    "bin": "mdvu.exe",
+    "shortcuts": [
+        [
+            "mdvu.exe",
+            "MDVu"
+        ]
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/stpork/mdvu/releases/download/v$version/mdvu-$version-windows-x86_64.zip"
+            }
+        }
+    }
+}

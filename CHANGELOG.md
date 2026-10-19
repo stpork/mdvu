@@ -4,6 +4,65 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - Unreleased
+
+### Release distribution
+- Publish the universal macOS DMG, ARM/Universal/Intel portable ZIPs, Windows x64 MSI and portable ZIP together, with SHA-256 sidecars and a source-commit manifest.
+- Keep releases as drafts until the complete upload is verified; reuse tested CI builds and never replace public release assets.
+- Document installer availability and measured UI/size results separately from marketing claims.
+
+
+### Added
+- **Cross-Platform Rust Core (`src/core`)**:
+  - High-throughput pull parser powered by `pulldown-cmark` with GFM extensions.
+  - Dialect preprocessing pipeline supporting Obsidian callouts, wikilinks, embeds, MkDocs admonitions, Docusaurus/VuePress containers, CriticMarkup, sub/superscript, GitLab TOC, and YAML frontmatter.
+  - Embedded offline diagram and math engines compressed with LZMA Ultra (Mermaid 12.2.0 + ZenUML 1.0.1, PlantUML Core 1.2026.9 + Viz.js 3.31.0 / Graphviz 16.1.0, and KaTeX 0.19.0).
+  - Stable C-ABI foreign function interface (`src/core/include/mdvu_core.h`) for Swift and external language bindings.
+- **Windows Native Desktop Application (`src/windows`)**:
+  - Standalone desktop Markdown viewer (`mdvu.exe`; measured sizes are recorded in COMPARISON.md) using native Win32 window management and the Microsoft Edge WebView2 runtime.
+  - DWM Windows 11 immersive dark mode window titlebars.
+  - Native Win32 menu bar and standard title bar; reader toolbar and sidebars inside WebView2.
+  - Live file watcher (`notify`) with directory-level monitoring, debounced reloading, and atomic save tracking for editors like VS Code, Notepad++, and Vim.
+  - Full keyboard shortcuts (`Ctrl+O`, `Ctrl+R` / `F5`, `Ctrl++` / `Ctrl+-` / `Ctrl+0`, `Ctrl+B`, `F11`).
+- **Unified Single-Binary Architecture**:
+  - Unified interactive GUI viewer and headless CLI compiler into a single executable `mdvu` (`mdvu.exe` on Windows).
+  - Automatically switches between GUI and headless modes based on passed command-line flags (`-o`, `--stdout`, `--toc`, `-s`, stdin `-`).
+  - Added Win32 `AttachConsole` dynamic hook to wire standard I/O to terminal callers without console window flashing on double-click.
+- **Swift FFI Bridge (`MdvuCoreBridge.swift`)**:
+  - Integration bridge connecting the macOS AppKit application to `mdvu-core` with memory-safe scoped closures (`withOptionalCString`).
+- **Cross-Platform Build & CI/CD Tooling**:
+  - Added root `build.ps1` and `build.cmd` scripts for native Windows compilation and release packaging.
+  - Added `windows` command to `build.sh` and created standalone POSIX `scripts/build-windows.sh`.
+  - Added automated GitHub Actions Windows CI/CD pipeline (`.github/workflows/ci.yml`) producing release zip archives with SHA-256 sidecars.
+
+### Security & Performance
+- **GFM Security Tagfilter**:
+  - Disarms malicious `<script>`, `<iframe>`, `<textarea>`, `<title>`, `<xmp>`, `<noembed>`, `<noframes>`, and `<plaintext>` tags across block and inline HTML, while preserving user-defined `<style>` blocks per MDVu specification.
+- **Deterministic Diagram Caching**:
+  - Replaced length-based cache keys with four domain-separated 64-bit digests (`compute_diagram_cache_key`) covering source, theme, app version and runtime manifest.
+- **Memory Safety & NUL-Termination**:
+  - Ensured all FFI string pointers returned by `mdvu-core` are NUL-terminated via `CString` backing in `assets.rs`.
+  - Removed dangling `mdvu_string_free` export.
+- **TOC Anchor Deduplication**:
+  - Implemented duplicate slug counting in Rust core matching `app.js` browser anchor behavior.
+
+### Current 0.5.0 work
+- Recognize fenced diagram/math languages independently of trailing titles and attributes, preserving renderer selection and cache identity.
+- Keep macOS `--dialect auto`/`automatic` in automatic mode, including after an explicit dialect selection.
+- Reject obsolete Windows folder scans and queued automatic file selections by navigation generation, including repeated visits to the same root.
+- Clear Windows find debounce state after execution or cancellation so Enter/Shift+Enter navigate immediately after a completed search.
+- Ignore completed navigator scans whose results arrive after a different root is selected; cancellation alone does not identify the current scan.
+- Fix Windows MSI scope/directory resolution and Start Menu/association paths; wire Finish to close the successful installation dialog. Add native UI installation, launch and uninstall regression tests for admin and non-admin tokens.
+- Keep competitor applications, ad hoc comparison tools and raw research results out of Git while preserving local evidence; derive native catalogue checks from the fixture itself.
+- Make build checks include shared Rust tests, reject missing release architectures/loaders, package the selected release output only and keep version validation read-only during packaging.
+- Preserve the macOS reader and loaded math runtime through error pages so subsequent documents render formulas correctly.
+- Keep decoded Windows link paths separate from fragments, including filenames containing `#` and `%`.
+- Update all release/native/Rust versions together and verify packaged CLI versions against release metadata.
+- Bundle C4-PlantUML 2.14.0 and ArchiMate 3.2.2; reuse Graphviz for DOT and the Mermaid engine for standalone ZenUML fences.
+- Keep one compressed-runtime resource copy in Universal macOS bundles; run native diagrams in isolated renderers on both platforms.
+- Preserve unrelated warm SVG entries when replacing an entry at the cache limit.
+- Maintain the verified 73-example catalogue and distinguish current cold/warm comparison data from historical prepared-profile measurements.
+
 ## [0.4.1] - 2026-09-15
 
 ### Fixed
