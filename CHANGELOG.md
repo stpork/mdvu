@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Embedded offline diagram and math engines compressed with LZMA Ultra (Mermaid 12.2.0 + ZenUML 1.0.1, PlantUML Core 1.2026.9 + Viz.js 3.31.0 / Graphviz 16.1.0, and KaTeX 0.19.0).
   - Stable C-ABI foreign function interface (`src/core/include/mdvu_core.h`) for Swift and external language bindings.
 - **Windows Native Desktop Application (`src/windows`)**:
-  - Standalone desktop Markdown viewer (`mdvu.exe`; measured sizes are recorded in COMPARISON.md) using native Win32 window management and the Microsoft Edge WebView2 runtime.
+  - Standalone desktop Markdown viewer (`mdvu.exe`) using native Win32 window management and the Microsoft Edge WebView2 runtime.
   - DWM Windows 11 immersive dark mode window titlebars.
   - Native Win32 menu bar and standard title bar; reader toolbar and sidebars inside WebView2.
   - Live file watcher (`notify`) with directory-level monitoring, debounced reloading, and atomic save tracking for editors like VS Code, Notepad++, and Vim.

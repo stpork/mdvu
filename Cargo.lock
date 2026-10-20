@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "mdvu-core"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "dunce",
  "getrandom",
@@ -1288,7 +1288,7 @@ dependencies = [
 
 [[package]]
 name = "mdvu-windows"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "clap",
  "dunce",
