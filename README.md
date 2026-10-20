@@ -28,7 +28,7 @@
 
 ## Why mdvu?
 
-Read Markdown, diagrams and math in a compact native app for Mac and Windows. The rendering engines are included; a separate browser runtime is not bundled. See [measured sizes and UI performance](COMPARISON.md) and the [website](https://stpork.github.io/mdvu/#comparison).
+Read Markdown, diagrams and math in a compact native app for Mac and Windows. The rendering engines are included; a separate browser runtime is not bundled. See measured sizes and UI performance on the [website](https://stpork.github.io/mdvu/#comparison).
 * **Dual Native Engines**: Pure native **AppKit & WebKit** on macOS and native **Win32 & WebView2** on Windows. Both run on the shared `mdvu-core` Rust engine with zero Electron, Node, or JVM.
 * **Responsive Reading**: Diagram execution uses a separate renderer so scrolling and zoom can continue while a diagram is being generated. Native fixture tests measure cold interaction latency and process memory.
 * **Unified Markdown Engine**: High-throughput `pulldown-cmark` parser with CommonMark parsing, GFM extensions and security tagfiltering.
