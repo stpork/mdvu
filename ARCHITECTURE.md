@@ -55,9 +55,9 @@ The core repository logic lives in `src/core` and is shared across all frontends
 
 ### C. Embedded Offline Diagram & Math Engines
 All engine assets use **LZMA Ultra**. Windows and default Cargo builds embed them in the core. Packaged macOS release builds use `bundle-assets` and keep one copy in `Contents/Resources`, shared by the ARM and Intel code slices:
-* **Mermaid 12.2.0 + ZenUML Core 4.7.2 + ELK 0.12.0** (`mermaid.lzma`, ~1.28 MiB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
+* **Mermaid 12.2.0 + ZenUML Core 4.12.1 + ELK 0.12.1** (`mermaid.lzma`, ~1.29 MiB): Sequence, flowchart, class, state, ER, Gantt, mindmap, C4, architecture, and ZenUML sequence diagrams.
 * **PlantUML Core 1.2026.9 + Viz.js 3.31.0** (`plantuml.lzma`, ~1.22 MiB): Offline TeaVM/Viz.js execution with Graphviz 16.1.0, C4-PlantUML 2.14.0 and ArchiMate 3.2.2. **Zero Java runtime (JVM/JRE) requirement.**
-* **KaTeX 0.19.0 MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
+* **KaTeX 0.19.1 MathML Engine** (`katex.lzma`, ~64 KB): Translates LaTeX equations to standard MathML Core for hardware-accelerated rendering.
 * **Deterministic Diagram Caching**: Four domain-separated 64-bit hashes (`compute_diagram_cache_key`) distinguish source, theme, application version and the locked runtime manifest, including asset hashes. Updating an engine invalidates old SVG cache entries.
 * **Runtime startup**: decode concurrently with native worker creation, then inject the direct runtime source and first job in one call. The decoder-only `lzma-rust2` build enables its optimized ARM64/x86-64 paths and bounds its dictionary to the known output size in the locked manifest. Standalone HTML keeps a separate escaped loader so script text cannot break out of its container.
 * **Native diagram isolation**: macOS shares one lazy, nonpersistent renderer WebView between document windows. Windows uses an isolated renderer origin within the same WebView2 environment, sharing its browser and GPU. Jobs run serially, obsolete work is cancelled, each job has a 30-second deadline, and the renderer is released after five idle seconds. Diagram engines never enter the reading document. Standalone HTML retains its browser fallback.

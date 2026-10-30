@@ -35,7 +35,7 @@ class RendererAssetsTests(unittest.TestCase):
             if name in {'@zenuml/core', 'elkjs', 'katex'}:
                 self.assertEqual(package['version'], packages[name], path)
             if name == 'marked':
-                self.assertEqual(package['version'], '18.1.1', path)
+                self.assertEqual(package['version'], '18.1.2', path)
         for name, expected in manifest['assets'].items():
             with self.subTest(asset=name):
                 compressed = (ROOT / 'assets' / (name + '.lzma')).read_bytes()

@@ -4,10 +4,10 @@
     "@mermaid-js/mermaid-zenuml": "1.0.1",
     "@plantuml/core": "1.2026.9",
     "@viz-js/viz": "3.31.0",
-    "@zenuml/core": "4.7.2",
-    "elkjs": "0.12.0",
+    "@zenuml/core": "4.12.1",
+    "elkjs": "0.12.1",
     "esbuild": "0.28.2",
-    "katex": "0.19.0",
+    "katex": "0.19.1",
     "mermaid": "12.2.0"
   },
   "stdlib": {
@@ -26,9 +26,9 @@
   },
   "assets": {
     "mermaid": {
-      "sourceBytes": 6882940,
-      "compressedBytes": 1341143,
-      "sha256": "943679d8767e5a5f6fd404e8f8e09657b2ded400c19e364941b87ad6f6609cf9"
+      "sourceBytes": 7040963,
+      "compressedBytes": 1354515,
+      "sha256": "8dc38642cacde30cc1c8f5e854e5e6cfc3b83ba9e0ce73b6ed8a99bfa86e974c"
     },
     "plantuml": {
       "sourceBytes": 4958867,
@@ -36,9 +36,9 @@
       "sha256": "b5e3092a53b1a29b2572f58f46f64be10e43e6d0472e6617561372c3458137aa"
     },
     "katex": {
-      "sourceBytes": 272868,
-      "compressedBytes": 64347,
-      "sha256": "fa1300c910fefc9d653c6954ef098fdf8a011e22c423feab73e86206cfbca255"
+      "sourceBytes": 273081,
+      "compressedBytes": 64350,
+      "sha256": "b71acda3519c213b5b13b147d1ec8abf6ec7440da2bf02d5d2ef87386eba7bb6"
     }
   }
 }

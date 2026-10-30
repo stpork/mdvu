@@ -4,6 +4,18 @@ All notable changes to **mdvu** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-10-30
+
+### Changed
+- Upgrade offline rendering engines to their latest stable releases: ZenUML Core 4.12.1, ELK 0.12.1, KaTeX 0.19.1, and Marked 18.1.2; regenerate locked, compressed LZMA Ultra renderer bundles.
+- Update pulldown-cmark to 0.13.6 in mdvu-core, incorporating upstream security fixes for potential denial-of-service and quadratic parsing of nested wikilinks while retaining SIMD acceleration.
+- Update lzma-rust2 to 0.24.0 for improved bounded decompression and minimal memory footprint.
+
+### Validation
+- Pass all 101 Swift/AppKit/WebKit tests and 51 Rust workspace tests on macOS.
+- Pass 20 repository and runtime asset integrity checks.
+- Verify offline diagram rendering, compound ELK layouts, nested ZenUML sequences, and KaTeX math formulas.
+
 ## [0.5.2] - 2026-10-19
 
 ### Changed

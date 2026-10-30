@@ -1254,9 +1254,9 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "lzma-rust2"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1c46f3fcd2e888afdb01a07efc071cb21300e07c68d32c3e8b01b5c8cb1fcaa"
+checksum = "490750560fa7851fbbf5d3ab1a8750f09350ed361ed8aed85b1e1e40587812ee"
 
 [[package]]
 name = "markup5ever"
@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "mdvu-core"
-version = "0.6.0"
+version = "0.5.3"
 dependencies = [
  "dunce",
  "getrandom",
@@ -1288,7 +1288,7 @@ dependencies = [
 
 [[package]]
 name = "mdvu-windows"
-version = "0.6.0"
+version = "0.5.3"
 dependencies = [
  "clap",
  "dunce",
@@ -1840,9 +1840,9 @@ dependencies = [
 
 [[package]]
 name = "pulldown-cmark"
-version = "0.13.4"
+version = "0.13.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e"
+checksum = "3db2be46835f013dd3f4fa7f5f7402c537787b54ebb6fe2b94bbdd7e2669bb7b"
 dependencies = [
  "bitflags 2.13.2",
  "memchr",
